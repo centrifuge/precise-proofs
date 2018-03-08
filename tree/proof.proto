@@ -1,0 +1,16 @@
+syntax = "proto3";
+package tree;
+option go_package = "github.com/CentrifugeInc/precise-proofs/tree";
+
+message MerkleHash {
+    bytes left = 1;
+    bytes right = 2;
+}
+
+message Proof {
+    string property = 1;
+    string value = 2;
+    bytes salt = 3;
+    repeated MerkleHash hashes = 4;
+}
+
