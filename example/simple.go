@@ -1,6 +1,4 @@
 /* Package example contains a code sample to explain usage and sample data for tests.
-
-
  */
 package example
 
@@ -9,12 +7,13 @@ import (
 	"fmt"
 	"encoding/json"
 	"encoding/base64"
+	"github.com/centrifuge/precise-proofs/example/documents"
 )
 
 func main () {
 
 	// ExampleDocument is a protobuf message
-	document := ExampleDocument{
+	document := documents.ExampleDocument{
 		Value1: 1,
 		ValueA: "Foo",
 		ValueB: "Bar",
@@ -22,7 +21,7 @@ func main () {
 	}
 
 	// The FillSalts method is a helper function that fills all fields with 32 random bytes
-	salts := SaltedExampleDocument{}
+	salts := documents.SaltedExampleDocument{}
 	preciseproofs.FillSalts(&salts)
 
 	doctree := preciseproofs.NewDocumentTree()

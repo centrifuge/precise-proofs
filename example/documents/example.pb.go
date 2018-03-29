@@ -13,7 +13,7 @@ It has these top-level messages:
 	SaltedLongDocument
 	SaltedExampleDocument
 */
-package example
+package documents
 
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"

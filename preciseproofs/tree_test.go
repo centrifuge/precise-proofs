@@ -3,12 +3,12 @@ package preciseproofs
 import (
 	"bytes"
 	"fmt"
-	"github.com/centrifuge/precise-proofs/example"
 	"github.com/stretchr/testify/assert"
 	merkle "github.com/xsleonard/go-merkle"
 	"golang.org/x/crypto/blake2b"
 	"testing"
 	"encoding/base64"
+	"github.com/centrifuge/precise-proofs/example/documents"
 )
 
 func TestValueToString(t *testing.T) {
@@ -51,11 +51,11 @@ func TestLeaf(t *testing.T) {
 }
 
 func TestFlatten(t *testing.T) {
-	message := example.ExampleDocument{
+	message := documents.ExampleDocument{
 		ValueA: "Foo",
 	}
 
-	messageSalts := example.SaltedExampleDocument{
+	messageSalts := documents.SaltedExampleDocument{
 		ValueA:      []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		ValueB:      []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		Value1:      []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
@@ -67,30 +67,30 @@ func TestFlatten(t *testing.T) {
 	assert.Equal(t, 5, len(flattened))
 
 	v, _ := ValueToString("Foo")
-	expected_payload := append([]byte("ValueA"), []byte(NodeValueSeparator)...)
-	expected_payload = append(expected_payload, v...)
-	expected_payload = append(expected_payload, []byte(NodeValueSeparator)...)
-	expected_payload = append(expected_payload, messageSalts.ValueA[:]...)
-	assert.Equal(t, expected_payload, flattened[2])
+	expectedPayload := append([]byte("ValueA"), []byte(NodeValueSeparator)...)
+	expectedPayload = append(expectedPayload, v...)
+	expectedPayload = append(expectedPayload, []byte(NodeValueSeparator)...)
+	expectedPayload = append(expectedPayload, messageSalts.ValueA[:]...)
+	assert.Equal(t, expectedPayload, flattened[2])
 }
 
 func TestFillSalts(t *testing.T) {
 	// Fill a properly formatted Document
-	exampleSalts := &example.SaltedExampleDocument{}
+	exampleSalts := &documents.SaltedExampleDocument{}
 	err := FillSalts(exampleSalts)
 	assert.Nil(t, err, "Fill Salts should not fail")
 
-	badExample := &example.ExampleDocument{}
+	badExample := &documents.ExampleDocument{}
 	err = FillSalts(badExample)
 	assert.NotEqual(t, err, nil, "Fill Salts should error because of string")
 }
 
 func TestTree_Generate(t *testing.T) {
-	protoMessage := example.ExampleDocument{
+	protoMessage := documents.ExampleDocument{
 		ValueA: "Foo",
 		ValueB: "Bar",
 	}
-	messageSalts := example.SaltedExampleDocument{
+	messageSalts := documents.SaltedExampleDocument{
 		ValueA:      []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		ValueB:      []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		Value1:      []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
@@ -288,7 +288,7 @@ func TestCalculateProofNodeList(t *testing.T) {
 
 func TestTree_GenerateProof(t *testing.T) {
 	doctree := NewDocumentTree()
-	doctree.AddDocument(&example.LongDocumentExample, &example.SaltedLongDocumentExample)
+	doctree.AddDocument(&documents.LongDocumentExample, &documents.SaltedLongDocumentExample)
 
 	expectedRootHash := []byte{0x2a, 0xdb, 0x4, 0x7f, 0x3f, 0xa5, 0xba, 0xe6, 0x18, 0xb, 0x3d, 0xd6, 0xad, 0x78, 0xd, 0xc9, 0xd, 0xac, 0xe2, 0x54, 0xe6, 0x6b, 0x3c, 0x39, 0xf2, 0xf6, 0xe, 0x30, 0x74, 0x57, 0x91, 0x3c}
 
@@ -304,19 +304,19 @@ func TestTree_GenerateProof(t *testing.T) {
 }
 
 func TestGetStringValueByProperty(t *testing.T) {
-	value, _ := getStringValueByProperty("ValueA", &example.FilledExampleDocument)
-	assert.Equal(t, example.FilledExampleDocument.ValueA, value)
+	value, _ := getStringValueByProperty("ValueA", &documents.FilledExampleDocument)
+	assert.Equal(t, documents.FilledExampleDocument.ValueA, value)
 }
 
 func Test_CreateProof(t *testing.T) {
 	doctree := NewDocumentTree()
-	doctree.AddDocument(&example.FilledExampleDocument, &example.ExampleDocumentSalts)
+	doctree.AddDocument(&documents.FilledExampleDocument, &documents.ExampleDocumentSalts)
 
 	proof, err := doctree.CreateProof("ValueA")
 	assert.Nil(t, err)
 	assert.Equal(t, "ValueA", proof.Property)
-	assert.Equal(t, example.FilledExampleDocument.ValueA, proof.Value)
-	assert.Equal(t, example.ExampleDocumentSalts.ValueA, proof.Salt)
+	assert.Equal(t, documents.FilledExampleDocument.ValueA, proof.Value)
+	assert.Equal(t, documents.ExampleDocumentSalts.ValueA, proof.Salt)
 
 	fieldHash, err := CalculateHashForProofField(&proof)
 	rootHash := []byte{0xb2, 0xd3, 0xa2, 0xe5, 0xe5, 0xab, 0x4a, 0x3a, 0x26, 0xa9, 0xdc, 0x50, 0x3d, 0x2, 0xc9, 0x5, 0x8e, 0x33, 0xf8, 0x34, 0xde, 0x8a, 0x5e, 0x83, 0x2c, 0x1f, 0xe9, 0x36, 0x13, 0xd7, 0x16, 0x3c}

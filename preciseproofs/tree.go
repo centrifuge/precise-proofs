@@ -66,6 +66,8 @@ func (doctree *DocumentTree) IsEmpty () bool {
 	return len(doctree.MerkleTree.Nodes) == 0
 }
 
+
+// CreateProof takes a property in dot notation and returns a Proof object for the given field
 func (doctree *DocumentTree) CreateProof(prop string) (proof Proof, err error) {
 	if doctree.IsEmpty() {
 		return Proof{}, fmt.Errorf("Can't create proof for empty MerkleTree")
@@ -151,7 +153,7 @@ type LeafNode struct {
 	Salt     []byte
 }
 
-// ConcatValue concatenates property, value & salt into one byte slice using the NodeValueSeparator.
+// ConcatValues concatenates property, value & salt into one byte slice using the NodeValueSeparator.
 func ConcatValues(prop string, value interface{}, salt []byte) (payload []byte, err error) {
 	propBytes := []byte(prop)
 	valueString, err := ValueToString(value)
