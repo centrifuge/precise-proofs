@@ -1,5 +1,6 @@
 /*
-Package tree generates merkle trees and proofs for fields of an object by just specifying the dot notation of a field.
+Package preciseproofs lets you construct merkle trees out of protobuf messages and create proofs for fields of
+an object by just specifying the dot notation of a field.
 
 Field names are not taken from the struct attributes but the protobuf field names. Protobuf field names stay the same
 across different programming languages (the struct field names are camel cased to follow Go's style guide which they
@@ -8,7 +9,7 @@ would not be in a javascript implementation.
 Note: this is a basic implementation that lacks support for serializing more complex structs. The interfaces and
 functions in this library will change significantly in the near future.
  */
-package tree
+package preciseproofs
 
 //go:generate protoc -I $PROTOBUF/src/ -I. -I $GOPATH/src --go_out=$GOPATH/src/ proof.proto
 
@@ -114,12 +115,16 @@ func (doctree *DocumentTree) pickHashesFromMerkleTree(leaf uint64) (hashes []*Me
 
 // ValidateProof by comparing it to the tree's RootHash
 func (doctree *DocumentTree) ValidateProof(proof *Proof) (valid bool, err error) {
+	return ValidateProof(proof, doctree.RootHash)
+}
+
+func ValidateProof(proof *Proof, rootHash []byte) (valid bool, err error) {
 	hash, err := CalculateHashForProofField(proof)
 	if err != nil {
 		return false, err
 	}
 
-	valid, err = ValidateProofHashes(hash, proof.Hashes, doctree.RootHash)
+	valid, err = ValidateProofHashes(hash, proof.Hashes, rootHash)
 	return
 }
 
