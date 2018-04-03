@@ -50,7 +50,7 @@ There are a few things to note:
 
 ## Usage:
 
-See below code sample (`example/simple.go`) for a usage example.
+See below code sample (`examples/simple.go`) for a usage example.
 
 ```go,
 	// ExampleDocument is a protobuf message

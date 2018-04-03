@@ -1,6 +1,6 @@
 syntax = "proto3";
 package documents;
-option go_package = "github.com/centrifuge/precise-proofs/example/documents";
+option go_package = "github.com/centrifuge/precise-proofs/examples/documents";
 
 message ExampleDocument {
     string ValueA = 1;

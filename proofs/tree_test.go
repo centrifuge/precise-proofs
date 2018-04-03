@@ -7,7 +7,7 @@ import (
 	"golang.org/x/crypto/blake2b"
 	"testing"
 	"encoding/base64"
-	"github.com/centrifuge/precise-proofs/example/documents"
+	"github.com/centrifuge/precise-proofs/examples/documents"
 )
 
 type UnsupportedType struct {

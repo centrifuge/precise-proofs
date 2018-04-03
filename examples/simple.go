@@ -6,7 +6,7 @@ import (
 	"github.com/centrifuge/precise-proofs/proofs"
 	"fmt"
 	"encoding/json"
-	"github.com/centrifuge/precise-proofs/example/documents"
+	"github.com/centrifuge/precise-proofs/examples/documents"
 )
 
 func main () {
