@@ -1,7 +1,6 @@
-package preciseproofs
+package proofs
 
 import (
-	"bytes"
 	"fmt"
 	"github.com/stretchr/testify/assert"
 	merkle "github.com/xsleonard/go-merkle"
@@ -10,6 +9,10 @@ import (
 	"encoding/base64"
 	"github.com/centrifuge/precise-proofs/example/documents"
 )
+
+type UnsupportedType struct {
+	supported bool
+}
 
 func TestValueToString(t *testing.T) {
 	v, _ := ValueToString(int64(42))
@@ -22,6 +25,9 @@ func TestValueToString(t *testing.T) {
 	expected := base64.StdEncoding.EncodeToString([]byte("42"))
 	assert.Equal(t, expected, v, "[]byte(\"42\") to string failed")
 
+	v, err := ValueToString(UnsupportedType{false})
+	assert.Error(t, err)
+  assert.Equal(t, "", v)
 }
 
 func TestLeaf(t *testing.T) {
@@ -35,17 +41,13 @@ func TestLeaf(t *testing.T) {
 	// Test the payload format:
 	payload, _ := ConcatNode(&intLeaf)
 	v, _ := ValueToString(intLeaf.Value)
-	expectedPayload := append([]byte(intLeaf.Property), []byte(NodeValueSeparator)...)
-	expectedPayload = append(expectedPayload, v...)
-	expectedPayload = append(expectedPayload, []byte(NodeValueSeparator)...)
+	expectedPayload := append([]byte(intLeaf.Property), v...)
 	expectedPayload = append(expectedPayload, intLeaf.Salt[:]...)
 
-	if !bytes.Equal(payload, expectedPayload) {
-		t.Fatal("Concatenated payload doesn't match")
-	}
+	assert.Equal(t, expectedPayload, payload, "Concatenated payload doesn't match")
 
 	hash := blake2b.Sum256(payload)
-	expectedHash := []byte{0xf0, 0xf1, 0x5f, 0xa5, 0x9b, 0x9b, 0x62, 0xe4, 0x58, 0x85, 0x9a, 0x64, 0x8b, 0x21, 0x4, 0xbf, 0x6f, 0x91, 0xc4, 0x4e, 0x3e, 0x93, 0x30, 0xe3, 0x68, 0x32, 0x77, 0x6f, 0xda, 0x39, 0x17, 0xb3}
+	expectedHash := []byte{0xd2, 0x97, 0x1c, 0x9f, 0x70, 0x8b, 0x1f, 0xc1, 0x61, 0x29, 0xac, 0xb8, 0x56, 0xa3, 0x26, 0xe4, 0x49, 0xff, 0xa0, 0x2a, 0x26, 0xae, 0xba, 0x21, 0x62, 0x2d, 0x20, 0x9b, 0xb7, 0xfb, 0x26, 0xd3}
 
 	assert.Equal(t, expectedHash, hash[:], "Hash for integer leaf doesn't match")
 }
@@ -62,27 +64,26 @@ func TestFlatten(t *testing.T) {
 		Value2:      []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		ValueBytes1: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 	}
-	flattened, _, err := FlattenMessage(&message, &messageSalts)
+	flattened, propOrder, err := FlattenMessage(&message, &messageSalts)
 	assert.Equal(t, nil, err)
 	assert.Equal(t, 5, len(flattened))
+	assert.Equal(t, []string{"Value1", "Value2", "ValueA", "ValueB", "ValueBytes1"}, propOrder)
 
 	v, _ := ValueToString("Foo")
-	expectedPayload := append([]byte("ValueA"), []byte(NodeValueSeparator)...)
-	expectedPayload = append(expectedPayload, v...)
-	expectedPayload = append(expectedPayload, []byte(NodeValueSeparator)...)
+	expectedPayload := append([]byte("ValueA"),  v...)
 	expectedPayload = append(expectedPayload, messageSalts.ValueA[:]...)
 	assert.Equal(t, expectedPayload, flattened[2])
 }
 
 func TestFillSalts(t *testing.T) {
-	// Fill a properly formatted Document
+	// Fill a properly formatted document
 	exampleSalts := &documents.SaltedExampleDocument{}
 	err := FillSalts(exampleSalts)
-	assert.Nil(t, err, "Fill Salts should not fail")
+	assert.Nil(t, err, "Fill salts should not fail")
 
 	badExample := &documents.ExampleDocument{}
 	err = FillSalts(badExample)
-	assert.NotEqual(t, err, nil, "Fill Salts should error because of string")
+	assert.NotEqual(t, err, nil, "Fill salts should error because of string")
 }
 
 func TestTree_Generate(t *testing.T) {
@@ -103,7 +104,7 @@ func TestTree_Generate(t *testing.T) {
 	blakeHash, _ := blake2b.New256([]byte{})
 	tree.Generate(flattened, blakeHash)
 	h := tree.Root().Hash
-	expectedHash := []byte{0x57, 0x9b, 0x2f, 0x38, 0xfb, 0x6f, 0x54, 0xc0, 0xbd, 0x11, 0xc9, 0x5c, 0x2f, 0xfc, 0x72, 0x0, 0xba, 0x5c, 0x50, 0x87, 0x2e, 0x77, 0x45, 0x83, 0xdf, 0xbe, 0x75, 0x3, 0xda, 0x66, 0xd6, 0x6a}
+	expectedHash := []byte{0xdd, 0x2d, 0xef, 0x0, 0xbb, 0xd3, 0xdd, 0x84, 0x1c, 0x1, 0x16, 0x83, 0xaf, 0x17, 0x53, 0xb5, 0x5, 0xbb, 0x66, 0x16, 0x39, 0xf0, 0x64, 0x1a, 0x17, 0xe1, 0x94, 0x9f, 0x4d, 0xbd, 0xfb, 0x88}
 	assert.Equal(t, expectedHash, h, "Hash should match")
 }
 
@@ -288,16 +289,17 @@ func TestCalculateProofNodeList(t *testing.T) {
 
 func TestTree_GenerateProof(t *testing.T) {
 	doctree := NewDocumentTree()
-	doctree.AddDocument(&documents.LongDocumentExample, &documents.SaltedLongDocumentExample)
+	doctree.FillTree(&documents.LongDocumentExample, &documents.SaltedLongDocumentExample)
 
-	expectedRootHash := []byte{0x2a, 0xdb, 0x4, 0x7f, 0x3f, 0xa5, 0xba, 0xe6, 0x18, 0xb, 0x3d, 0xd6, 0xad, 0x78, 0xd, 0xc9, 0xd, 0xac, 0xe2, 0x54, 0xe6, 0x6b, 0x3c, 0x39, 0xf2, 0xf6, 0xe, 0x30, 0x74, 0x57, 0x91, 0x3c}
+	expectedRootHash := []byte{0x87, 0xec, 0xe2, 0xbc, 0xe3, 0x55, 0x69, 0xf0, 0x43, 0x94, 0xca, 0x2f, 0xdc, 0xd1, 0xd8, 0x4d, 0xb0, 0x5c, 0x11, 0xc4, 0x4b, 0x54, 0x62, 0x70, 0x94, 0xc, 0xe5, 0x3e, 0x19, 0xe9, 0x44, 0x38}
 
-	assert.Equal(t, expectedRootHash, doctree.RootHash)
+
+	assert.Equal(t, expectedRootHash, doctree.rootHash)
 
 	hashes, err := doctree.pickHashesFromMerkleTree( 0)
 	assert.Nil(t, err)
-	fieldHash := doctree.MerkleTree.Nodes[0].Hash
-	valid, err := ValidateProofHashes(fieldHash, hashes, doctree.RootHash)
+	fieldHash := doctree.merkleTree.Nodes[0].Hash
+	valid, err := ValidateProofHashes(fieldHash, hashes, doctree.rootHash)
 	assert.Nil(t, err)
 	assert.True(t, valid)
 
@@ -310,7 +312,7 @@ func TestGetStringValueByProperty(t *testing.T) {
 
 func Test_CreateProof(t *testing.T) {
 	doctree := NewDocumentTree()
-	doctree.AddDocument(&documents.FilledExampleDocument, &documents.ExampleDocumentSalts)
+	doctree.FillTree(&documents.FilledExampleDocument, &documents.ExampleDocumentSalts)
 
 	proof, err := doctree.CreateProof("ValueA")
 	assert.Nil(t, err)
@@ -319,8 +321,9 @@ func Test_CreateProof(t *testing.T) {
 	assert.Equal(t, documents.ExampleDocumentSalts.ValueA, proof.Salt)
 
 	fieldHash, err := CalculateHashForProofField(&proof)
-	rootHash := []byte{0xb2, 0xd3, 0xa2, 0xe5, 0xe5, 0xab, 0x4a, 0x3a, 0x26, 0xa9, 0xdc, 0x50, 0x3d, 0x2, 0xc9, 0x5, 0x8e, 0x33, 0xf8, 0x34, 0xde, 0x8a, 0x5e, 0x83, 0x2c, 0x1f, 0xe9, 0x36, 0x13, 0xd7, 0x16, 0x3c}
-	assert.Equal(t, rootHash, doctree.RootHash)
+	rootHash := []byte{0x54, 0xb1, 0xe6, 0xb2, 0x42, 0x2a, 0x74, 0xc6, 0x57, 0xa8, 0x7f, 0x2a, 0x80, 0xac, 0xb, 0x27, 0x3f, 0xd9, 0x76, 0x5d, 0xe2, 0x59, 0xc1, 0xdf, 0x8a, 0x4d, 0xd4, 0x3d, 0xa0, 0xfe, 0x62, 0x5c}
+
+	assert.Equal(t, rootHash, doctree.rootHash)
 	valid, err := ValidateProofHashes(fieldHash, proof.Hashes, rootHash)
 	assert.True(t, valid)
 

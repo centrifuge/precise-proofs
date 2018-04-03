@@ -1,6 +1,6 @@
 syntax = "proto3";
 package preciseproofs;
-option go_package = "github.com/centrifuge/precise-proofs/preciseproofs";
+option go_package = "github.com/centrifuge/precise-proofs/proofs";
 
 message MerkleHash {
     bytes left = 1;

@@ -9,7 +9,7 @@ would not be in a javascript implementation.
 Note: this is a basic implementation that lacks support for serializing more complex structs. The interfaces and
 functions in this library will change significantly in the near future.
  */
-package preciseproofs
+package proofs
 
 //go:generate protoc -I $PROTOBUF/src/ -I. -I $GOPATH/src --go_out=$GOPATH/src/ proof.proto
 
@@ -32,13 +32,13 @@ import (
 // NodeValueSeparator is used to separate Property, Value, Salt.
 const NodeValueSeparator = ","
 
-// DocumentTree is a helper object to create a MerkleTree and proofs for fields in the Document
+// DocumentTree is a helper object to create a merkleTree and proofs for fields in the document
 type DocumentTree struct {
-	PropertyList []string
-	MerkleTree   merkle.Tree
-	RootHash 		 []byte
-	Salts        proto.Message
-	Document     proto.Message
+	propertyList []string
+	merkleTree   merkle.Tree
+	rootHash     []byte
+	salts        proto.Message
+	document     proto.Message
 }
 
 // NewDocumentTree returns an empty DocumentTree
@@ -46,40 +46,47 @@ func NewDocumentTree () DocumentTree {
 	return DocumentTree{[]string{}, merkle.NewTree(), []byte{}, nil, nil}
 }
 
-// AddDocument fills a MerkleTree with a provided Document and Salts
-func (doctree *DocumentTree) AddDocument(document, salts proto.Message) (err error){
+// FillTree fills a merkleTree with a provided document and salts
+func (doctree *DocumentTree) FillTree(document, salts proto.Message) (err error){
 	leaves, propertyList, err := FlattenMessage(document, salts)
 	if err != nil {
 		return err
 	}
 	blakeHash, _ := blake2b.New256([]byte{})
-	doctree.MerkleTree.Generate(leaves, blakeHash)
-	doctree.RootHash = doctree.MerkleTree.Root().Hash
-	doctree.PropertyList = propertyList
-	doctree.Document = document
-	doctree.Salts = salts
+	doctree.merkleTree.Generate(leaves, blakeHash)
+	doctree.rootHash = doctree.merkleTree.Root().Hash
+	doctree.propertyList = propertyList
+	doctree.document = document
+	doctree.salts = salts
 	return nil
 }
 
 // IsEmpty returns false if the tree contains no leaves
 func (doctree *DocumentTree) IsEmpty () bool {
-	return len(doctree.MerkleTree.Nodes) == 0
+	return len(doctree.merkleTree.Nodes) == 0
 }
 
+func (doctree *DocumentTree) RootHash() []byte {
+	return doctree.rootHash
+}
+
+func (doctree *DocumentTree) Document() proto.Message {
+	return doctree.document
+}
 
 // CreateProof takes a property in dot notation and returns a Proof object for the given field
 func (doctree *DocumentTree) CreateProof(prop string) (proof Proof, err error) {
 	if doctree.IsEmpty() {
-		return Proof{}, fmt.Errorf("Can't create proof for empty MerkleTree")
+		return Proof{}, fmt.Errorf("Can't create proof for empty merkleTree")
 	}
 
-	value, err := getStringValueByProperty(prop, doctree.Document)
+	value, err := getStringValueByProperty(prop, doctree.document)
 	if err != nil {
 		return Proof{}, err
 	}
-	salt, err := getByteValueByProperty(prop, doctree.Salts)
+	salt, err := getByteValueByProperty(prop, doctree.salts)
 
-	leaf, err := getIndexOfString(doctree.PropertyList, prop)
+	leaf, err := getIndexOfString(doctree.propertyList, prop)
 	if err != nil {
 		return Proof{}, err
 	}
@@ -95,7 +102,7 @@ func (doctree *DocumentTree) CreateProof(prop string) (proof Proof, err error) {
 
 // pickHashesFromMerkleTree takes the required hashes needed to create a proof
 func (doctree *DocumentTree) pickHashesFromMerkleTree(leaf uint64) (hashes []*MerkleHash, err error) {
-	proofNodes, err := CalculateProofNodeList(leaf, uint64(len(doctree.MerkleTree.Leaves())))
+	proofNodes, err := CalculateProofNodeList(leaf, uint64(len(doctree.merkleTree.Leaves())))
 
 	if err != nil {
 		return hashes, err
@@ -104,7 +111,7 @@ func (doctree *DocumentTree) pickHashesFromMerkleTree(leaf uint64) (hashes []*Me
 	hashes = make([]*MerkleHash, len(proofNodes))
 
 	for i, n := range proofNodes {
-		h := doctree.MerkleTree.Nodes[n.Leaf].Hash
+		h := doctree.merkleTree.Nodes[n.Leaf].Hash
 		if n.Left {
 			hashes[i] = &MerkleHash{h, nil}
 		} else {
@@ -115,11 +122,12 @@ func (doctree *DocumentTree) pickHashesFromMerkleTree(leaf uint64) (hashes []*Me
 	return hashes, nil
 }
 
-// ValidateProof by comparing it to the tree's RootHash
+// ValidateProof by comparing it to the tree's rootHash
 func (doctree *DocumentTree) ValidateProof(proof *Proof) (valid bool, err error) {
-	return ValidateProof(proof, doctree.RootHash)
+	return ValidateProof(proof, doctree.rootHash)
 }
 
+// ValidateProof by comparing it to a given merkle tree root
 func ValidateProof(proof *Proof, rootHash []byte) (valid bool, err error) {
 	hash, err := CalculateHashForProofField(proof)
 	if err != nil {
@@ -131,22 +139,22 @@ func ValidateProof(proof *Proof, rootHash []byte) (valid bool, err error) {
 }
 
 // ValueToString takes any supported interface and returns a string representation of the value. This is used calculate
-// the hash and create the proof object.
+// the hash and to create the proof object.
 func ValueToString(value interface{}) (s string, err error) {
-	switch t := reflect.TypeOf(value).String(); t {
-	case "string":
+	switch t := reflect.TypeOf(value); t {
+	case reflect.TypeOf(""):
 		return value.(string), nil
-	case "int64":
+	case reflect.TypeOf(int64(0)):
 		return strconv.FormatInt(value.(int64), 10), nil
-	case "[]uint8":
+	case reflect.TypeOf([]uint8{}):
 		return base64.StdEncoding.EncodeToString(value.([]uint8)), nil
 	default:
-		return "", errors.New(fmt.Sprint("Got unsupported value:", t))
+		return "", errors.New(fmt.Sprint("Got unsupported value: %s", t))
 	}
 	return
 }
 
-// LeafNode represents a field that can be hashed to create a merkle MerkleTree
+// LeafNode represents a field that can be hashed to create a merkle tree
 type LeafNode struct {
 	Property string
 	Value    interface{}
@@ -162,9 +170,7 @@ func ConcatValues(prop string, value interface{}, salt []byte) (payload []byte, 
 	}
 
 	payload = append(payload, propBytes...)
-	payload = append(payload, []byte(NodeValueSeparator)...)
 	payload = append(payload, []byte(valueString)...)
-	payload = append(payload, []byte(NodeValueSeparator)...)
 	payload = append(payload, salt[:32]...)
 	return
 }
@@ -178,8 +184,8 @@ func ConcatNode(n *LeafNode) (payload []byte, err error) {
 	return
 }
 
-// GenerateRandomSalt creates a 32 byte slice with random data using the crypto/rand RNG
-func GenerateRandomSalt() (salt []byte) {
+// NewSalt creates a 32 byte slice with random data using the crypto/rand RNG
+func NewSalt() (salt []byte) {
 	randbytes := make([]byte, 32)
 	rand.Read(randbytes)
 	return randbytes
@@ -195,10 +201,10 @@ func FillSalts(message proto.Message) (err error) {
 
 	for i := 0; i < v.NumField(); i++ {
 		f := v.Field(i)
-		if f.Type().String() != "[]uint8" {
+		if f.Type() != reflect.TypeOf([]uint8{}) {
 			return fmt.Errorf("Invalid type (%s) for field", f.Type().String())
 		}
-		salt := GenerateRandomSalt()
+		salt := NewSalt()
 		saltVal := reflect.ValueOf(salt)
 		f.Set(saltVal)
 	}
@@ -207,7 +213,7 @@ func FillSalts(message proto.Message) (err error) {
 }
 
 // LeafList is a list implementation that can be sorted by the LeafNode.Property value. This is needed for ordering all
-// leaves before generating a MerkleTree out of it.
+// leaves before generating a merkleTree out of it.
 type LeafList []LeafNode
 
 // Len returns the length of the list
@@ -226,7 +232,7 @@ func (s LeafList) Less(i, j int) bool {
 }
 
 // getPropertyNameFromProtobufTag extracts the name attribute from the protobuf tag, the tag name is essential in defining
-// the oder, not the struct field name.
+// the order, not the struct field name.
 func getPropertyNameFromProtobufTag(tag string) (name string, err error) {
 	tagList := strings.Split(tag, ",")
 	for _, v := range tagList {
@@ -237,8 +243,10 @@ func getPropertyNameFromProtobufTag(tag string) (name string, err error) {
 	return "", fmt.Errorf("Invalid protobuf annotation: %s", tag)
 }
 
-// FlattenMessage takes a protobuf message Struct and flattens it into an array of nodes. This currently doesn't support
+// FlattenMessage takes a protobuf message struct and flattens it into an array of nodes. This currently doesn't support
 // nested structures and lists.
+//
+// The fields are sorted lexicographically by their protobuf field names. 
 func FlattenMessage(message, messageSalts proto.Message) (nodes [][]byte, propOrder []string, err error) {
 	leaves := LeafList{}
 	v := reflect.ValueOf(message).Elem()
@@ -306,7 +314,7 @@ func getIndexOfString(slice []string, match string) (index int, err error) {
 	return index, fmt.Errorf("getIndexOfString: No match found")
 }
 
-// HashTwoValues concatenate two hashes to calculate hash out of the result. This is used in the MerkleTree calculation code
+// HashTwoValues concatenate two hashes to calculate hash out of the result. This is used in the merkleTree calculation code
 // as well as the validation code.
 func HashTwoValues(a, b []byte) (hash []byte) {
 	data := make([]byte, 64)

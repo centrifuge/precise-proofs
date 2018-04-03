@@ -3,7 +3,7 @@
 package example
 
 import (
-	"github.com/centrifuge/precise-proofs/preciseproofs"
+	"github.com/centrifuge/precise-proofs/proofs"
 	"fmt"
 	"encoding/json"
 	"encoding/base64"
@@ -22,11 +22,11 @@ func main () {
 
 	// The FillSalts method is a helper function that fills all fields with 32 random bytes
 	salts := documents.SaltedExampleDocument{}
-	preciseproofs.FillSalts(&salts)
+	proofs.FillSalts(&salts)
 
-	doctree := preciseproofs.NewDocumentTree()
-	doctree.AddDocument(&document, &salts)
-	fmt.Println("Merkle Root Hash", base64.StdEncoding.EncodeToString(doctree.RootHash))
+	doctree := proofs.NewDocumentTree()
+	doctree.FillTree(&document, &salts)
+	fmt.Println("Merkle Root Hash", base64.StdEncoding.EncodeToString(doctree.RootHash()))
 
 	proof, _ := doctree.CreateProof("ValueA")
 

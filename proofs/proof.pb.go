@@ -2,7 +2,7 @@
 // source: proof.proto
 
 /*
-Package preciseproofs is a generated protocol buffer package.
+Package proofs is a generated protocol buffer package.
 
 It is generated from these files:
 	proof.proto
@@ -11,7 +11,7 @@ It has these top-level messages:
 	MerkleHash
 	Proof
 */
-package preciseproofs
+package proofs
 
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
@@ -93,8 +93,8 @@ func (m *Proof) GetHashes() []*MerkleHash {
 }
 
 func init() {
-	proto.RegisterType((*MerkleHash)(nil), "preciseproofs.MerkleHash")
-	proto.RegisterType((*Proof)(nil), "preciseproofs.Proof")
+	proto.RegisterType((*MerkleHash)(nil), "proofs.MerkleHash")
+	proto.RegisterType((*Proof)(nil), "proofs.Proof")
 }
 
 func init() { proto.RegisterFile("proof.proto", fileDescriptor0) }
