@@ -50,32 +50,39 @@ There are a few things to note:
 
 ## Usage:
 
+See below code sample (`example/simple.go`) for a usage example.
+
 ```go,
-    // ExampleDocument is a protobuf message
-    document := ExampleDocument{
-        Value1: 1,
-        ValueA: "Foo",
-        ValueB: "Bar",
-        ValueBytes1: []byte("foobar"),
-    }
+	// ExampleDocument is a protobuf message
+	document := documents.ExampleDocument{
+		Value1: 1,
+		ValueA: "Foo",
+		ValueB: "Bar",
+		ValueBytes1: []byte("foobar"),
+	}
 
-    // The FillSalts method is a helper function that fills all fields with 32 random bytes
-    salts := SaltedExampleDocument{}
-    preciseproofs.FillSalts(&salts)
+	// The FillSalts method is a helper function that fills all fields with 32 
+    // random bytes. SaltedExampleDocument is a protobuf message that has the 
+    // same structure as ExampleDocument but has all `bytes` field types.
+	salts := documents.SaltedExampleDocument{}
+	proofs.FillSalts(&salts)
 
-    doctree := preciseproofs.NewDocumentTree()
-    doctree.AddDocument(&document, &salts)
-    fmt.Println("Merkle Root Hash", base64.StdEncoding.EncodeToString(doctree.RootHash))
-
+	doctree := proofs.NewDocumentTree()
+	doctree.FillTree(&document, &salts)
+	fmt.Printf("Generated tree: %s\n", doctree.String())
+	// Output:
+	// Generated tree: DocumentTree with Hash [k4E4F9xgvzDPtCGE0yM1QRguleSxQX6sZ14VTYAYVTk=] and [5] leaves
+	
     proof, _ := doctree.CreateProof("ValueA")
+	proofJson, _ := json.Marshal(proof)
+	fmt.Println(string(proofJson))
+    // Output:
+    // {"property":"ValueA","value":"Foo","salt":"YSJ0pFJ4fk0gYsCOU2zLC1xAcqSDcw7tdV4M5ydlCNw=","hashes":[{"right":"anfIr8Oa4PjWQsf2qFLIGgFBeBphTI+RGBaKp8F6Fw0="},{"left":"B+/DkYDB2vvYAuw9GTbVk7jpxM2vPddxsbhldM1wOus="},{"right":"hCkGp+gqakfRE1aLg4j4mA9eAvKn0LbulLOAKUVLSCg="}]}
 
-    proofJson, _ := json.Marshal(proof)
-
-    fmt.Println("Proof:\n", string(proofJson))
-
-    valid, _ := preciseproofs.ValidateProof(&proof, doctree.RootHash)
-
-    fmt.Printf("Proof validated:", valid)
+	valid, _ := doctree.ValidateProof(&proof)
+	fmt.Printf("Proof validated: %v\n", valid)
+    // Output:
+    // Proof validated: true
 ```
 
 ### Missing features
