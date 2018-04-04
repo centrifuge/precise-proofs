@@ -1,9 +1,9 @@
 Precise Proofs
 ==============
-[![GoDoc](https://godoc.org/github.com/centrifuge/precise-proofs/preciseproofs?status.svg)](https://godoc.org/github.com/centrifuge/precise-proofs/preciseproofs)
+[![GoDoc](https://godoc.org/github.com/centrifuge/precise-proofs/proofs?status.svg)](https://godoc.org/github.com/centrifuge/precise-proofs/proofs)
 [![Travis CI](https://api.travis-ci.org/centrifuge/precise-proofs.svg?branch=master)](https://travis-ci.org/centrifuge/precise-proofs)
 
-Precise Proofs is a library for creating merlke proofs out of protobuf messages. It 
+Precise Proofs is a library for creating merkle proofs out of protobuf messages. It 
 handles flattening of objects, ordering the fields by label and creating shareable and
 independently verifiable proofs.
 
@@ -48,6 +48,11 @@ There are a few things to note:
 * The value is included in the file as a string value not a native type. 
 
 
+## Why protobuf?
+
+Google's [protobuf](https://developers.google.com/protocol-buffers/docs/gotutorial) is a space efficient and fast format
+to serialize data in a portable way. It's easy to generate JSON out of
+
 ## Usage:
 
 See below code sample (`examples/simple.go`) for a usage example.
@@ -86,7 +91,7 @@ See below code sample (`examples/simple.go`) for a usage example.
 ```
 
 ### Missing features
-
-* Support for nested documents is in the works
-* Currently only []byte, int64 and string types are supported 
+The following features are being worked on:
+* Support for nested documents
+* Currently only []byte, int64 and string types are supported, support more standard types
 * Custom hash functions, the hash function currently used is blake2b

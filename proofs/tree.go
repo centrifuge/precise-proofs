@@ -1,10 +1,16 @@
 /*
-Package preciseproofs lets you construct merkle trees out of protobuf messages and create proofs for fields of
+Package proofs lets you construct merkle trees out of protobuf messages and create proofs for fields of
 an object by just specifying the dot notation of a field.
 
 Field names are not taken from the struct attributes but the protobuf field names. Protobuf field names stay the same
 across different programming languages (the struct field names are camel cased to follow Go's style guide which they
 would not be in a javascript implementation.
+
+Supported types:
+* string
+* int64
+* timestamp.Timestamp
+
 
 Note: this is a basic implementation that lacks support for serializing more complex structs. The interfaces and
 functions in this library will change significantly in the near future.
@@ -42,6 +48,7 @@ Example Usage
  */
 package proofs
 
+// Use below command to update proof protobuf file.
 //go:generate protoc -I $PROTOBUF/src/ -I. -I $GOPATH/src --go_out=$GOPATH/src/ proof.proto
 
 import (
@@ -51,13 +58,15 @@ import (
 	"fmt"
 	"github.com/go-bongo/go-dotaccess"
 	"github.com/golang/protobuf/proto"
-	merkle "github.com/xsleonard/go-merkle"
+	"github.com/xsleonard/go-merkle"
 	"golang.org/x/crypto/blake2b"
 	"reflect"
 	"sort"
 	"strings"
 	"encoding/base64"
 	"strconv"
+	"github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/golang/protobuf/ptypes"
 )
 
 
@@ -185,6 +194,9 @@ func ValueToString(value interface{}) (s string, err error) {
 		return strconv.FormatInt(value.(int64), 10), nil
 	case reflect.TypeOf([]uint8{}):
 		return base64.StdEncoding.EncodeToString(value.([]uint8)), nil
+	case reflect.TypeOf(&timestamp.Timestamp{}):
+		v := reflect.ValueOf(value).Elem().Interface().(timestamp.Timestamp)
+		return ptypes.TimestampString(&v), nil
 	default:
 		return "", errors.New(fmt.Sprint("Got unsupported value: %s", t))
 	}
@@ -198,7 +210,7 @@ type LeafNode struct {
 	Salt     []byte
 }
 
-// ConcatValues concatenates property, value & salt into one byte slice using the NodeValueSeparator.
+// ConcatValues concatenates property, value & salt into one byte slice.
 func ConcatValues(prop string, value interface{}, salt []byte) (payload []byte, err error) {
 	propBytes := []byte(prop)
 	valueString, err := ValueToString(value)
