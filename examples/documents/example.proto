@@ -5,8 +5,6 @@ option go_package = "github.com/centrifuge/precise-proofs/examples/documents";
 
 import "google/protobuf/timestamp.proto";
 
-
-
 message ExampleDocument {
     string ValueA = 1;
     string ValueB = 2;
