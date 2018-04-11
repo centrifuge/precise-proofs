@@ -187,6 +187,11 @@ func ValidateProof(proof *Proof, rootHash []byte) (valid bool, err error) {
 // ValueToString takes any supported interface and returns a string representation of the value. This is used calculate
 // the hash and to create the proof object.
 func ValueToString(value interface{}) (s string, err error) {
+	// First dereference any pointers
+	if reflect.TypeOf(value).Kind() == reflect.Ptr {
+		value = reflect.ValueOf(value).Elem().Interface()
+	}
+
 	switch t := reflect.TypeOf(value); t {
 	case reflect.TypeOf(""):
 		return value.(string), nil
@@ -195,7 +200,7 @@ func ValueToString(value interface{}) (s string, err error) {
 	case reflect.TypeOf([]uint8{}):
 		return base64.StdEncoding.EncodeToString(value.([]uint8)), nil
 	case reflect.TypeOf(&timestamp.Timestamp{}):
-		v := reflect.ValueOf(value).Elem().Interface().(timestamp.Timestamp)
+		v := value.(timestamp.Timestamp)
 		return ptypes.TimestampString(&v), nil
 	default:
 		return "", errors.New(fmt.Sprint("Got unsupported value: %s", t))
