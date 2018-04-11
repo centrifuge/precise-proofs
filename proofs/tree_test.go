@@ -89,7 +89,7 @@ func TestFlatten_AllFieldTypes(t *testing.T) {
 	FillSalts(&messageSalts)
 
 	_, fieldOrder, err := FlattenMessage(message, &messageSalts)
-	assert.Equal(t, fieldOrder, []string{"StringValue", "TimestampValue"})
+	assert.Equal(t, []string{"StringValue", "TimestampValue"}, fieldOrder)
 	assert.Nil(t, err)
 
 }

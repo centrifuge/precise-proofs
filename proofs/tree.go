@@ -199,7 +199,7 @@ func ValueToString(value interface{}) (s string, err error) {
 		return strconv.FormatInt(value.(int64), 10), nil
 	case reflect.TypeOf([]uint8{}):
 		return base64.StdEncoding.EncodeToString(value.([]uint8)), nil
-	case reflect.TypeOf(&timestamp.Timestamp{}):
+	case reflect.TypeOf(timestamp.Timestamp{}):
 		v := value.(timestamp.Timestamp)
 		return ptypes.TimestampString(&v), nil
 	default:
