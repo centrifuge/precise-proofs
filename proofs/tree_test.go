@@ -8,6 +8,8 @@ import (
 	"testing"
 	"encoding/base64"
 	"github.com/centrifuge/precise-proofs/examples/documents"
+	"github.com/golang/protobuf/ptypes"
+	"time"
 )
 
 type UnsupportedType struct {
@@ -28,6 +30,12 @@ func TestValueToString(t *testing.T) {
 	v, err := ValueToString(UnsupportedType{false})
 	assert.Error(t, err)
   assert.Equal(t, "", v)
+
+	ts := time.Now()
+	ts.UnmarshalJSON([]byte(fmt.Sprintf("\"%s\"", documents.ExampleTimeString)))
+	pt, _ := ptypes.TimestampProto(ts)
+	v, _ = ValueToString(pt)
+	assert.Equal(t, documents.ExampleTimeString, v)
 }
 
 func TestLeaf(t *testing.T) {
@@ -73,6 +81,17 @@ func TestFlatten(t *testing.T) {
 	expectedPayload := append([]byte("ValueA"),  v...)
 	expectedPayload = append(expectedPayload, messageSalts.ValueA[:]...)
 	assert.Equal(t, expectedPayload, flattened[2])
+}
+
+func TestFlatten_AllFieldTypes(t *testing.T) {
+	message := documents.NewAllFieldTypes()
+	messageSalts := documents.AllFieldTypesSalts{}
+	FillSalts(&messageSalts)
+
+	_, fieldOrder, err := FlattenMessage(message, &messageSalts)
+	assert.Equal(t, []string{"StringValue", "TimestampValue"}, fieldOrder)
+	assert.Nil(t, err)
+
 }
 
 func TestFillSalts(t *testing.T) {

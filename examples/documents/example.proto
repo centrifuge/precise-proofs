@@ -2,12 +2,25 @@ syntax = "proto3";
 package documents;
 option go_package = "github.com/centrifuge/precise-proofs/examples/documents";
 
+
+import "google/protobuf/timestamp.proto";
+
 message ExampleDocument {
     string ValueA = 1;
     string ValueB = 2;
     int64 Value1 = 3;
     int64 Value2 = 4;
     bytes ValueBytes1 = 5;
+}
+
+message AllFieldTypes {
+    string StringValue = 1;
+    google.protobuf.Timestamp TimestampValue = 2;
+}
+
+message AllFieldTypesSalts {
+    bytes StringValue = 1;
+    bytes TimestampValue = 2;
 }
 
 message LongDocument {
