@@ -187,9 +187,25 @@ func ValidateProof(proof *Proof, rootHash []byte) (valid bool, err error) {
 // ValueToString takes any supported interface and returns a string representation of the value. This is used calculate
 // the hash and to create the proof object.
 func ValueToString(value interface{}) (s string, err error) {
-	// First dereference any pointers
+	// nil values should return an empty string
+	if reflect.TypeOf(value) == reflect.TypeOf(nil) {
+		return "", nil
+	}
+
+	// nil pointers should also return an empty string
+	if reflect.TypeOf(value).Kind() == reflect.Ptr && reflect.ValueOf(value).IsNil() {
+		return "", nil
+	}
+
+	// Dereference any pointers
 	if reflect.TypeOf(value).Kind() == reflect.Ptr {
-		value = reflect.ValueOf(value).Elem().Interface()
+		elem := reflect.ValueOf(value).Elem()
+
+		// Check if elem is a zero value, return empty string if it is.
+		if elem == reflect.Zero(reflect.TypeOf(elem)) {
+			return "", nil
+		}
+		value = elem.Interface()
 	}
 
 	switch t := reflect.TypeOf(value); t {

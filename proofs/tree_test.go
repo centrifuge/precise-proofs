@@ -10,6 +10,7 @@ import (
 	"github.com/centrifuge/precise-proofs/examples/documents"
 	"github.com/golang/protobuf/ptypes"
 	"time"
+	"github.com/golang/protobuf/ptypes/timestamp"
 )
 
 type UnsupportedType struct {
@@ -17,25 +18,41 @@ type UnsupportedType struct {
 }
 
 func TestValueToString(t *testing.T) {
-	v, _ := ValueToString(int64(42))
+	v, err := ValueToString(nil)
+	assert.Equal(t, "", v)
+	assert.Nil(t, err)
+
+	v, err = ValueToString(int64(42))
 	assert.Equal(t, "42", v, "int64(42) to string failed")
+	assert.Nil(t, err)
 
-	v, _ = ValueToString("Hello World.")
+	v, err = ValueToString("Hello World.")
 	assert.Equal(t, "Hello World.", v, "string(\"Hello World\".) to string failed")
+	assert.Nil(t, err)
 
-	v, _ = ValueToString([]byte("42"))
+	v, err = ValueToString([]byte("42"))
 	expected := base64.StdEncoding.EncodeToString([]byte("42"))
 	assert.Equal(t, expected, v, "[]byte(\"42\") to string failed")
+	assert.Nil(t, err)
 
-	v, err := ValueToString(UnsupportedType{false})
-	assert.Error(t, err)
+	v, err = ValueToString(UnsupportedType{false})
   assert.Equal(t, "", v)
+	assert.Error(t, err)
 
+  // Timestamp
 	ts := time.Now()
 	ts.UnmarshalJSON([]byte(fmt.Sprintf("\"%s\"", documents.ExampleTimeString)))
 	pt, _ := ptypes.TimestampProto(ts)
-	v, _ = ValueToString(pt)
+	v, err = ValueToString(pt)
 	assert.Equal(t, documents.ExampleTimeString, v)
+	assert.Nil(t, err)
+
+	// Test empty pointer (zero value)
+	var  emptyTimestamp *timestamp.Timestamp;
+	emptyTimestamp = nil
+	v, err = ValueToString(emptyTimestamp)
+	assert.Equal(t, "", v)
+	assert.Nil(t, err)
 }
 
 func TestLeaf(t *testing.T) {
