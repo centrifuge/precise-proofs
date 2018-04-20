@@ -33,6 +33,8 @@ Example Usage
 			proofs.FillSalts(&salts)
 
 			doctree := proofs.NewDocumentTree()
+			ssha256Hash := sha256.New()
+			doctree.SetHashFunc(sha256Hash)
 			doctree.FillTree(&document, &salts)
 			fmt.Printf("Generated tree: %s\n", doctree.String())
 
@@ -54,21 +56,21 @@ package proofs
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/go-bongo/go-dotaccess"
-	"github.com/golang/protobuf/proto"
-	"github.com/xsleonard/go-merkle"
-	"golang.org/x/crypto/blake2b"
+	"hash"
 	"reflect"
 	"sort"
-	"strings"
-	"encoding/base64"
 	"strconv"
+	"strings"
+
+	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/golang/protobuf/ptypes"
+	"github.com/go-bongo/go-dotaccess"
+	"github.com/xsleonard/go-merkle"
 )
-
 
 // DocumentTree is a helper object to create a merkleTree and proofs for fields in the document
 type DocumentTree struct {
@@ -77,6 +79,7 @@ type DocumentTree struct {
 	rootHash     []byte
 	salts        proto.Message
 	document     proto.Message
+	hash         hash.Hash
 }
 
 func (doctree *DocumentTree) String() string {
@@ -84,22 +87,31 @@ func (doctree *DocumentTree) String() string {
 		"DocumentTree with Hash [%s] and [%d] leaves",
 		base64.StdEncoding.EncodeToString(doctree.RootHash()),
 		len(doctree.merkleTree.Leaves()),
-		)
+	)
 }
 
 // NewDocumentTree returns an empty DocumentTree
-func NewDocumentTree () DocumentTree {
-	return DocumentTree{[]string{}, merkle.NewTree(), []byte{}, nil, nil}
+func NewDocumentTree() DocumentTree {
+	return DocumentTree{[]string{}, merkle.NewTree(), []byte{}, nil, nil, nil}
+}
+
+// SetHashFunc to an implementation of hash.Hash of your choice
+func (doctree *DocumentTree) SetHashFunc(h hash.Hash) {
+	doctree.hash = h
 }
 
 // FillTree fills a merkleTree with a provided document and salts
-func (doctree *DocumentTree) FillTree(document, salts proto.Message) (err error){
+func (doctree *DocumentTree) FillTree(document, salts proto.Message) (err error) {
+	if doctree.hash == nil {
+		return fmt.Errorf("DocumentTree.hash is not set")
+	}
+
 	leaves, propertyList, err := FlattenMessage(document, salts)
 	if err != nil {
 		return err
 	}
-	blakeHash, _ := blake2b.New256([]byte{})
-	doctree.merkleTree.Generate(leaves, blakeHash)
+
+	doctree.merkleTree.Generate(leaves, doctree.hash)
 	doctree.rootHash = doctree.merkleTree.Root().Hash
 	doctree.propertyList = propertyList
 	doctree.document = document
@@ -108,7 +120,7 @@ func (doctree *DocumentTree) FillTree(document, salts proto.Message) (err error)
 }
 
 // IsEmpty returns false if the tree contains no leaves
-func (doctree *DocumentTree) IsEmpty () bool {
+func (doctree *DocumentTree) IsEmpty() bool {
 	return len(doctree.merkleTree.Nodes) == 0
 }
 
@@ -170,17 +182,17 @@ func (doctree *DocumentTree) pickHashesFromMerkleTree(leaf uint64) (hashes []*Me
 
 // ValidateProof by comparing it to the tree's rootHash
 func (doctree *DocumentTree) ValidateProof(proof *Proof) (valid bool, err error) {
-	return ValidateProof(proof, doctree.rootHash)
+	return ValidateProof(proof, doctree.rootHash, doctree.hash)
 }
 
 // ValidateProof by comparing it to a given merkle tree root
-func ValidateProof(proof *Proof, rootHash []byte) (valid bool, err error) {
-	hash, err := CalculateHashForProofField(proof)
+func ValidateProof(proof *Proof, rootHash []byte, hashFunc hash.Hash) (valid bool, err error) {
+	hash, err := CalculateHashForProofField(proof, hashFunc)
 	if err != nil {
 		return false, err
 	}
 
-	valid, err = ValidateProofHashes(hash, proof.Hashes, rootHash)
+	valid, err = ValidateProofHashes(hash, proof.Hashes, rootHash, hashFunc)
 	return
 }
 
@@ -386,13 +398,21 @@ func getIndexOfString(slice []string, match string) (index int, err error) {
 
 // HashTwoValues concatenate two hashes to calculate hash out of the result. This is used in the merkleTree calculation code
 // as well as the validation code.
-func HashTwoValues(a, b []byte) (hash []byte) {
+func HashTwoValues(a []byte, b []byte, hashFunc hash.Hash) (hash []byte) {
 	data := make([]byte, 64)
 	copy(data[:32], a[:32])
 	copy(data[32:], b[:32])
-	h := blake2b.Sum256(data)
-	hash = h[:]
-	return
+	return hashBytes(hashFunc, data)
+}
+
+// hashBytes takes a hash.Hash interface and hashes the provided value
+func hashBytes(hashFunc hash.Hash, input []byte) []byte {
+	defer hashFunc.Reset()
+	_, err := hashFunc.Write(input[:])
+	if err != nil {
+		return []byte{}
+	}
+	return hashFunc.Sum(nil)
 }
 
 // po2 calculates 2 to the power of i
@@ -419,24 +439,24 @@ func CalculateProofNodeList(node, leafCount uint64) (nodes []*HashNode, err erro
 	height, _ := merkle.CalculateHeightAndNodeCount(leafCount)
 	index := 0
 	level := height - 1
-	lastNodeInLevel := leafCount-1
+	lastNodeInLevel := leafCount - 1
 	offset := uint64(0)
 	nodes = make([]*HashNode, height-1)
 
 	for i := level; i > 0; i-- {
 		// only add hash if this isn't an odd end
-		if !(node == lastNodeInLevel && (lastNodeInLevel+1) % 2 == 1) {
-			if node % 2 == 0 {
-				nodes[index] = &HashNode{false, offset+node+1}
+		if !(node == lastNodeInLevel && (lastNodeInLevel+1)%2 == 1) {
+			if node%2 == 0 {
+				nodes[index] = &HashNode{false, offset + node + 1}
 			} else {
-				nodes[index] = &HashNode{true, offset+node-1}
+				nodes[index] = &HashNode{true, offset + node - 1}
 			}
 			index++
 		}
-		node = node/2
+		node = node / 2
 
-		offset += lastNodeInLevel+1
-		lastNodeInLevel = (lastNodeInLevel+1) / 2 + (lastNodeInLevel+1) % 2 - 1
+		offset += lastNodeInLevel + 1
+		lastNodeInLevel = (lastNodeInLevel+1)/2 + (lastNodeInLevel+1)%2 - 1
 		level--
 	}
 	return nodes[:index], nil
@@ -444,24 +464,22 @@ func CalculateProofNodeList(node, leafCount uint64) (nodes []*HashNode, err erro
 
 // CalculateHashForProofField takes a Proof struct and returns a hash of the concatenated property name, value & salt.
 // Uses ConcatValues internally.
-func CalculateHashForProofField(proof *Proof) (hash []byte, err error) {
+func CalculateHashForProofField(proof *Proof, hashFunc hash.Hash) (hash []byte, err error) {
 	input, err := ConcatValues(proof.Property, proof.Value, proof.Salt)
 	if err != nil {
 		return []byte{}, err
 	}
-
-	h := blake2b.Sum256(input)
-	hash = h[:]
+	hash = hashBytes(hashFunc, input)
 	return hash, nil
 }
 
 // ValidateProofHashes calculates the merkle root based on a list of left/right hashes.
-func ValidateProofHashes(hash []byte, hashes []*MerkleHash, rootHash []byte) (valid bool, err error) {
+func ValidateProofHashes(hash []byte, hashes []*MerkleHash, rootHash []byte, hashFunc hash.Hash) (valid bool, err error) {
 	for i := 0; i < len(hashes); i++ {
 		if len(hashes[i].Left) == 0 {
-			hash = HashTwoValues(hash, hashes[i].Right)
+			hash = HashTwoValues(hash, hashes[i].Right, hashFunc)
 		} else {
-			hash = HashTwoValues(hashes[i].Left, hash)
+			hash = HashTwoValues(hashes[i].Left, hash, hashFunc)
 		}
 	}
 

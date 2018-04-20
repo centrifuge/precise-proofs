@@ -73,6 +73,8 @@ See below code sample (`examples/simple.go`) for a usage example.
 	proofs.FillSalts(&salts)
 
 	doctree := proofs.NewDocumentTree()
+	sha256Hash := sha256.New()
+	doctree.SetHashFunc(sha256Hash)
 	doctree.FillTree(&document, &salts)
 	fmt.Printf("Generated tree: %s\n", doctree.String())
 	// Output:
@@ -94,4 +96,3 @@ See below code sample (`examples/simple.go`) for a usage example.
 The following features are being worked on:
 * Support for nested documents
 * Currently only timestamp.Timestamp, []byte, int64 and string types are supported, support more standard types
-* Custom hash functions, the hash function currently used is blake2b
