@@ -485,8 +485,6 @@ func ValidateProofHashes(hash []byte, hashes []*MerkleHash, rootHash []byte, has
 		}
 	}
 
-	fmt.Println("hash1", hash)
-	fmt.Println("root1", rootHash)
 	if !bytes.Equal(hash, rootHash) {
 		return false, errors.New("Hash does not match")
 	}
