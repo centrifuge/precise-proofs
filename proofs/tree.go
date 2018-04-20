@@ -402,9 +402,13 @@ func HashTwoValues(a []byte, b []byte, hashFunc hash.Hash) (hash []byte) {
 	data := make([]byte, 64)
 	copy(data[:32], a[:32])
 	copy(data[32:], b[:32])
+	return hashBytes(hashFunc, data)
+}
 
+// hashBytes takes a hash.Hash interface and hashes the provided value
+func hashBytes(hashFunc hash.Hash, input []byte) []byte {
 	defer hashFunc.Reset()
-	_, err := hashFunc.Write(data[:])
+	_, err := hashFunc.Write(input[:])
 	if err != nil {
 		return []byte{}
 	}
@@ -465,13 +469,7 @@ func CalculateHashForProofField(proof *Proof, hashFunc hash.Hash) (hash []byte, 
 	if err != nil {
 		return []byte{}, err
 	}
-
-	defer hashFunc.Reset()
-	_, err = hashFunc.Write(input[:])
-	if err != nil {
-		return []byte{}, err
-	}
-	hash = hashFunc.Sum(nil)
+	hash = hashBytes(hashFunc, input)
 	return hash, nil
 }
 
