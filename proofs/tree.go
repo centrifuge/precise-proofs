@@ -47,7 +47,7 @@ Example Usage
 			fmt.Printf("Proof validated: %v\n", valid)
 		}
 
- */
+*/
 package proofs
 
 // Use below command to update proof protobuf file.
@@ -65,10 +65,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/golang/protobuf/ptypes"
 	"github.com/go-bongo/go-dotaccess"
+	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/xsleonard/go-merkle"
 )
 
@@ -328,7 +328,7 @@ func getPropertyNameFromProtobufTag(tag string) (name string, err error) {
 // FlattenMessage takes a protobuf message struct and flattens it into an array of nodes. This currently doesn't support
 // nested structures and lists.
 //
-// The fields are sorted lexicographically by their protobuf field names. 
+// The fields are sorted lexicographically by their protobuf field names.
 func FlattenMessage(message, messageSalts proto.Message) (nodes [][]byte, propOrder []string, err error) {
 	leaves := LeafList{}
 	v := reflect.ValueOf(message).Elem()
@@ -437,29 +437,24 @@ func CalculateProofNodeList(node, leafCount uint64) (nodes []*HashNode, err erro
 	}
 
 	height, _ := merkle.CalculateHeightAndNodeCount(leafCount)
-	index := 0
-	level := height - 1
 	lastNodeInLevel := leafCount - 1
 	offset := uint64(0)
-	nodes = make([]*HashNode, height-1)
+	nodes = make([]*HashNode, 0)
 
-	for i := level; i > 0; i-- {
+	for level := height - 1; level > 0; level-- {
 		// only add hash if this isn't an odd end
 		if !(node == lastNodeInLevel && (lastNodeInLevel+1)%2 == 1) {
 			if node%2 == 0 {
-				nodes[index] = &HashNode{false, offset + node + 1}
+				nodes = append(nodes, &HashNode{false, offset + node + 1})
 			} else {
-				nodes[index] = &HashNode{true, offset + node - 1}
+				nodes = append(nodes, &HashNode{true, offset + node - 1})
 			}
-			index++
 		}
 		node = node / 2
-
 		offset += lastNodeInLevel + 1
 		lastNodeInLevel = (lastNodeInLevel+1)/2 + (lastNodeInLevel+1)%2 - 1
-		level--
 	}
-	return nodes[:index], nil
+	return nodes, nil
 }
 
 // CalculateHashForProofField takes a Proof struct and returns a hash of the concatenated property name, value & salt.

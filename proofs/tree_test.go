@@ -1,17 +1,17 @@
 package proofs
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"fmt"
+	"github.com/centrifuge/precise-proofs/examples/documents"
+	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/assert"
 	"github.com/xsleonard/go-merkle"
 	"golang.org/x/crypto/blake2b"
 	"testing"
-	"encoding/base64"
-	"github.com/centrifuge/precise-proofs/examples/documents"
-	"github.com/golang/protobuf/ptypes"
 	"time"
-	"github.com/golang/protobuf/ptypes/timestamp"
-	"crypto/sha256"
 )
 
 type UnsupportedType struct {
@@ -49,7 +49,7 @@ func TestValueToString(t *testing.T) {
 	assert.Nil(t, err)
 
 	// Test empty pointer (zero value)
-	var emptyTimestamp *timestamp.Timestamp;
+	var emptyTimestamp *timestamp.Timestamp
 	emptyTimestamp = nil
 	v, err = ValueToString(emptyTimestamp)
 	assert.Equal(t, "", v)
