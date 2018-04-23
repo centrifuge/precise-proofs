@@ -437,24 +437,26 @@ func CalculateProofNodeList(node, leafCount uint64) (nodes []*HashNode, err erro
 	}
 
 	height, _ := merkle.CalculateHeightAndNodeCount(leafCount)
+	index := 0
 	lastNodeInLevel := leafCount - 1
 	offset := uint64(0)
-	nodes = make([]*HashNode, 0)
+	nodes = make([]*HashNode, height-1)
 
 	for level := height - 1; level > 0; level-- {
 		// only add hash if this isn't an odd end
 		if !(node == lastNodeInLevel && (lastNodeInLevel+1)%2 == 1) {
 			if node%2 == 0 {
-				nodes = append(nodes, &HashNode{false, offset + node + 1})
+				nodes[index] = &HashNode{false, offset + node + 1}
 			} else {
-				nodes = append(nodes, &HashNode{true, offset + node - 1})
+				nodes[index] = &HashNode{true, offset + node - 1}
 			}
+			index++
 		}
 		node = node / 2
 		offset += lastNodeInLevel + 1
 		lastNodeInLevel = (lastNodeInLevel+1)/2 + (lastNodeInLevel+1)%2 - 1
 	}
-	return nodes, nil
+	return nodes[:index], nil
 }
 
 // CalculateHashForProofField takes a Proof struct and returns a hash of the concatenated property name, value & salt.

@@ -321,6 +321,12 @@ func TestCalculateProofNodeList(t *testing.T) {
 
 }
 
+func BenchmarkCalculateProofNodeList(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		CalculateProofNodeList(50, 100)
+	}
+}
+
 // TestTree_SetHashFunc tests calculating hashes both with sha256 & blake2b
 func TestTree_SetHashFunc(t *testing.T) {
 	doctree := NewDocumentTree()
