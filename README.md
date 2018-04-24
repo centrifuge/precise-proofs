@@ -3,11 +3,13 @@ Precise Proofs
 [![GoDoc](https://godoc.org/github.com/centrifuge/precise-proofs/proofs?status.svg)](https://godoc.org/github.com/centrifuge/precise-proofs/proofs)
 [![Travis CI](https://api.travis-ci.org/centrifuge/precise-proofs.svg?branch=master)](https://travis-ci.org/centrifuge/precise-proofs)
 
-Precise Proofs is a library for creating merkle proofs out of protobuf messages. It 
+Read the [introduction on Precise-Proofs](https://github.com/centrifuge/precise-proofs)
+
+Precise-Proofs is a library for creating Merkle proofs out of protobuf messages. It 
 handles flattening of objects, ordering the fields by label and creating shareable and
 independently verifiable proofs.
 
-This library takes arbitrary protobuf messages and makes sure a merkle tree can be reliable calculated
+This library takes arbitrary protobuf messages and makes sure a Merkle tree can be reliable calculated
 from the values with each value representing a leaf in the tree. 
 ```js,
 { 
@@ -26,7 +28,7 @@ Above example would result in the following tree:
 ![Merkle tree example](https://raw.githubusercontent.com/centrifuge/precise-proofs/master/docs/tree.png)
 
 ## Proof format
-This library defines a proof format that ensures both human readable, concise and secure merkle proofs:
+This library defines a proof format that ensures both human readable, concise and secure Merkle proofs:
 
 ```js,
 {  
@@ -67,8 +69,8 @@ See below code sample (`examples/simple.go`) for a usage example.
 	}
 
 	// The FillSalts method is a helper function that fills all fields with 32 
-    // random bytes. SaltedExampleDocument is a protobuf message that has the 
-    // same structure as ExampleDocument but has all `bytes` field types.
+        // random bytes. SaltedExampleDocument is a protobuf message that has the 
+        // same structure as ExampleDocument but has all `bytes` field types.
 	salts := documents.SaltedExampleDocument{}
 	proofs.FillSalts(&salts)
 
@@ -83,16 +85,16 @@ See below code sample (`examples/simple.go`) for a usage example.
     proof, _ := doctree.CreateProof("ValueA")
 	proofJson, _ := json.Marshal(proof)
 	fmt.Println(string(proofJson))
-    // Output:
-    // {"property":"ValueA","value":"Foo","salt":"YSJ0pFJ4fk0gYsCOU2zLC1xAcqSDcw7tdV4M5ydlCNw=","hashes":[{"right":"anfIr8Oa4PjWQsf2qFLIGgFBeBphTI+RGBaKp8F6Fw0="},{"left":"B+/DkYDB2vvYAuw9GTbVk7jpxM2vPddxsbhldM1wOus="},{"right":"hCkGp+gqakfRE1aLg4j4mA9eAvKn0LbulLOAKUVLSCg="}]}
+        // Output:
+        // {"property":"ValueA","value":"Foo","salt":"YSJ0pFJ4fk0gYsCOU2zLC1xAcqSDcw7tdV4M5ydlCNw=","hashes":[{"right":"anfIr8Oa4PjWQsf2qFLIGgFBeBphTI+RGBaKp8F6Fw0="},{"left":"B+/DkYDB2vvYAuw9GTbVk7jpxM2vPddxsbhldM1wOus="},{"right":"hCkGp+gqakfRE1aLg4j4mA9eAvKn0LbulLOAKUVLSCg="}]}
 
 	valid, _ := doctree.ValidateProof(&proof)
 	fmt.Printf("Proof validated: %v\n", valid)
-    // Output:
-    // Proof validated: true
+        // Output:
+        // Proof validated: true
 ```
 
 ### Missing features
 The following features are being worked on:
 * Support for nested documents
-* Currently only timestamp.Timestamp, []byte, int64 and string types are supported, support more standard types
+* Add support for more types, currently only timestamp.Timestamp, []byte, int64 and string types are supported
