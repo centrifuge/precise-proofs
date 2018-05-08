@@ -310,7 +310,7 @@ func TestCalculateProofNodeList(t *testing.T) {
 			assert.Equal(t,
 				results[i][j].Left,
 				n.Left,
-				fmt.Sprintf("CalculateProofNodeList(%d, %d), node #: %d, %s, %d", input[0], input[1], j, results[i][j].Left, results[i][j].Leaf))
+				fmt.Sprintf("CalculateProofNodeList(%d, %d), node #: %d, %t, %d", input[0], input[1], j, results[i][j].Left, results[i][j].Leaf))
 
 			assert.Equal(t,
 				results[i][j].Leaf,

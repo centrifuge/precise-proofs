@@ -231,7 +231,7 @@ func ValueToString(value interface{}) (s string, err error) {
 		v := value.(timestamp.Timestamp)
 		return ptypes.TimestampString(&v), nil
 	default:
-		return "", errors.New(fmt.Sprint("Got unsupported value: %s", t))
+		return "", errors.New(fmt.Sprintf("Got unsupported value: %t", t))
 	}
 	return
 }
