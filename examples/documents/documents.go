@@ -18,11 +18,12 @@ var FilledExampleDocument ExampleDocument = ExampleDocument{
 }
 
 var ExampleDocumentSalts SaltedExampleDocument = SaltedExampleDocument{
-	ValueA:      salt,
-	ValueB:      salt,
-	Value1:      salt,
-	Value2:      salt,
-	ValueBytes1: salt,
+	ValueA:          salt,
+	ValueB:          salt,
+	Value1:          salt,
+	Value2:          salt,
+	ValueBytes1:     salt,
+	ValueCamelCased: salt,
 }
 
 var ExampleTimeString string = "2018-04-10T01:23:12.697116Z"
@@ -33,6 +34,6 @@ func NewAllFieldTypes() *AllFieldTypes {
 	t.UnmarshalJSON([]byte(ExampleTimeString))
 	now, _ := ptypes.TimestampProto(t)
 	m.StringValue = "foobar"
-	m.TimestampValue = now
+	m.TimeStampValue = now
 	return &m
 }

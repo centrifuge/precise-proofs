@@ -7,63 +7,65 @@ package documents;
 option go_package = "github.com/centrifuge/precise-proofs/examples/documents";
 
 message ExampleDocument {
-  string ValueA = 1;
-  string ValueB = 2;
-  int64 Value1 = 3;
-  int64 Value2 = 4;
-  bytes ValueBytes1 = 5;
+  string valueA = 1;
+  string valueB = 2;
+  int64 value1 = 3;
+  int64 value2 = 4;
+  bytes value_bytes1 = 5;
+  bytes ValueCamelCased = 6;
 }
 
 message AllFieldTypes {
-  string StringValue = 1;
-  google.protobuf.Timestamp TimestampValue = 2;
+  string string_value = 1;
+  google.protobuf.Timestamp time_stamp_value = 2;
 }
 
 message AllFieldTypesSalts {
-  bytes StringValue = 1;
-  bytes TimestampValue = 2;
+  bytes string_value = 1;
+  bytes time_stamp_value = 2;
 }
 
 message LongDocument {
-  int64 Value0 = 16;
-  int64 Value1 = 1;
-  int64 Value2 = 2;
-  int64 Value3 = 3;
-  int64 Value4 = 4;
-  int64 Value5 = 5;
-  int64 Value6 = 6;
-  int64 Value7 = 7;
-  int64 Value8 = 8;
-  int64 Value9 = 9;
-  int64 ValueA = 10;
-  int64 ValueB = 11;
-  int64 ValueC = 12;
-  int64 ValueD = 13;
-  int64 ValueE = 14;
+  int64 value0 = 16;
+  int64 value1 = 1;
+  int64 value2 = 2;
+  int64 value3 = 3;
+  int64 value4 = 4;
+  int64 value5 = 5;
+  int64 value6 = 6;
+  int64 value7 = 7;
+  int64 value8 = 8;
+  int64 value9 = 9;
+  int64 valueA = 10;
+  int64 valueB = 11;
+  int64 valueC = 12;
+  int64 valueD = 13;
+  int64 valueE = 14;
 }
 
 message SaltedLongDocument {
-  bytes Value0 = 16;
-  bytes Value1 = 1;
-  bytes Value2 = 2;
-  bytes Value3 = 3;
-  bytes Value4 = 4;
-  bytes Value5 = 5;
-  bytes Value6 = 6;
-  bytes Value7 = 7;
-  bytes Value8 = 8;
-  bytes Value9 = 9;
-  bytes ValueA = 10;
-  bytes ValueB = 11;
-  bytes ValueC = 12;
-  bytes ValueD = 13;
-  bytes ValueE = 14;
+  bytes value0 = 16;
+  bytes value1 = 1;
+  bytes value2 = 2;
+  bytes value3 = 3;
+  bytes value4 = 4;
+  bytes value5 = 5;
+  bytes value6 = 6;
+  bytes value7 = 7;
+  bytes value8 = 8;
+  bytes value9 = 9;
+  bytes valueA = 10;
+  bytes valueB = 11;
+  bytes valueC = 12;
+  bytes valueD = 13;
+  bytes valueE = 14;
 }
 
 message SaltedExampleDocument {
-  bytes ValueA = 1;
-  bytes ValueB = 2;
-  bytes Value1 = 3;
-  bytes Value2 = 4;
-  bytes ValueBytes1 = 5;
+  bytes valueA = 1;
+  bytes valueB = 2;
+  bytes value1 = 3;
+  bytes value2 = 4;
+  bytes value_bytes1 = 5;
+  bytes ValueCamelCased = 6;
 }

@@ -43,7 +43,6 @@ Example Usage
 			fmt.Println("Proof:\n", string(proofJson))
 
 			valid, _ := doctree.ValidateProof(&proof)
-
 			fmt.Printf("Proof validated: %v\n", valid)
 		}
 
@@ -253,6 +252,9 @@ func ConcatValues(prop string, value interface{}, salt []byte) (payload []byte, 
 
 	payload = append(payload, propBytes...)
 	payload = append(payload, []byte(valueString)...)
+	if len(salt) != 32 {
+		return []byte{}, fmt.Errorf("Salt has incorrect length: %d instead of 32", len(salt))
+	}
 	payload = append(payload, salt[:32]...)
 	return
 }
