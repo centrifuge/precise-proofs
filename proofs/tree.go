@@ -33,7 +33,7 @@ Example Usage
 			proofs.FillSalts(&salts)
 
 			doctree := proofs.NewDocumentTree()
-			ssha256Hash := sha256.New()
+			sha256Hash := sha256.New()
 			doctree.SetHashFunc(sha256Hash)
 			doctree.FillTree(&document, &salts)
 			fmt.Printf("Generated tree: %s\n", doctree.String())
@@ -171,9 +171,9 @@ func (doctree *DocumentTree) pickHashesFromMerkleTree(leaf uint64) (hashes []*Me
 	for i, n := range proofNodes {
 		h := doctree.merkleTree.Nodes[n.Leaf].Hash
 		if n.Left {
-			hashes[i] = &MerkleHash{h, nil}
+			hashes[i] = &MerkleHash{Left: h, Right: nil}
 		} else {
-			hashes[i] = &MerkleHash{nil, h}
+			hashes[i] = &MerkleHash{Left: nil, Right: h}
 
 		}
 	}
@@ -283,6 +283,11 @@ func FillSalts(message proto.Message) (err error) {
 
 	for i := 0; i < v.NumField(); i++ {
 		f := v.Field(i)
+		// Ignore fields starting with XXX_, those are protobuf internals
+		if strings.HasPrefix(v.Type().Field(i).Name, "XXX_") {
+			continue
+		}
+
 		if f.Type() != reflect.TypeOf([]uint8{}) {
 			return fmt.Errorf("Invalid type (%s) for field", f.Type().String())
 		}
@@ -338,6 +343,11 @@ func FlattenMessage(message, messageSalts proto.Message) (nodes [][]byte, propOr
 	for i := 0; i < v.NumField(); i++ {
 		value := v.Field(i).Interface()
 		tag := v.Type().Field(i).Tag.Get("protobuf")
+
+		// Ignore fields starting with XXX_, those are protobuf internals
+		if strings.HasPrefix(v.Type().Field(i).Name, "XXX_") {
+			continue
+		}
 		prop, err := getPropertyNameFromProtobufTag(tag)
 		if err != nil {
 			return [][]byte{}, []string{}, err

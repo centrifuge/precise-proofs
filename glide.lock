@@ -9,8 +9,4 @@ imports:
   version: 12b6f73e6084dad08a7c6e575284b177ecafbc71
 - name: github.com/xsleonard/go-merkle
   version: c71c7cc334c839f31f3760b2385eab8381daf64e
-- name: golang.org/x/crypto
-  version: 5119cf507ed5294cc409c092980c7497ee5d6fd2
-  subpackages:
-  - blake2b
 testImports: []
