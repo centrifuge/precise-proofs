@@ -65,10 +65,10 @@ func (m *MerkleHash) GetRight() []byte {
 }
 
 type Proof struct {
-	Property             string        `protobuf:"bytes,1,opt,name=property" json:"property,omitempty"`
-	Value                string        `protobuf:"bytes,2,opt,name=value" json:"value,omitempty"`
+	Property             string        `protobuf:"bytes,1,opt,name=property,proto3" json:"property,omitempty"`
+	Value                string        `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
 	Salt                 []byte        `protobuf:"bytes,3,opt,name=salt,proto3" json:"salt,omitempty"`
-	Hashes               []*MerkleHash `protobuf:"bytes,4,rep,name=hashes" json:"hashes,omitempty"`
+	Hashes               []*MerkleHash `protobuf:"bytes,4,rep,name=hashes,proto3" json:"hashes,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
 	XXX_unrecognized     []byte        `json:"-"`
 	XXX_sizecache        int32         `json:"-"`

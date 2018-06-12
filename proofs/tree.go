@@ -50,7 +50,7 @@ Example Usage
 package proofs
 
 // Use below command to update proof protobuf file.
-//go:generate protoc -I $PROTOBUF/src/ -I. -I $GOPATH/src --go_out=$GOPATH/src/ proof.proto
+//go:generate protoc -I $PROTOBUF/include/ -I. -I $GOPATH/src --go_out=$GOPATH/src/ proof.proto
 
 import (
 	"bytes"
@@ -68,6 +68,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/iancoleman/strcase"
 	"github.com/xsleonard/go-merkle"
 )
 
@@ -381,6 +382,7 @@ func FlattenMessage(message, messageSalts proto.Message) (nodes [][]byte, propOr
 // getStringValueByProperty gets a value from a (nested) struct and returns the value. This method does not yet
 // support nested structs. It converts the value to a string representation.
 func getStringValueByProperty(prop string, message proto.Message) (value string, err error) {
+	prop = strcase.ToCamel(prop)
 	v, err := dotaccess.Get(message, prop)
 	if err != nil {
 		return "", err

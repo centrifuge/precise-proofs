@@ -380,8 +380,16 @@ func TestTree_GenerateProof(t *testing.T) {
 }
 
 func TestGetStringValueByProperty(t *testing.T) {
-	value, _ := getStringValueByProperty("valueA", &documents.FilledExampleDocument)
+	value, err := getStringValueByProperty("valueA", &documents.FilledExampleDocument)
+	assert.Nil(t, err)
 	assert.Equal(t, documents.FilledExampleDocument.ValueA, value)
+	doc := &documents.ExampleDocument{ValueCamelCased: []byte{2}, ValueBytes1: []byte{2}}
+	value, err = getStringValueByProperty("ValueCamelCased", doc)
+	assert.Nil(t, err)
+	assert.Equal(t, "Ag==", value)
+	value, err = getStringValueByProperty("value_bytes1", doc)
+	assert.Nil(t, err)
+	assert.Equal(t, "Ag==", value)
 }
 
 func TestCreateProof(t *testing.T) {

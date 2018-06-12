@@ -20,10 +20,10 @@ var _ = math.Inf
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type ExampleDocument struct {
-	ValueA               string   `protobuf:"bytes,1,opt,name=valueA" json:"valueA,omitempty"`
-	ValueB               string   `protobuf:"bytes,2,opt,name=valueB" json:"valueB,omitempty"`
-	Value1               int64    `protobuf:"varint,3,opt,name=value1" json:"value1,omitempty"`
-	Value2               int64    `protobuf:"varint,4,opt,name=value2" json:"value2,omitempty"`
+	ValueA               string   `protobuf:"bytes,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
+	ValueB               string   `protobuf:"bytes,2,opt,name=valueB,proto3" json:"valueB,omitempty"`
+	Value1               int64    `protobuf:"varint,3,opt,name=value1,proto3" json:"value1,omitempty"`
+	Value2               int64    `protobuf:"varint,4,opt,name=value2,proto3" json:"value2,omitempty"`
 	ValueBytes1          []byte   `protobuf:"bytes,5,opt,name=value_bytes1,json=valueBytes1,proto3" json:"value_bytes1,omitempty"`
 	ValueCamelCased      []byte   `protobuf:"bytes,6,opt,name=ValueCamelCased,proto3" json:"ValueCamelCased,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
@@ -98,8 +98,8 @@ func (m *ExampleDocument) GetValueCamelCased() []byte {
 }
 
 type AllFieldTypes struct {
-	StringValue          string               `protobuf:"bytes,1,opt,name=string_value,json=stringValue" json:"string_value,omitempty"`
-	TimeStampValue       *timestamp.Timestamp `protobuf:"bytes,2,opt,name=time_stamp_value,json=timeStampValue" json:"time_stamp_value,omitempty"`
+	StringValue          string               `protobuf:"bytes,1,opt,name=string_value,json=stringValue,proto3" json:"string_value,omitempty"`
+	TimeStampValue       *timestamp.Timestamp `protobuf:"bytes,2,opt,name=time_stamp_value,json=timeStampValue,proto3" json:"time_stamp_value,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
 	XXX_unrecognized     []byte               `json:"-"`
 	XXX_sizecache        int32                `json:"-"`
@@ -190,21 +190,21 @@ func (m *AllFieldTypesSalts) GetTimeStampValue() []byte {
 }
 
 type LongDocument struct {
-	Value0               int64    `protobuf:"varint,16,opt,name=value0" json:"value0,omitempty"`
-	Value1               int64    `protobuf:"varint,1,opt,name=value1" json:"value1,omitempty"`
-	Value2               int64    `protobuf:"varint,2,opt,name=value2" json:"value2,omitempty"`
-	Value3               int64    `protobuf:"varint,3,opt,name=value3" json:"value3,omitempty"`
-	Value4               int64    `protobuf:"varint,4,opt,name=value4" json:"value4,omitempty"`
-	Value5               int64    `protobuf:"varint,5,opt,name=value5" json:"value5,omitempty"`
-	Value6               int64    `protobuf:"varint,6,opt,name=value6" json:"value6,omitempty"`
-	Value7               int64    `protobuf:"varint,7,opt,name=value7" json:"value7,omitempty"`
-	Value8               int64    `protobuf:"varint,8,opt,name=value8" json:"value8,omitempty"`
-	Value9               int64    `protobuf:"varint,9,opt,name=value9" json:"value9,omitempty"`
-	ValueA               int64    `protobuf:"varint,10,opt,name=valueA" json:"valueA,omitempty"`
-	ValueB               int64    `protobuf:"varint,11,opt,name=valueB" json:"valueB,omitempty"`
-	ValueC               int64    `protobuf:"varint,12,opt,name=valueC" json:"valueC,omitempty"`
-	ValueD               int64    `protobuf:"varint,13,opt,name=valueD" json:"valueD,omitempty"`
-	ValueE               int64    `protobuf:"varint,14,opt,name=valueE" json:"valueE,omitempty"`
+	Value0               int64    `protobuf:"varint,16,opt,name=value0,proto3" json:"value0,omitempty"`
+	Value1               int64    `protobuf:"varint,1,opt,name=value1,proto3" json:"value1,omitempty"`
+	Value2               int64    `protobuf:"varint,2,opt,name=value2,proto3" json:"value2,omitempty"`
+	Value3               int64    `protobuf:"varint,3,opt,name=value3,proto3" json:"value3,omitempty"`
+	Value4               int64    `protobuf:"varint,4,opt,name=value4,proto3" json:"value4,omitempty"`
+	Value5               int64    `protobuf:"varint,5,opt,name=value5,proto3" json:"value5,omitempty"`
+	Value6               int64    `protobuf:"varint,6,opt,name=value6,proto3" json:"value6,omitempty"`
+	Value7               int64    `protobuf:"varint,7,opt,name=value7,proto3" json:"value7,omitempty"`
+	Value8               int64    `protobuf:"varint,8,opt,name=value8,proto3" json:"value8,omitempty"`
+	Value9               int64    `protobuf:"varint,9,opt,name=value9,proto3" json:"value9,omitempty"`
+	ValueA               int64    `protobuf:"varint,10,opt,name=valueA,proto3" json:"valueA,omitempty"`
+	ValueB               int64    `protobuf:"varint,11,opt,name=valueB,proto3" json:"valueB,omitempty"`
+	ValueC               int64    `protobuf:"varint,12,opt,name=valueC,proto3" json:"valueC,omitempty"`
+	ValueD               int64    `protobuf:"varint,13,opt,name=valueD,proto3" json:"valueD,omitempty"`
+	ValueE               int64    `protobuf:"varint,14,opt,name=valueE,proto3" json:"valueE,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
