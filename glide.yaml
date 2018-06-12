@@ -4,4 +4,3 @@ import:
 - package: github.com/go-bongo/go-dotaccess
 - package: github.com/stretchr/testify
   version: ^1.2.1
-- package: github.com/iancoleman/strcase

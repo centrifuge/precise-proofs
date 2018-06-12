@@ -11,8 +11,6 @@ imports:
   - ptypes/any
   - ptypes/duration
   - ptypes/timestamp
-- name: github.com/iancoleman/strcase
-  version: 90d371a664d668ca3e61d3ddddf1916662959f11
 - name: github.com/oleiade/reflections
   version: 0e86b3c98b2ff33e30c85cfe97d9a63d439fe7eb
 - name: github.com/stretchr/testify
