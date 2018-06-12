@@ -33,7 +33,7 @@ Example Usage
 			proofs.FillSalts(&salts)
 
 			doctree := proofs.NewDocumentTree()
-			ssha256Hash := sha256.New()
+			sha256Hash := sha256.New()
 			doctree.SetHashFunc(sha256Hash)
 			doctree.FillTree(&document, &salts)
 			fmt.Printf("Generated tree: %s\n", doctree.String())
@@ -43,7 +43,6 @@ Example Usage
 			fmt.Println("Proof:\n", string(proofJson))
 
 			valid, _ := doctree.ValidateProof(&proof)
-
 			fmt.Printf("Proof validated: %v\n", valid)
 		}
 
@@ -51,7 +50,7 @@ Example Usage
 package proofs
 
 // Use below command to update proof protobuf file.
-//go:generate protoc -I $PROTOBUF/src/ -I. -I $GOPATH/src --go_out=$GOPATH/src/ proof.proto
+//go:generate protoc -I $PROTOBUF/include/ -I. -I $GOPATH/src --go_out=$GOPATH/src/ proof.proto
 
 import (
 	"bytes"
@@ -69,6 +68,7 @@ import (
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
+	"github.com/iancoleman/strcase"
 	"github.com/xsleonard/go-merkle"
 )
 
@@ -171,9 +171,9 @@ func (doctree *DocumentTree) pickHashesFromMerkleTree(leaf uint64) (hashes []*Me
 	for i, n := range proofNodes {
 		h := doctree.merkleTree.Nodes[n.Leaf].Hash
 		if n.Left {
-			hashes[i] = &MerkleHash{h, nil}
+			hashes[i] = &MerkleHash{Left: h, Right: nil}
 		} else {
-			hashes[i] = &MerkleHash{nil, h}
+			hashes[i] = &MerkleHash{Left: nil, Right: h}
 
 		}
 	}
@@ -253,6 +253,9 @@ func ConcatValues(prop string, value interface{}, salt []byte) (payload []byte, 
 
 	payload = append(payload, propBytes...)
 	payload = append(payload, []byte(valueString)...)
+	if len(salt) != 32 {
+		return []byte{}, fmt.Errorf("Salt has incorrect length: %d instead of 32", len(salt))
+	}
 	payload = append(payload, salt[:32]...)
 	return
 }
@@ -283,6 +286,11 @@ func FillSalts(message proto.Message) (err error) {
 
 	for i := 0; i < v.NumField(); i++ {
 		f := v.Field(i)
+		// Ignore fields starting with XXX_, those are protobuf internals
+		if strings.HasPrefix(v.Type().Field(i).Name, "XXX_") {
+			continue
+		}
+
 		if f.Type() != reflect.TypeOf([]uint8{}) {
 			return fmt.Errorf("Invalid type (%s) for field", f.Type().String())
 		}
@@ -338,6 +346,11 @@ func FlattenMessage(message, messageSalts proto.Message) (nodes [][]byte, propOr
 	for i := 0; i < v.NumField(); i++ {
 		value := v.Field(i).Interface()
 		tag := v.Type().Field(i).Tag.Get("protobuf")
+
+		// Ignore fields starting with XXX_, those are protobuf internals
+		if strings.HasPrefix(v.Type().Field(i).Name, "XXX_") {
+			continue
+		}
 		prop, err := getPropertyNameFromProtobufTag(tag)
 		if err != nil {
 			return [][]byte{}, []string{}, err
@@ -369,6 +382,7 @@ func FlattenMessage(message, messageSalts proto.Message) (nodes [][]byte, propOr
 // getStringValueByProperty gets a value from a (nested) struct and returns the value. This method does not yet
 // support nested structs. It converts the value to a string representation.
 func getStringValueByProperty(prop string, message proto.Message) (value string, err error) {
+	prop = strcase.ToCamel(prop)
 	v, err := dotaccess.Get(message, prop)
 	if err != nil {
 		return "", err

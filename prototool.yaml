@@ -1,0 +1,8 @@
+protoc_version: 3.5.1
+gen:
+  go_options:
+    import_path: github.com/centrifuge/precise-proofs
+  plugins:
+    - name: go
+      type: go
+      output: ../../../

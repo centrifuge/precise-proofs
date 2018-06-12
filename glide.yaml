@@ -4,3 +4,10 @@ import:
 - package: github.com/go-bongo/go-dotaccess
 - package: github.com/stretchr/testify
   version: ^1.2.1
+- package: github.com/golang/protobuf.git
+  version: ^1.1.0
+- package: github.com/golang/protobuf
+  version: ^1.1.0
+  subpackages:
+  - proto
+- package: github.com/iancoleman/strcase
