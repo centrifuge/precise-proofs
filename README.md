@@ -46,7 +46,7 @@ This library defines a proof format that ensures both human readable, concise an
 
 There are a few things to note:
 * When calculating the hash of the leaf, the dot notation of the property, the value and salt should
-  be concatenated and separated by commas to produce the hash.
+  be concatenated to produce the hash.
 * The default proof expects values of documents to be salted to prevent rainbow table lookups.
 * The value is included in the file as a string value not a native type. 
 
