@@ -2,7 +2,16 @@ syntax = "proto3";
 
 package proofs;
 
-option go_package = "github.com/centrifuge/precise-proofs/proofs";
+option go_package = "proofspb";
+option java_multiple_files = true;
+option java_outer_classname = "ProofProto";
+option java_package = "com.proofs";
+
+import "google/protobuf/descriptor.proto";
+
+extend google.protobuf.FieldOptions {
+  bool exclude_from_tree = 2862100;
+}
 
 message MerkleHash {
   bytes left = 1;

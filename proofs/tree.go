@@ -233,7 +233,6 @@ func ValueToString(value interface{}) (s string, err error) {
 	default:
 		return "", errors.New(fmt.Sprintf("Got unsupported value: %t", t))
 	}
-	return
 }
 
 // LeafNode represents a field that can be hashed to create a merkle tree
@@ -333,6 +332,32 @@ func getPropertyNameFromProtobufTag(tag string) (name string, err error) {
 	return "", fmt.Errorf("Invalid protobuf annotation: %s", tag)
 }
 
+func generateLeafFromFieldIndex(messageType reflect.Type, message reflect.Value, salts reflect.Value, index int) (node *LeafNode, err error) {
+	// Ignore fields starting with XXX_, those are protobuf internals
+	if strings.HasPrefix(messageType.Field(index).Name, "XXX_") {
+		return nil, nil
+	}
+
+	// Check if the field has an exclude_tag option
+
+	value := message.Field(index).Interface()
+	tag := message.Type().Field(index).Tag.Get("protobuf")
+	prop, err := getPropertyNameFromProtobufTag(tag)
+
+	if err != nil {
+		return nil, err
+	}
+
+	salt := reflect.Indirect(salts).FieldByName(messageType.Field(index).Name).Interface().([]byte)
+	leaf := LeafNode{
+		Property: prop,
+		Value:    value,
+		Salt:     salt,
+	}
+
+	return &leaf, nil
+}
+
 // FlattenMessage takes a protobuf message struct and flattens it into an array of nodes. This currently doesn't support
 // nested structures and lists.
 //
@@ -344,24 +369,13 @@ func FlattenMessage(message, messageSalts proto.Message) (nodes [][]byte, propOr
 	s := reflect.ValueOf(messageSalts).Elem()
 
 	for i := 0; i < v.NumField(); i++ {
-		value := v.Field(i).Interface()
-		tag := v.Type().Field(i).Tag.Get("protobuf")
-
-		// Ignore fields starting with XXX_, those are protobuf internals
-		if strings.HasPrefix(v.Type().Field(i).Name, "XXX_") {
-			continue
-		}
-		prop, err := getPropertyNameFromProtobufTag(tag)
+		leaf, err := generateLeafFromFieldIndex(t, v, s, i)
 		if err != nil {
 			return [][]byte{}, []string{}, err
 		}
-		salt := reflect.Indirect(s).FieldByName(t.Field(i).Name).Interface().([]byte)
-		leaf := LeafNode{
-			Property: prop,
-			Value:    value,
-			Salt:     salt,
+		if leaf != nil {
+			leaves = append(leaves, *leaf)
 		}
-		leaves = append(leaves, leaf)
 	}
 
 	sort.Sort(leaves)
