@@ -8,4 +8,4 @@ gen:
   plugins:
     - name: go
       type: go
-      output: ../../../
+      output: .

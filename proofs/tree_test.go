@@ -43,10 +43,10 @@ func TestValueToString(t *testing.T) {
 
 	// Timestamp
 	ts := time.Now()
-	ts.UnmarshalJSON([]byte(fmt.Sprintf("\"%s\"", documents.ExampleTimeString)))
+	ts.UnmarshalJSON([]byte(fmt.Sprintf("\"%s\"", documentspb.ExampleTimeString)))
 	pt, _ := ptypes.TimestampProto(ts)
 	v, err = ValueToString(pt)
-	assert.Equal(t, documents.ExampleTimeString, v)
+	assert.Equal(t, documentspb.ExampleTimeString, v)
 	assert.Nil(t, err)
 
 	// Test empty pointer (zero value)
@@ -90,22 +90,23 @@ func TestConcatNode(t *testing.T) {
 }
 
 func TestFlattenMessage(t *testing.T) {
-	message := documents.ExampleDocument{
+	message := documentspb.ExampleDocument{
 		ValueA: "Foo",
 	}
 
-	messageSalts := documents.SaltedExampleDocument{
+	messageSalts := documentspb.SaltedExampleDocument{
 		ValueA:          []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		ValueB:          []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		Value1:          []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		Value2:          []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		ValueBytes1:     []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		ValueCamelCased: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
+		ValueNotIgnored: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 	}
 	flattened, propOrder, err := FlattenMessage(&message, &messageSalts)
 	assert.Nil(t, err)
-	assert.Equal(t, 6, len(flattened))
-	assert.Equal(t, []string{"ValueCamelCased", "value1", "value2", "valueA", "valueB", "value_bytes1"}, propOrder)
+	assert.Equal(t, 7, len(flattened))
+	assert.Equal(t, []string{"ValueCamelCased", "value1", "value2", "valueA", "valueB", "value_bytes1", "value_not_ignored"}, propOrder)
 
 	v, _ := ValueToString("Foo")
 	expectedPayload := append([]byte("valueA"), v...)
@@ -114,8 +115,8 @@ func TestFlattenMessage(t *testing.T) {
 }
 
 func TestFlattenMessage_AllFieldTypes(t *testing.T) {
-	message := documents.NewAllFieldTypes()
-	messageSalts := documents.AllFieldTypesSalts{}
+	message := documentspb.NewAllFieldTypes()
+	messageSalts := documentspb.AllFieldTypesSalts{}
 	FillSalts(&messageSalts)
 
 	_, fieldOrder, err := FlattenMessage(message, &messageSalts)
@@ -126,21 +127,21 @@ func TestFlattenMessage_AllFieldTypes(t *testing.T) {
 
 func TestFillSalts(t *testing.T) {
 	// Fill a properly formatted document
-	exampleSalts := &documents.SaltedExampleDocument{}
+	exampleSalts := &documentspb.SaltedExampleDocument{}
 	err := FillSalts(exampleSalts)
 	assert.Nil(t, err, "Fill salts should not fail")
 
-	badExample := &documents.ExampleDocument{}
+	badExample := &documentspb.ExampleDocument{}
 	err = FillSalts(badExample)
 	assert.NotNil(t, err, "Fill salts should error because of string")
 }
 
 func TestTree_Generate(t *testing.T) {
-	protoMessage := documents.ExampleDocument{
+	protoMessage := documentspb.ExampleDocument{
 		ValueA: "Foo",
 		ValueB: "Bar",
 	}
-	messageSalts := documents.SaltedExampleDocument{
+	messageSalts := documentspb.SaltedExampleDocument{
 		ValueA:      []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		ValueB:      []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		Value1:      []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
@@ -344,7 +345,7 @@ func TestTree_SetHashFunc(t *testing.T) {
 	doctree := NewDocumentTree()
 	hashFuncMd5 := md5.New()
 	doctree.SetHashFunc(hashFuncMd5)
-	err := doctree.FillTree(&documents.LongDocumentExample, &documents.SaltedLongDocumentExample)
+	err := doctree.FillTree(&documentspb.LongDocumentExample, &documentspb.SaltedLongDocumentExample)
 	assert.Nil(t, err)
 
 	expectedRootHash := []byte{0x97, 0x6d, 0xb8, 0x98, 0x81, 0x19, 0x3f, 0x7f, 0x79, 0xb3, 0x60, 0xfc, 0x77, 0x64, 0x31, 0xd9}
@@ -353,7 +354,7 @@ func TestTree_SetHashFunc(t *testing.T) {
 	doctreeSha256 := NewDocumentTree()
 	hashFuncSha256 := sha256.New()
 	doctreeSha256.SetHashFunc(hashFuncSha256)
-	err = doctreeSha256.FillTree(&documents.LongDocumentExample, &documents.SaltedLongDocumentExample)
+	err = doctreeSha256.FillTree(&documentspb.LongDocumentExample, &documentspb.SaltedLongDocumentExample)
 	assert.Nil(t, err)
 
 	expectedRootHash = []byte{0xcf, 0x1, 0x81, 0xa8, 0xdc, 0x9b, 0xa3, 0x16, 0x97, 0xe3, 0x39, 0x6b, 0xa8, 0xfd, 0x12, 0xaf, 0x50, 0x4b, 0x51, 0x60, 0x93, 0xa5, 0xa9, 0x44, 0xd7, 0x8a, 0x69, 0x60, 0xc9, 0xe0, 0x32, 0x5b}
@@ -364,7 +365,7 @@ func TestTree_GenerateProof(t *testing.T) {
 	doctree := NewDocumentTree()
 	hashFunc := sha256.New()
 	doctree.SetHashFunc(hashFunc)
-	err := doctree.FillTree(&documents.LongDocumentExample, &documents.SaltedLongDocumentExample)
+	err := doctree.FillTree(&documentspb.LongDocumentExample, &documentspb.SaltedLongDocumentExample)
 	assert.Nil(t, err)
 
 	expectedRootHash := []byte{0xcf, 0x1, 0x81, 0xa8, 0xdc, 0x9b, 0xa3, 0x16, 0x97, 0xe3, 0x39, 0x6b, 0xa8, 0xfd, 0x12, 0xaf, 0x50, 0x4b, 0x51, 0x60, 0x93, 0xa5, 0xa9, 0x44, 0xd7, 0x8a, 0x69, 0x60, 0xc9, 0xe0, 0x32, 0x5b}
@@ -380,10 +381,10 @@ func TestTree_GenerateProof(t *testing.T) {
 }
 
 func TestGetStringValueByProperty(t *testing.T) {
-	value, err := getStringValueByProperty("valueA", &documents.FilledExampleDocument)
+	value, err := getStringValueByProperty("valueA", &documentspb.FilledExampleDocument)
 	assert.Nil(t, err)
-	assert.Equal(t, documents.FilledExampleDocument.ValueA, value)
-	doc := &documents.ExampleDocument{ValueCamelCased: []byte{2}, ValueBytes1: []byte{2}}
+	assert.Equal(t, documentspb.FilledExampleDocument.ValueA, value)
+	doc := &documentspb.ExampleDocument{ValueCamelCased: []byte{2}, ValueBytes1: []byte{2}}
 	value, err = getStringValueByProperty("ValueCamelCased", doc)
 	assert.Nil(t, err)
 	assert.Equal(t, "Ag==", value)
@@ -396,14 +397,14 @@ func TestCreateProof(t *testing.T) {
 	doctree := NewDocumentTree()
 	hashFunc := sha256.New()
 	doctree.SetHashFunc(hashFunc)
-	err := doctree.FillTree(&documents.FilledExampleDocument, &documents.ExampleDocumentSalts)
+	err := doctree.FillTree(&documentspb.FilledExampleDocument, &documentspb.ExampleDocumentSalts)
 	assert.Nil(t, err)
 
 	proof, err := doctree.CreateProof("valueA")
 	assert.Nil(t, err)
 	assert.Equal(t, "valueA", proof.Property)
-	assert.Equal(t, documents.FilledExampleDocument.ValueA, proof.Value)
-	assert.Equal(t, documents.ExampleDocumentSalts.ValueA, proof.Salt)
+	assert.Equal(t, documentspb.FilledExampleDocument.ValueA, proof.Value)
+	assert.Equal(t, documentspb.ExampleDocumentSalts.ValueA, proof.Salt)
 
 	fieldHash, err := CalculateHashForProofField(&proof, hashFunc)
 	rootHash := []byte{0xff, 0x75, 0x97, 0xc1, 0x1e, 0xb3, 0xa0, 0x62, 0x44, 0x22, 0xe5, 0x4c, 0x4c, 0x1b, 0x83, 0xa3, 0x2a, 0x5e, 0xaa, 0x71, 0xdb, 0x65, 0x93, 0x98, 0x67, 0x51, 0x16, 0x10, 0x1, 0x7f, 0x1c, 0xea}

@@ -19,7 +19,7 @@ Example Usage
 
 		func main () {
 			// ExampleDocument is a protobuf message
-			document := documents.ExampleDocument{
+			document := documentspb.ExampleDocument{
 				Value1: 1,
 				ValueA: "Foo",
 				ValueB: "Bar",
@@ -58,18 +58,19 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"hash"
-	"reflect"
-	"sort"
-	"strconv"
-	"strings"
-
+	"github.com/centrifuge/precise-proofs/proofs/proto"
 	"github.com/go-bongo/go-dotaccess"
+	"github.com/golang/protobuf/descriptor"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/iancoleman/strcase"
 	"github.com/xsleonard/go-merkle"
+	"hash"
+	"reflect"
+	"sort"
+	"strconv"
+	"strings"
 )
 
 // DocumentTree is a helper object to create a merkleTree and proofs for fields in the document
@@ -133,47 +134,47 @@ func (doctree *DocumentTree) Document() proto.Message {
 }
 
 // CreateProof takes a property in dot notation and returns a Proof object for the given field
-func (doctree *DocumentTree) CreateProof(prop string) (proof Proof, err error) {
+func (doctree *DocumentTree) CreateProof(prop string) (proof proofspb.Proof, err error) {
 	if doctree.IsEmpty() {
-		return Proof{}, fmt.Errorf("Can't create proof for empty merkleTree")
+		return proofspb.Proof{}, fmt.Errorf("Can't create proof for empty merkleTree")
 	}
 
 	value, err := getStringValueByProperty(prop, doctree.document)
 	if err != nil {
-		return Proof{}, err
+		return proofspb.Proof{}, err
 	}
 	salt, err := getByteValueByProperty(prop, doctree.salts)
 
 	leaf, err := getIndexOfString(doctree.propertyList, prop)
 	if err != nil {
-		return Proof{}, err
+		return proofspb.Proof{}, err
 	}
 
 	hashes, err := doctree.pickHashesFromMerkleTree(uint64(leaf))
 	if err != nil {
-		return Proof{}, err
+		return proofspb.Proof{}, err
 	}
 
-	proof = Proof{Property: prop, Value: value, Salt: salt, Hashes: hashes}
+	proof = proofspb.Proof{Property: prop, Value: value, Salt: salt, Hashes: hashes}
 	return
 }
 
 // pickHashesFromMerkleTree takes the required hashes needed to create a proof
-func (doctree *DocumentTree) pickHashesFromMerkleTree(leaf uint64) (hashes []*MerkleHash, err error) {
+func (doctree *DocumentTree) pickHashesFromMerkleTree(leaf uint64) (hashes []*proofspb.MerkleHash, err error) {
 	proofNodes, err := CalculateProofNodeList(leaf, uint64(len(doctree.merkleTree.Leaves())))
 
 	if err != nil {
 		return hashes, err
 	}
 
-	hashes = make([]*MerkleHash, len(proofNodes))
+	hashes = make([]*proofspb.MerkleHash, len(proofNodes))
 
 	for i, n := range proofNodes {
 		h := doctree.merkleTree.Nodes[n.Leaf].Hash
 		if n.Left {
-			hashes[i] = &MerkleHash{Left: h, Right: nil}
+			hashes[i] = &proofspb.MerkleHash{Left: h, Right: nil}
 		} else {
-			hashes[i] = &MerkleHash{Left: nil, Right: h}
+			hashes[i] = &proofspb.MerkleHash{Left: nil, Right: h}
 
 		}
 	}
@@ -181,12 +182,12 @@ func (doctree *DocumentTree) pickHashesFromMerkleTree(leaf uint64) (hashes []*Me
 }
 
 // ValidateProof by comparing it to the tree's rootHash
-func (doctree *DocumentTree) ValidateProof(proof *Proof) (valid bool, err error) {
+func (doctree *DocumentTree) ValidateProof(proof *proofspb.Proof) (valid bool, err error) {
 	return ValidateProof(proof, doctree.rootHash, doctree.hash)
 }
 
 // ValidateProof by comparing it to a given merkle tree root
-func ValidateProof(proof *Proof, rootHash []byte, hashFunc hash.Hash) (valid bool, err error) {
+func ValidateProof(proof *proofspb.Proof, rootHash []byte, hashFunc hash.Hash) (valid bool, err error) {
 	hash, err := CalculateHashForProofField(proof, hashFunc)
 	if err != nil {
 		return false, err
@@ -332,30 +333,71 @@ func getPropertyNameFromProtobufTag(tag string) (name string, err error) {
 	return "", fmt.Errorf("Invalid protobuf annotation: %s", tag)
 }
 
-func generateLeafFromFieldIndex(messageType reflect.Type, message reflect.Value, salts reflect.Value, index int) (node *LeafNode, err error) {
+type messageFlattener struct {
+	message        proto.Message
+	messageType    reflect.Type
+	messageValue   reflect.Value
+	excludedFields []string
+	salts          proto.Message
+	saltsValue     reflect.Value
+	leaves         LeafList
+	nodes          [][]byte
+	propOrder      []string
+}
+
+func (f *messageFlattener) generateLeafFromFieldIndex(index int) (err error) {
 	// Ignore fields starting with XXX_, those are protobuf internals
-	if strings.HasPrefix(messageType.Field(index).Name, "XXX_") {
-		return nil, nil
+	if strings.HasPrefix(f.messageType.Field(index).Name, "XXX_") {
+		return nil
 	}
 
-	// Check if the field has an exclude_tag option
-
-	value := message.Field(index).Interface()
-	tag := message.Type().Field(index).Tag.Get("protobuf")
+	tag := f.messageType.Field(index).Tag.Get("protobuf")
+	value := f.messageValue.Field(index).Interface()
 	prop, err := getPropertyNameFromProtobufTag(tag)
-
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	salt := reflect.Indirect(salts).FieldByName(messageType.Field(index).Name).Interface().([]byte)
+	// Check if the field has an exclude_from_tree option
+	for i := 0; i < len(f.excludedFields); i++ {
+		fmt.Println(prop, f.excludedFields[i])
+		if f.excludedFields[i] == prop {
+			return
+		}
+	}
+
+	salt := reflect.Indirect(f.saltsValue).FieldByName(f.messageType.Field(index).Name).Interface().([]byte)
 	leaf := LeafNode{
 		Property: prop,
 		Value:    value,
 		Salt:     salt,
 	}
+	f.leaves = append(f.leaves, leaf)
+	return nil
+}
 
-	return &leaf, nil
+func (f *messageFlattener) sortLeaves() (err error) {
+	sort.Sort(f.leaves)
+	f.nodes = make([][]byte, f.leaves.Len())
+	f.propOrder = make([]string, f.leaves.Len())
+
+	for i := 0; i < f.leaves.Len(); i++ {
+		f.nodes[i], err = ConcatNode(&f.leaves[i])
+		if err != nil {
+			return err
+		}
+		f.propOrder[i] = f.leaves[i].Property
+	}
+	return nil
+}
+
+func NewMessageFlattener(message, messageSalts proto.Message) *messageFlattener {
+	f := messageFlattener{message: message, salts: messageSalts}
+	f.leaves = LeafList{}
+	f.messageValue = reflect.ValueOf(message).Elem()
+	f.messageType = f.messageValue.Type()
+	f.saltsValue = reflect.ValueOf(messageSalts).Elem()
+	return &f
 }
 
 // FlattenMessage takes a protobuf message struct and flattens it into an array of nodes. This currently doesn't support
@@ -363,34 +405,48 @@ func generateLeafFromFieldIndex(messageType reflect.Type, message reflect.Value,
 //
 // The fields are sorted lexicographically by their protobuf field names.
 func FlattenMessage(message, messageSalts proto.Message) (nodes [][]byte, propOrder []string, err error) {
-	leaves := LeafList{}
-	v := reflect.ValueOf(message).Elem()
-	t := v.Type()
-	s := reflect.ValueOf(messageSalts).Elem()
+	f := NewMessageFlattener(message, messageSalts)
+	descriptorMessage, ok := message.(descriptor.Message)
+	if !ok {
+		return [][]byte{}, []string{}, fmt.Errorf("message [%s] does not implement descriptor.Message", message)
+	}
+	_, messageDescriptor := descriptor.ForMessage(descriptorMessage)
 
-	for i := 0; i < v.NumField(); i++ {
-		leaf, err := generateLeafFromFieldIndex(t, v, s, i)
+	for i := range messageDescriptor.Field {
+		fieldDescriptor := messageDescriptor.Field[i]
+		fV := reflect.ValueOf(fieldDescriptor).Elem()
+		fType := fV.Type()
+		fieldName := *fieldDescriptor.Name
+		for i := 0; i < fV.NumField(); i++ {
+			field := fV.Field(i)
+			if fType.Field(i).Name != "Options" {
+				continue
+			}
+			if proto.HasExtension(field.Interface().(proto.Message), proofspb.E_ExcludeFromTree) {
+				ext, err := proto.GetExtension(field.Interface().(proto.Message), proofspb.E_ExcludeFromTree)
+				if err != nil {
+					continue
+				}
+				b, _ := ext.(*bool)
+				if *b {
+					f.excludedFields = append(f.excludedFields, fieldName)
+				}
+			}
+		}
+	}
+
+	for i := 0; i < f.messageValue.NumField(); i++ {
+		err := f.generateLeafFromFieldIndex(i)
 		if err != nil {
 			return [][]byte{}, []string{}, err
 		}
-		if leaf != nil {
-			leaves = append(leaves, *leaf)
-		}
 	}
 
-	sort.Sort(leaves)
-	nodes = make([][]byte, leaves.Len())
-	propOrder = make([]string, leaves.Len())
-
-	for i := 0; i < leaves.Len(); i++ {
-		nodes[i], err = ConcatNode(&leaves[i])
-		if err != nil {
-			return nodes, propOrder, err
-		}
-		propOrder[i] = leaves[i].Property
+	err = f.sortLeaves()
+	if err != nil {
+		return [][]byte{}, []string{}, err
 	}
-
-	return nodes, propOrder, err
+	return f.nodes, f.propOrder, nil
 }
 
 // getStringValueByProperty gets a value from a (nested) struct and returns the value. This method does not yet
@@ -489,7 +545,7 @@ func CalculateProofNodeList(node, leafCount uint64) (nodes []*HashNode, err erro
 
 // CalculateHashForProofField takes a Proof struct and returns a hash of the concatenated property name, value & salt.
 // Uses ConcatValues internally.
-func CalculateHashForProofField(proof *Proof, hashFunc hash.Hash) (hash []byte, err error) {
+func CalculateHashForProofField(proof *proofspb.Proof, hashFunc hash.Hash) (hash []byte, err error) {
 	input, err := ConcatValues(proof.Property, proof.Value, proof.Salt)
 	if err != nil {
 		return []byte{}, err
@@ -499,7 +555,7 @@ func CalculateHashForProofField(proof *Proof, hashFunc hash.Hash) (hash []byte, 
 }
 
 // ValidateProofHashes calculates the merkle root based on a list of left/right hashes.
-func ValidateProofHashes(hash []byte, hashes []*MerkleHash, rootHash []byte, hashFunc hash.Hash) (valid bool, err error) {
+func ValidateProofHashes(hash []byte, hashes []*proofspb.MerkleHash, rootHash []byte, hashFunc hash.Hash) (valid bool, err error) {
 	for i := 0; i < len(hashes); i++ {
 		if len(hashes[i].Left) == 0 {
 			hash = HashTwoValues(hash, hashes[i].Right, hashFunc)

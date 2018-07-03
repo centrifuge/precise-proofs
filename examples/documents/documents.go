@@ -1,4 +1,4 @@
-package documents
+package documentspb
 
 //go:generate protoc -I $PROTOBUF/src/ -I. -I $GOPATH/src --go_out=$GOPATH/src/ examples.proto
 
@@ -24,6 +24,7 @@ var ExampleDocumentSalts SaltedExampleDocument = SaltedExampleDocument{
 	Value2:          salt,
 	ValueBytes1:     salt,
 	ValueCamelCased: salt,
+	ValueNotIgnored: salt,
 }
 
 var ExampleTimeString string = "2018-04-10T01:23:12.697116Z"
