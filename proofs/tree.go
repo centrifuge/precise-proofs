@@ -46,11 +46,20 @@ Example Usage
 			fmt.Printf("Proof validated: %v\n", valid)
 		}
 
+# Advanced options
+Fields can be excluded from the flattener by setting the custom protobuf option
+`proofs.exclude_from_tree` found in `proofs/proto/proof.proto`.
+
+	message Document {
+		string value_a = 1;
+		string value_b = 2 [
+			(proofs.exclude_from_tree) = true
+		];
+	}
 */
 package proofs
 
-// Use below command to update proof protobuf file.
-//go:generate protoc -I $PROTOBUF/include/ -I. -I $GOPATH/src --go_out=$GOPATH/src/ proof.proto
+// TODO: Update example usage
 
 import (
 	"bytes"
@@ -333,6 +342,7 @@ func getPropertyNameFromProtobufTag(tag string) (name string, err error) {
 	return "", fmt.Errorf("Invalid protobuf annotation: %s", tag)
 }
 
+// messageFlattener takes a proto.Message and flattens it to a list of ordered nodes.
 type messageFlattener struct {
 	message        proto.Message
 	messageType    reflect.Type
@@ -345,6 +355,8 @@ type messageFlattener struct {
 	propOrder      []string
 }
 
+// generateLeafFromFieldIndex adds the LeafNode to LeafList for a field by it's
+// index in the Message struct.
 func (f *messageFlattener) generateLeafFromFieldIndex(index int) (err error) {
 	// Ignore fields starting with XXX_, those are protobuf internals
 	if strings.HasPrefix(f.messageType.Field(index).Name, "XXX_") {
@@ -376,6 +388,8 @@ func (f *messageFlattener) generateLeafFromFieldIndex(index int) (err error) {
 	return nil
 }
 
+// sortLeaves by the property attribute and copies the properties and
+// concatenated byte values into the nodes
 func (f *messageFlattener) sortLeaves() (err error) {
 	sort.Sort(f.leaves)
 	f.nodes = make([][]byte, f.leaves.Len())
@@ -391,6 +405,7 @@ func (f *messageFlattener) sortLeaves() (err error) {
 	return nil
 }
 
+// NewMessageFlattener instantiates a flattener for the given document
 func NewMessageFlattener(message, messageSalts proto.Message) *messageFlattener {
 	f := messageFlattener{message: message, salts: messageSalts}
 	f.leaves = LeafList{}
@@ -449,7 +464,7 @@ func FlattenMessage(message, messageSalts proto.Message) (nodes [][]byte, propOr
 	return f.nodes, f.propOrder, nil
 }
 
-// getStringValueByProperty gets a value from a (nested) struct and returns the value. This method does not yet
+// getStringValueByProperty gets a value from a struct and returns the value. This method does not yet
 // support nested structs. It converts the value to a string representation.
 func getStringValueByProperty(prop string, message proto.Message) (value string, err error) {
 	prop = strcase.ToCamel(prop)
