@@ -15,38 +15,8 @@ Supported types:
 Note: this is a basic implementation that lacks support for serializing more complex structs. The interfaces and
 functions in this library will change significantly in the near future.
 
-Example Usage
+Advanced options
 
-		func main () {
-			// ExampleDocument is a protobuf message
-			document := documentspb.ExampleDocument{
-				Value1: 1,
-				ValueA: "Foo",
-				ValueB: "Bar",
-				ValueBytes1: []byte("foobar"),
-			}
-
-			// The FillSalts method is a helper function that fills all fields with 32
-			// random bytes. SaltedExampleDocument is a protobuf message that has the
-			// same structure as ExampleDocument but has all `bytes` field types.
-			salts := documents.SaltedExampleDocument{}
-			proofs.FillSalts(&salts)
-
-			doctree := proofs.NewDocumentTree()
-			sha256Hash := sha256.New()
-			doctree.SetHashFunc(sha256Hash)
-			doctree.FillTree(&document, &salts)
-			fmt.Printf("Generated tree: %s\n", doctree.String())
-
-			proof, _ := doctree.CreateProof("ValueA")
-			proofJson, _ := json.Marshal(proof)
-			fmt.Println("Proof:\n", string(proofJson))
-
-			valid, _ := doctree.ValidateProof(&proof)
-			fmt.Printf("Proof validated: %v\n", valid)
-		}
-
-# Advanced options
 Fields can be excluded from the flattener by setting the custom protobuf option
 `proofs.exclude_from_tree` found in `proofs/proto/proof.proto`.
 
