@@ -7,7 +7,14 @@ import (
 	"fmt"
 	"encoding/json"
 	"github.com/centrifuge/precise-proofs/examples/documents"
+	"crypto/sha256"
 )
+
+func printError(err error){
+	if err != nil{
+		fmt.Printf("There was an error: [%v]\n", err)
+	}
+}
 
 func main () {
 	// ExampleDocument is a protobuf message
@@ -25,14 +32,24 @@ func main () {
 	proofs.FillSalts(&salts)
 
 	doctree := proofs.NewDocumentTree()
-	doctree.FillTree(&document, &salts)
+
+	//Setting the desired hash function that is used to generate the tree
+	sha256Hash := sha256.New()
+	doctree.SetHashFunc(sha256Hash)
+
+	err := doctree.FillTree(&document, &salts)
+	printError(err)
 	fmt.Printf("Generated tree: %s\n", doctree.String())
 
-	proof, _ := doctree.CreateProof("ValueA")
+	// Generate the actual proof for a field. In this case the field called "ValueA".
+	proof, err := doctree.CreateProof("valueA")
+	printError(err)
 	proofJson, _ := json.Marshal(proof)
 	fmt.Println("Proof:\n", string(proofJson))
 
-	valid, _ := doctree.ValidateProof(&proof)
+	// Validate the proof that was just generated
+	valid, err := doctree.ValidateProof(&proof)
+	printError(err)
 
 	fmt.Printf("Proof validated: %v\n", valid)
 }
