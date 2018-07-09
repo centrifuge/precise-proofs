@@ -233,7 +233,7 @@ func ConcatValues(prop string, value interface{}, salt []byte) (payload []byte, 
 	payload = append(payload, propBytes...)
 	payload = append(payload, []byte(valueString)...)
 	if len(salt) != 32 {
-		return []byte{}, fmt.Errorf("%s:Salt has incorrect length: %d instead of 32", prop, len(salt))
+		return []byte{}, fmt.Errorf("%s: Salt has incorrect length: %d instead of 32", prop, len(salt))
 	}
 	payload = append(payload, salt[:32]...)
 	return

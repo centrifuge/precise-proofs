@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/centrifuge/precise-proofs/examples/documents"
 	"github.com/golang/protobuf/ptypes"
@@ -16,6 +15,8 @@ import (
 	"time"
 )
 
+var testSalt = []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225}
+
 type UnsupportedType struct {
 	supported bool
 }
@@ -23,6 +24,10 @@ type UnsupportedType struct {
 func TestValueToString(t *testing.T) {
 	v, err := ValueToString(nil)
 	assert.Equal(t, "", v)
+	assert.Nil(t, err)
+
+	v, err = ValueToString(int64(0))
+	assert.Equal(t, "0", v, "int64(0) to string failed")
 	assert.Nil(t, err)
 
 	v, err = ValueToString(int64(42))
@@ -58,12 +63,24 @@ func TestValueToString(t *testing.T) {
 	assert.Nil(t, err)
 }
 
+func TestConcatValues(t *testing.T) {
+	val, err := ConcatValues("prop", int64(0), testSalt)
+	assert.Nil(t, err)
+	v, _ := ValueToString(int64(0))
+	expectedPayload := append([]byte("prop"), v...)
+	expectedPayload = append(expectedPayload, testSalt...)
+	assert.Equal(t, expectedPayload, val)
+
+	val, err = ConcatValues("prop", documentspb.FilledExampleDocument, testSalt)
+	assert.NotNil(t, err)
+	assert.Equal(t, []byte{}, val)
+}
+
 func TestConcatNode(t *testing.T) {
-	salt := []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225}
 	intLeaf := LeafNode{
 		Property: "fieldName",
 		Value:    int64(42),
-		Salt:     salt,
+		Salt:     testSalt,
 	}
 
 	// Test the payload format:
@@ -86,7 +103,7 @@ func TestConcatNode(t *testing.T) {
 		Salt:     []byte{},
 	}
 	_, err = ConcatNode(&invalidSaltLeaf)
-	assert.Error(t, errors.New("Salt has incorrect length: 0 instead of 32"), err)
+	assert.EqualError(t, err, "fieldName: Salt has incorrect length: 0 instead of 32")
 
 }
 
@@ -153,7 +170,8 @@ func TestTree_Generate(t *testing.T) {
 		ValueCamelCased: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 	}
 
-	flattened, _, _ := FlattenMessage(&protoMessage, &messageSalts)
+	flattened, _, err := FlattenMessage(&protoMessage, &messageSalts)
+	assert.Nil(t, err)
 	tree := merkle.NewTree()
 	sha256Hash := sha256.New()
 	tree.Generate(flattened, sha256Hash)
@@ -346,6 +364,7 @@ func BenchmarkCalculateProofNodeList(b *testing.B) {
 
 // TestTree_SetHashFunc tests calculating hashes both with sha256 and md5
 func TestTree_SetHashFunc(t *testing.T) {
+	// MD5
 	doctree := NewDocumentTree()
 	hashFuncMd5 := md5.New()
 	doctree.SetHashFunc(hashFuncMd5)
@@ -355,6 +374,13 @@ func TestTree_SetHashFunc(t *testing.T) {
 	expectedRootHash := []byte{0x97, 0x6d, 0xb8, 0x98, 0x81, 0x19, 0x3f, 0x7f, 0x79, 0xb3, 0x60, 0xfc, 0x77, 0x64, 0x31, 0xd9}
 	assert.Equal(t, expectedRootHash, doctree.rootHash)
 
+	// No hash func set
+	doctreeNoHash := NewDocumentTree()
+	err = doctreeNoHash.FillTree(&documentspb.LongDocumentExample, &documentspb.SaltedLongDocumentExample)
+	assert.NotNil(t, err)
+	assert.EqualError(t, err, "DocumentTree.hash is not set")
+
+	// SHA256
 	doctreeSha256 := NewDocumentTree()
 	hashFuncSha256 := sha256.New()
 	doctreeSha256.SetHashFunc(hashFuncSha256)
@@ -374,6 +400,7 @@ func TestTree_GenerateProof(t *testing.T) {
 
 	expectedRootHash := []byte{0xcf, 0x1, 0x81, 0xa8, 0xdc, 0x9b, 0xa3, 0x16, 0x97, 0xe3, 0x39, 0x6b, 0xa8, 0xfd, 0x12, 0xaf, 0x50, 0x4b, 0x51, 0x60, 0x93, 0xa5, 0xa9, 0x44, 0xd7, 0x8a, 0x69, 0x60, 0xc9, 0xe0, 0x32, 0x5b}
 	assert.Equal(t, expectedRootHash, doctree.rootHash)
+	assert.Equal(t, expectedRootHash, doctree.RootHash())
 
 	hashes, err := doctree.pickHashesFromMerkleTree(0)
 	assert.Nil(t, err)
@@ -404,6 +431,9 @@ func TestCreateProof(t *testing.T) {
 	err := doctree.FillTree(&documentspb.FilledExampleDocument, &documentspb.ExampleDocumentSalts)
 	assert.Nil(t, err)
 
+	_, err = doctree.CreateProof("InexistentField")
+	assert.EqualError(t, err, "No such field: InexistentField in obj")
+
 	proof, err := doctree.CreateProof("valueA")
 	assert.Nil(t, err)
 	assert.Equal(t, "valueA", proof.Property)
@@ -415,6 +445,17 @@ func TestCreateProof(t *testing.T) {
 	assert.Equal(t, rootHash, doctree.rootHash)
 	valid, err := ValidateProofHashes(fieldHash, proof.Hashes, rootHash, doctree.hash)
 	assert.True(t, valid)
+
+	valid, err = doctree.ValidateProof(&proof)
+	assert.True(t, valid)
+	assert.Nil(t, err)
+
+	falseProof, err := doctree.CreateProof("valueA")
+	falseProof.Value = "Invalid"
+	valid, err = doctree.ValidateProof(&falseProof)
+	assert.False(t, valid)
+	assert.EqualError(t, err, "Hash does not match")
+
 }
 
 func Example_complete() {
