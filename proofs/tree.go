@@ -233,7 +233,7 @@ func ConcatValues(prop string, value interface{}, salt []byte) (payload []byte, 
 	payload = append(payload, propBytes...)
 	payload = append(payload, []byte(valueString)...)
 	if len(salt) != 32 {
-		return []byte{}, fmt.Errorf("Salt has incorrect length: %d instead of 32", len(salt))
+		return []byte{}, fmt.Errorf("%s:Salt has incorrect length: %d instead of 32", prop, len(salt))
 	}
 	payload = append(payload, salt[:32]...)
 	return
@@ -342,7 +342,6 @@ func (f *messageFlattener) generateLeafFromFieldIndex(index int) (err error) {
 
 	// Check if the field has an exclude_from_tree option
 	for i := 0; i < len(f.excludedFields); i++ {
-		fmt.Println(prop, f.excludedFields[i])
 		if f.excludedFields[i] == prop {
 			return
 		}
