@@ -1,10 +1,14 @@
 syntax = "proto3";
 
-import "google/protobuf/timestamp.proto";
-
 package documents;
 
-option go_package = "github.com/centrifuge/precise-proofs/examples/documents";
+option go_package = "documentspb";
+option java_multiple_files = true;
+option java_outer_classname = "ExampleProto";
+option java_package = "com.documents";
+
+import "google/protobuf/timestamp.proto";
+import "proofs/proto/proof.proto";
 
 message ExampleDocument {
   string valueA = 1;
@@ -13,6 +17,12 @@ message ExampleDocument {
   int64 value2 = 4;
   bytes value_bytes1 = 5;
   bytes ValueCamelCased = 6;
+  bytes value_not_ignored = 7 [
+    (proofs.exclude_from_tree) = false
+  ];
+  bytes value_ignored = 8 [
+    (proofs.exclude_from_tree) = true
+  ];
 }
 
 message AllFieldTypes {
@@ -68,4 +78,5 @@ message SaltedExampleDocument {
   bytes value2 = 4;
   bytes value_bytes1 = 5;
   bytes ValueCamelCased = 6;
+  bytes value_not_ignored = 7;
 }

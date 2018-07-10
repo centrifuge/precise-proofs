@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package proofs;
+
+option go_package = "proofspb";
+option java_multiple_files = true;
+option java_outer_classname = "ProofProto";
+option java_package = "com.proofs";
+
+import "google/protobuf/descriptor.proto";
+
+extend google.protobuf.FieldOptions {
+  bool exclude_from_tree = 2862100;
+}
+
+message MerkleHash {
+  bytes left = 1;
+  bytes right = 2;
+}
+
+message Proof {
+  string property = 1;
+  string value = 2;
+  bytes salt = 3;
+  repeated MerkleHash hashes = 4;
+}

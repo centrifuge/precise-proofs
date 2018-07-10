@@ -3,10 +3,10 @@
 package main
 
 import (
-	"github.com/centrifuge/precise-proofs/proofs"
-	"fmt"
 	"encoding/json"
+	"fmt"
 	"github.com/centrifuge/precise-proofs/examples/documents"
+	"github.com/centrifuge/precise-proofs/proofs"
 	"crypto/sha256"
 )
 
@@ -18,17 +18,17 @@ func printError(err error){
 
 func main () {
 	// ExampleDocument is a protobuf message
-	document := documents.ExampleDocument{
-		Value1: 1,
-		ValueA: "Foo",
-		ValueB: "Bar",
+	document := documentspb.ExampleDocument{
+		Value1:      1,
+		ValueA:      "Foo",
+		ValueB:      "Bar",
 		ValueBytes1: []byte("foobar"),
 	}
 
 	// The FillSalts method is a helper function that fills all fields with 32
 	// random bytes. SaltedExampleDocument is a protobuf message that has the
 	// same structure as ExampleDocument but has all `bytes` field types.
-	salts := documents.SaltedExampleDocument{}
+	salts := documentspb.SaltedExampleDocument{}
 	proofs.FillSalts(&salts)
 
 	doctree := proofs.NewDocumentTree()

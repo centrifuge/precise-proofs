@@ -3,6 +3,10 @@ go:
  - 1.10.x
  - tip
 
+install:
+  - go get -u github.com/golang/dep/...
+  - dep ensure
+
 script:
   - go test -race -coverprofile=coverage.txt -covermode=atomic -v ./proofs
 

@@ -1,8 +1,11 @@
 protoc_version: 3.5.1
+lint:
+  exclude_ids:
+    - MESSAGE_FIELD_NAMES_LOWER_SNAKE_CASE 
 gen:
   go_options:
     import_path: github.com/centrifuge/precise-proofs
   plugins:
     - name: go
       type: go
-      output: ../../../
+      output: .
