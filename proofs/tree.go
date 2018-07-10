@@ -29,8 +29,6 @@ Fields can be excluded from the flattener by setting the custom protobuf option
 */
 package proofs
 
-// TODO: Update example usage
-
 import (
 	"bytes"
 	"crypto/rand"
@@ -374,25 +372,12 @@ func (f *messageFlattener) sortLeaves() (err error) {
 	return nil
 }
 
-// NewMessageFlattener instantiates a flattener for the given document
-func NewMessageFlattener(message, messageSalts proto.Message) *messageFlattener {
-	f := messageFlattener{message: message, salts: messageSalts}
-	f.leaves = LeafList{}
-	f.messageValue = reflect.ValueOf(message).Elem()
-	f.messageType = f.messageValue.Type()
-	f.saltsValue = reflect.ValueOf(messageSalts).Elem()
-	return &f
-}
-
-// FlattenMessage takes a protobuf message struct and flattens it into an array of nodes. This currently doesn't support
-// nested structures and lists.
-//
-// The fields are sorted lexicographically by their protobuf field names.
-func FlattenMessage(message, messageSalts proto.Message) (nodes [][]byte, propOrder []string, err error) {
-	f := NewMessageFlattener(message, messageSalts)
-	descriptorMessage, ok := message.(descriptor.Message)
+// parseExtensions iterates over the prototype descripter to find fields that
+// should be excluded
+func (f *messageFlattener) parseExtensions() (err error) {
+	descriptorMessage, ok := f.message.(descriptor.Message)
 	if !ok {
-		return [][]byte{}, []string{}, fmt.Errorf("message [%s] does not implement descriptor.Message", message)
+		return fmt.Errorf("message [%s] does not implement descriptor.Message", f.message)
 	}
 	_, messageDescriptor := descriptor.ForMessage(descriptorMessage)
 
@@ -417,6 +402,29 @@ func FlattenMessage(message, messageSalts proto.Message) (nodes [][]byte, propOr
 				}
 			}
 		}
+	}
+	return nil
+}
+
+// NewMessageFlattener instantiates a flattener for the given document
+func NewMessageFlattener(message, messageSalts proto.Message) *messageFlattener {
+	f := messageFlattener{message: message, salts: messageSalts}
+	f.leaves = LeafList{}
+	f.messageValue = reflect.ValueOf(message).Elem()
+	f.messageType = f.messageValue.Type()
+	f.saltsValue = reflect.ValueOf(messageSalts).Elem()
+	return &f
+}
+
+// FlattenMessage takes a protobuf message struct and flattens it into an array
+// of nodes. This currently doesn't support nested structures and lists.
+//
+// The fields are sorted lexicographically by their protobuf field names.
+func FlattenMessage(message, messageSalts proto.Message) (nodes [][]byte, propOrder []string, err error) {
+	f := NewMessageFlattener(message, messageSalts)
+
+	if err := f.parseExtensions(); err != nil {
+		return [][]byte{}, []string{}, err
 	}
 
 	for i := 0; i < f.messageValue.NumField(); i++ {
@@ -445,8 +453,8 @@ func getStringValueByProperty(prop string, message proto.Message) (value string,
 	return
 }
 
-// getByteValueByProperty tries to use the dot notation to access a field. This is used specifically to get the salt
-// value which is always a byte slice.
+// getByteValueByProperty tries to use the dot notation to access a field. This
+// is used specifically to get the salt value which is always a byte slice.
 func getByteValueByProperty(prop string, message proto.Message) (value []byte, err error) {
 	v, err := dotaccess.Get(message, prop)
 	if err != nil {
