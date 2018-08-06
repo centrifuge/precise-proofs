@@ -35,6 +35,12 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"hash"
+	"reflect"
+	"sort"
+	"strconv"
+	"strings"
+
 	"github.com/centrifuge/precise-proofs/proofs/proto"
 	"github.com/go-bongo/go-dotaccess"
 	"github.com/golang/protobuf/descriptor"
@@ -43,11 +49,6 @@ import (
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/iancoleman/strcase"
 	"github.com/xsleonard/go-merkle"
-	"hash"
-	"reflect"
-	"sort"
-	"strconv"
-	"strings"
 )
 
 // DocumentTree is a helper object to create a merkleTree and proofs for fields in the document
@@ -315,7 +316,7 @@ type messageFlattener struct {
 	message        proto.Message
 	messageType    reflect.Type
 	messageValue   reflect.Value
-	excludedFields []string
+	excludedFields map[string]struct{}
 	salts          proto.Message
 	saltsValue     reflect.Value
 	leaves         LeafList
@@ -339,10 +340,8 @@ func (f *messageFlattener) generateLeafFromFieldIndex(index int) (err error) {
 	}
 
 	// Check if the field has an exclude_from_tree option
-	for i := 0; i < len(f.excludedFields); i++ {
-		if f.excludedFields[i] == prop {
-			return
-		}
+	if _, ok := f.excludedFields[prop]; ok {
+		return
 	}
 
 	salt := reflect.Indirect(f.saltsValue).FieldByName(f.messageType.Field(index).Name).Interface().([]byte)
@@ -398,7 +397,7 @@ func (f *messageFlattener) parseExtensions() (err error) {
 				}
 				b, _ := ext.(*bool)
 				if *b {
-					f.excludedFields = append(f.excludedFields, fieldName)
+					f.excludedFields[fieldName] = struct{}{}
 				}
 			}
 		}
@@ -413,6 +412,7 @@ func NewMessageFlattener(message, messageSalts proto.Message) *messageFlattener 
 	f.messageValue = reflect.ValueOf(message).Elem()
 	f.messageType = f.messageValue.Type()
 	f.saltsValue = reflect.ValueOf(messageSalts).Elem()
+	f.excludedFields = make(map[string]struct{})
 	return &f
 }
 
