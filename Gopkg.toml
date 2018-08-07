@@ -42,8 +42,8 @@
   version = "1.2.1"
 
 [[constraint]]
-  branch = "master"
-  name = "github.com/xsleonard/go-merkle"
+  branch = "add-sort-option"
+  name = "github.com/mikiquantum/go-merkle"
 
 [prune]
   go-tests = true

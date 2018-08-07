@@ -10,7 +10,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/assert"
-	"github.com/xsleonard/go-merkle"
+	"github.com/mikiquantum/go-merkle"
 	"testing"
 	"time"
 )
@@ -177,6 +177,32 @@ func TestTree_Generate(t *testing.T) {
 	tree.Generate(flattened, sha256Hash)
 	h := tree.Root().Hash
 	expectedHash := []byte{0xf6, 0x16, 0xbf, 0x90, 0x7c, 0xa0, 0xee, 0x67, 0xdf, 0xd8, 0x47, 0x6, 0xc9, 0xb, 0xd7, 0x31, 0xeb, 0x65, 0xe3, 0xae, 0x5e, 0xa9, 0x58, 0xb9, 0xe, 0xc7, 0x60, 0xcd, 0x24, 0xde, 0x30, 0x9c}
+	assert.Equal(t, expectedHash, h, "Hash should match")
+}
+
+func TestSortedHashTree_Generate(t *testing.T) {
+	protoMessage := documentspb.ExampleDocument{
+		ValueA: "Foo",
+		ValueB: "Bar",
+	}
+
+	messageSalts := documentspb.SaltedExampleDocument{
+		ValueA:          []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
+		ValueB:          []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
+		Value1:          []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
+		Value2:          []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
+		ValueBytes1:     []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
+		ValueNotIgnored: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
+		ValueCamelCased: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
+	}
+
+	flattened, _, err := FlattenMessage(&protoMessage, &messageSalts)
+	assert.Nil(t, err)
+	tree := merkle.NewTreeWithOpts(merkle.TreeOptions{ EnableHashSorting: true })
+	sha256Hash := sha256.New()
+	tree.Generate(flattened, sha256Hash)
+	h := tree.Root().Hash
+	expectedHash := []byte{0x93, 0xc4, 0xe1, 0x7d, 0xdd, 0x5d, 0xea, 0xd9, 0x7f, 0xa9, 0x67, 0x7e, 0xa5, 0x3, 0x5c, 0x37, 0xa7, 0x2b, 0x59, 0x79, 0x9c, 0x4, 0xe4, 0xc, 0xe0, 0x7c, 0x49, 0x7e, 0xe, 0x1c, 0x11, 0x65}
 	assert.Equal(t, expectedHash, h, "Hash should match")
 }
 

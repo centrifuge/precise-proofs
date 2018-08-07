@@ -42,7 +42,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/iancoleman/strcase"
-	"github.com/xsleonard/go-merkle"
+	"github.com/mikiquantum/go-merkle"
 	"hash"
 	"reflect"
 	"sort"
