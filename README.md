@@ -4,7 +4,7 @@ Precise Proofs
 [![Travis CI](https://api.travis-ci.org/centrifuge/precise-proofs.svg?branch=master)](https://travis-ci.org/centrifuge/precise-proofs)
 [![codecov](https://codecov.io/gh/centrifuge/precise-proofs/branch/master/graph/badge.svg)](https://codecov.io/gh/centrifuge/precise-proofs)
 
-Read the [introduction on Precise-Proofs](https://github.com/centrifuge/precise-proofs)
+Read the [introduction on Precise-Proofs](https://medium.com/centrifuge/introducing-precise-proofs-create-validate-field-level-merkle-proofs-a31af9220df0)
 
 Precise-Proofs is a library for creating Merkle proofs out of protobuf messages. It 
 handles flattening of objects, ordering the fields by label and creating shareable and
