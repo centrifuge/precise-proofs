@@ -448,7 +448,7 @@ func TestTree_GenerateSortedProof(t *testing.T) {
 	assert.Equal(t, expectedRootHash, doctree.rootHash)
 	assert.Equal(t, expectedRootHash, doctree.RootHash())
 
-	hashes, err := doctree.pickHashesListFromMerkleTree(0)
+	hashes, err := doctree.pickHashesFromMerkleTreeAsList(0)
 	assert.Nil(t, err)
 	fieldHash := doctree.merkleTree.Nodes[0].Hash
 	valid, err := ValidateProofSortedHashes(fieldHash, hashes, doctree.rootHash, doctree.hash)
