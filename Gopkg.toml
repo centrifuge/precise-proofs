@@ -42,7 +42,7 @@
   version = "1.2.1"
 
 [[constraint]]
-  branch = "add-sort-option"
+  branch = "master"
   name = "github.com/mikiquantum/go-merkle"
 
 [prune]

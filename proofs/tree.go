@@ -69,8 +69,8 @@ func (doctree *DocumentTree) String() string {
 }
 
 // NewDocumentTree returns an empty DocumentTree
-func NewDocumentTree() DocumentTree {
-	return DocumentTree{[]string{}, merkle.NewTree(), []byte{}, nil, nil, nil}
+func NewDocumentTree(opts merkle.TreeOptions) DocumentTree {
+	return DocumentTree{[]string{}, merkle.NewTreeWithOpts(opts), []byte{}, nil, nil, nil}
 }
 
 // SetHashFunc to an implementation of hash.Hash of your choice
@@ -127,12 +127,20 @@ func (doctree *DocumentTree) CreateProof(prop string) (proof proofspb.Proof, err
 		return proofspb.Proof{}, err
 	}
 
-	hashes, err := doctree.pickHashesFromMerkleTree(uint64(leaf))
-	if err != nil {
-		return proofspb.Proof{}, err
+	if doctree.merkleTree.Options.EnableHashSorting {
+		sortedHashes, err := doctree.pickSortedHashesFromMerkleTree(uint64(leaf))
+		if err != nil {
+			return proofspb.Proof{}, err
+		}
+		proof = proofspb.Proof{Property: prop, Value: value, Salt: salt, SortedHashes: sortedHashes}
+	} else {
+		hashes, err := doctree.pickHashesFromMerkleTree(uint64(leaf))
+		if err != nil {
+			return proofspb.Proof{}, err
+		}
+		proof = proofspb.Proof{Property: prop, Value: value, Salt: salt, Hashes: hashes}
 	}
 
-	proof = proofspb.Proof{Property: prop, Value: value, Salt: salt, Hashes: hashes}
 	return
 }
 
@@ -158,19 +166,32 @@ func (doctree *DocumentTree) pickHashesFromMerkleTree(leaf uint64) (hashes []*pr
 	return hashes, nil
 }
 
-// ValidateProof by comparing it to the tree's rootHash
-func (doctree *DocumentTree) ValidateProof(proof *proofspb.Proof) (valid bool, err error) {
-	return ValidateProof(proof, doctree.rootHash, doctree.hash)
+// pickSortedHashesFromMerkleTree takes the required hashes needed to create a proof as a list
+func (doctree *DocumentTree) pickSortedHashesFromMerkleTree(leaf uint64) (hashes [][]byte, err error) {
+	proofNodes, err := CalculateProofNodeList(leaf, uint64(len(doctree.merkleTree.Leaves())))
+
+	if err != nil {
+		return hashes, err
+	}
+
+	hashes = make([][]byte, len(proofNodes))
+	for i, n := range proofNodes {
+		hashes[i] = doctree.merkleTree.Nodes[n.Leaf].Hash
+	}
+	return
 }
 
-// ValidateProof by comparing it to a given merkle tree root
-func ValidateProof(proof *proofspb.Proof, rootHash []byte, hashFunc hash.Hash) (valid bool, err error) {
-	hash, err := CalculateHashForProofField(proof, hashFunc)
+// ValidateProof by comparing it to the tree's rootHash
+func (doctree *DocumentTree) ValidateProof(proof *proofspb.Proof) (valid bool, err error) {
+	fieldHash, err := CalculateHashForProofField(proof, doctree.hash)
 	if err != nil {
 		return false, err
 	}
-
-	valid, err = ValidateProofHashes(hash, proof.Hashes, rootHash, hashFunc)
+	if doctree.merkleTree.Options.EnableHashSorting {
+		valid, err = ValidateProofSortedHashes(fieldHash, proof.SortedHashes, doctree.rootHash, doctree.hash)
+	} else {
+		valid, err = ValidateProofHashes(fieldHash, proof.Hashes, doctree.rootHash, doctree.hash)
+	}
 	return
 }
 
@@ -475,9 +496,9 @@ func getIndexOfString(slice []string, match string) (index int, err error) {
 // HashTwoValues concatenate two hashes to calculate hash out of the result. This is used in the merkleTree calculation code
 // as well as the validation code.
 func HashTwoValues(a []byte, b []byte, hashFunc hash.Hash) (hash []byte) {
-	data := make([]byte, 64)
-	copy(data[:32], a[:32])
-	copy(data[32:], b[:32])
+	data := make([]byte, hashFunc.Size()*2)
+	copy(data[:hashFunc.Size()], a[:hashFunc.Size()])
+	copy(data[hashFunc.Size():], b[:hashFunc.Size()])
 	return hashBytes(hashFunc, data)
 }
 
@@ -553,6 +574,23 @@ func ValidateProofHashes(hash []byte, hashes []*proofspb.MerkleHash, rootHash []
 			hash = HashTwoValues(hash, hashes[i].Right, hashFunc)
 		} else {
 			hash = HashTwoValues(hashes[i].Left, hash, hashFunc)
+		}
+	}
+
+	if !bytes.Equal(hash, rootHash) {
+		return false, errors.New("Hash does not match")
+	}
+
+	return true, nil
+}
+
+// ValidateProofHashes calculates the merkle root based on a list of left/right hashes.
+func ValidateProofSortedHashes(hash []byte, hashes [][]byte, rootHash []byte, hashFunc hash.Hash) (valid bool, err error) {
+	for i := 0; i < len(hashes); i++ {
+		if bytes.Compare(hash, hashes[i]) > 0 {
+			hash = HashTwoValues(hashes[i], hash, hashFunc)
+		} else {
+			hash = HashTwoValues(hash, hashes[i], hashFunc)
 		}
 	}
 

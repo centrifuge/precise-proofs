@@ -391,7 +391,7 @@ func BenchmarkCalculateProofNodeList(b *testing.B) {
 // TestTree_SetHashFunc tests calculating hashes both with sha256 and md5
 func TestTree_SetHashFunc(t *testing.T) {
 	// MD5
-	doctree := NewDocumentTree()
+	doctree := NewDocumentTree(merkle.TreeOptions{})
 	hashFuncMd5 := md5.New()
 	doctree.SetHashFunc(hashFuncMd5)
 	err := doctree.FillTree(&documentspb.LongDocumentExample, &documentspb.SaltedLongDocumentExample)
@@ -401,13 +401,13 @@ func TestTree_SetHashFunc(t *testing.T) {
 	assert.Equal(t, expectedRootHash, doctree.rootHash)
 
 	// No hash func set
-	doctreeNoHash := NewDocumentTree()
+	doctreeNoHash := NewDocumentTree(merkle.TreeOptions{})
 	err = doctreeNoHash.FillTree(&documentspb.LongDocumentExample, &documentspb.SaltedLongDocumentExample)
 	assert.NotNil(t, err)
 	assert.EqualError(t, err, "DocumentTree.hash is not set")
 
 	// SHA256
-	doctreeSha256 := NewDocumentTree()
+	doctreeSha256 := NewDocumentTree(merkle.TreeOptions{})
 	hashFuncSha256 := sha256.New()
 	doctreeSha256.SetHashFunc(hashFuncSha256)
 	err = doctreeSha256.FillTree(&documentspb.LongDocumentExample, &documentspb.SaltedLongDocumentExample)
@@ -417,8 +417,8 @@ func TestTree_SetHashFunc(t *testing.T) {
 	assert.Equal(t, expectedRootHash, doctreeSha256.rootHash)
 }
 
-func TestTree_GenerateProof(t *testing.T) {
-	doctree := NewDocumentTree()
+func TestTree_GenerateStandardProof(t *testing.T) {
+	doctree := NewDocumentTree(merkle.TreeOptions{})
 	hashFunc := sha256.New()
 	doctree.SetHashFunc(hashFunc)
 	err := doctree.FillTree(&documentspb.LongDocumentExample, &documentspb.SaltedLongDocumentExample)
@@ -437,6 +437,26 @@ func TestTree_GenerateProof(t *testing.T) {
 
 }
 
+func TestTree_GenerateSortedProof(t *testing.T) {
+	doctree := NewDocumentTree(merkle.TreeOptions{EnableHashSorting:true})
+	hashFunc := sha256.New()
+	doctree.SetHashFunc(hashFunc)
+	err := doctree.FillTree(&documentspb.LongDocumentExample, &documentspb.SaltedLongDocumentExample)
+	assert.Nil(t, err)
+
+	expectedRootHash := []byte{0x68, 0x36, 0x1f, 0x62, 0x5f, 0x8b, 0x5, 0x75, 0xc, 0x5e, 0x32, 0x85, 0x64, 0xcb, 0x45, 0xd0, 0x17, 0x66, 0xc0, 0x58, 0x3e, 0x9c, 0x19, 0xda, 0x53, 0x52, 0x81, 0x52, 0x44, 0x74, 0x79, 0xb7}
+	assert.Equal(t, expectedRootHash, doctree.rootHash)
+	assert.Equal(t, expectedRootHash, doctree.RootHash())
+
+	hashes, err := doctree.pickSortedHashesFromMerkleTree(0)
+	assert.Nil(t, err)
+	fieldHash := doctree.merkleTree.Nodes[0].Hash
+	valid, err := ValidateProofSortedHashes(fieldHash, hashes, doctree.rootHash, doctree.hash)
+	assert.Nil(t, err)
+	assert.True(t, valid)
+
+}
+
 func TestGetStringValueByProperty(t *testing.T) {
 	value, err := getStringValueByProperty("valueA", &documentspb.FilledExampleDocument)
 	assert.Nil(t, err)
@@ -450,8 +470,8 @@ func TestGetStringValueByProperty(t *testing.T) {
 	assert.Equal(t, "Ag==", value)
 }
 
-func TestCreateProof(t *testing.T) {
-	doctree := NewDocumentTree()
+func TestCreateStandardProof(t *testing.T) {
+	doctree := NewDocumentTree(merkle.TreeOptions{})
 	hashFunc := sha256.New()
 	doctree.SetHashFunc(hashFunc)
 	err := doctree.FillTree(&documentspb.FilledExampleDocument, &documentspb.ExampleDocumentSalts)
@@ -484,6 +504,39 @@ func TestCreateProof(t *testing.T) {
 
 }
 
+func TestCreateSortedProof(t *testing.T) {
+	doctree := NewDocumentTree(merkle.TreeOptions{EnableHashSorting:true})
+	hashFunc := sha256.New()
+	doctree.SetHashFunc(hashFunc)
+	err := doctree.FillTree(&documentspb.FilledExampleDocument, &documentspb.ExampleDocumentSalts)
+	assert.Nil(t, err)
+
+	_, err = doctree.CreateProof("InexistentField")
+	assert.EqualError(t, err, "No such field: InexistentField in obj")
+
+	proof, err := doctree.CreateProof("valueA")
+	assert.Nil(t, err)
+	assert.Equal(t, "valueA", proof.Property)
+	assert.Equal(t, documentspb.FilledExampleDocument.ValueA, proof.Value)
+	assert.Equal(t, documentspb.ExampleDocumentSalts.ValueA, proof.Salt)
+
+	fieldHash, err := CalculateHashForProofField(&proof, hashFunc)
+	rootHash := []byte{0x29, 0xdb, 0xff, 0xa6, 0x8e, 0x5c, 0xd4, 0x8b, 0xb4, 0xcb, 0x25, 0x4, 0x19, 0xf, 0x10, 0x88, 0x3f, 0xb1, 0x87, 0x79, 0x3b, 0x2f, 0x70, 0xea, 0xb8, 0x1f, 0xb5, 0x44, 0xc, 0x68, 0x9, 0xb6}
+	assert.Equal(t, rootHash, doctree.rootHash)
+	valid, err := ValidateProofSortedHashes(fieldHash, proof.SortedHashes, rootHash, doctree.hash)
+	assert.True(t, valid)
+
+	valid, err = doctree.ValidateProof(&proof)
+	assert.True(t, valid)
+	assert.Nil(t, err)
+
+	falseProof, err := doctree.CreateProof("valueA")
+	falseProof.Value = "Invalid"
+	valid, err = doctree.ValidateProof(&falseProof)
+	assert.False(t, valid)
+	assert.EqualError(t, err, "Hash does not match")
+}
+
 func Example_complete() {
 	// ExampleDocument is a protobuf message
 	document := documentspb.ExampleDocument{
@@ -499,7 +552,7 @@ func Example_complete() {
 	salts := documentspb.SaltedExampleDocument{}
 	FillSalts(&salts)
 
-	doctree := NewDocumentTree()
+	doctree := NewDocumentTree(merkle.TreeOptions{})
 	doctree.FillTree(&document, &salts)
 	fmt.Printf("Generated tree: %s\n", doctree.String())
 

@@ -2,16 +2,6 @@
 
 
 [[projects]]
-  branch = "master"
-  name = "github.com/centrifuge/precise-proofs"
-  packages = [
-    "examples/documents",
-    "proofs",
-    "proofs/proto"
-  ]
-  revision = "f8ef5392db436f8678e972810bf919c0406d1b83"
-
-[[projects]]
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
@@ -44,10 +34,10 @@
   revision = "90d371a664d668ca3e61d3ddddf1916662959f11"
 
 [[projects]]
-  branch = "add-sort-option"
+  branch = "master"
   name = "github.com/mikiquantum/go-merkle"
   packages = ["."]
-  revision = "7ba5c54fcfc2d844a472b78294eb8adfa7b72a3f"
+  revision = "15d0693a4fbeaffc448f5207a7e80bd293ba346a"
 
 [[projects]]
   branch = "master"
@@ -67,15 +57,9 @@
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
   version = "v1.2.2"
 
-[[projects]]
-  branch = "master"
-  name = "github.com/xsleonard/go-merkle"
-  packages = ["."]
-  revision = "c71c7cc334c839f31f3760b2385eab8381daf64e"
-
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "0914db2ca74d099b56f5c9531375898b018f706f07349563039b0a6f492e58df"
+  inputs-digest = "5c9e6ba302fd64be0d52d12464f7bfd8ee807cca4ea49beb597b710abbde80ca"
   solver-name = "gps-cdcl"
   solver-version = 1

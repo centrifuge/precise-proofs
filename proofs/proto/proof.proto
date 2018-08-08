@@ -23,4 +23,5 @@ message Proof {
   string value = 2;
   bytes salt = 3;
   repeated MerkleHash hashes = 4;
+  repeated bytes sortedHashes = 5;
 }
