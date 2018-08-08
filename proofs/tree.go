@@ -129,7 +129,7 @@ func (doctree *DocumentTree) CreateProof(prop string) (proof proofspb.Proof, err
 	}
 
 	if doctree.merkleTree.Options.EnableHashSorting {
-		sortedHashes, err := doctree.pickSortedHashesFromMerkleTree(uint64(leaf))
+		sortedHashes, err := doctree.pickHashesListFromMerkleTree(uint64(leaf))
 		if err != nil {
 			return proofspb.Proof{}, err
 		}
@@ -167,8 +167,8 @@ func (doctree *DocumentTree) pickHashesFromMerkleTree(leaf uint64) (hashes []*pr
 	return hashes, nil
 }
 
-// pickSortedHashesFromMerkleTree takes the required hashes needed to create a proof as a list
-func (doctree *DocumentTree) pickSortedHashesFromMerkleTree(leaf uint64) (hashes [][]byte, err error) {
+// pickHashesListFromMerkleTree takes the required hashes needed to create a proof as a list
+func (doctree *DocumentTree) pickHashesListFromMerkleTree(leaf uint64) (hashes [][]byte, err error) {
 	proofNodes, err := CalculateProofNodeList(leaf, uint64(len(doctree.merkleTree.Leaves())))
 
 	if err != nil {
