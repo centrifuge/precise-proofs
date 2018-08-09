@@ -48,8 +48,12 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/iancoleman/strcase"
-	"github.com/mikiquantum/go-merkle"
+	"github.com/centrifuge/go-merkle"
 )
+
+type TreeOptions struct {
+	EnableHashSorting bool
+}
 
 // DocumentTree is a helper object to create a merkleTree and proofs for fields in the document
 type DocumentTree struct {
@@ -70,7 +74,11 @@ func (doctree *DocumentTree) String() string {
 }
 
 // NewDocumentTree returns an empty DocumentTree
-func NewDocumentTree(opts merkle.TreeOptions) DocumentTree {
+func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
+	opts := merkle.TreeOptions{}
+	if proofOpts.EnableHashSorting {
+		opts.EnableHashSorting = proofOpts.EnableHashSorting
+	}
 	return DocumentTree{[]string{}, merkle.NewTreeWithOpts(opts), []byte{}, nil, nil, nil}
 }
 

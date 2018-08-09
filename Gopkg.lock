@@ -2,6 +2,12 @@
 
 
 [[projects]]
+  branch = "master"
+  name = "github.com/centrifuge/go-merkle"
+  packages = ["."]
+  revision = "eb4cce98822c0dcccc0594b45b8d8ab3fdb48ffa"
+
+[[projects]]
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
@@ -35,12 +41,6 @@
 
 [[projects]]
   branch = "master"
-  name = "github.com/mikiquantum/go-merkle"
-  packages = ["."]
-  revision = "15d0693a4fbeaffc448f5207a7e80bd293ba346a"
-
-[[projects]]
-  branch = "master"
   name = "github.com/oleiade/reflections"
   packages = ["."]
   revision = "0e86b3c98b2ff33e30c85cfe97d9a63d439fe7eb"
@@ -60,6 +60,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "5c9e6ba302fd64be0d52d12464f7bfd8ee807cca4ea49beb597b710abbde80ca"
+  inputs-digest = "66997a92eba443bab40023696b486b7502efc3d44fef21ccc11e5472300880d5"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -10,7 +10,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/assert"
-	"github.com/mikiquantum/go-merkle"
+	"github.com/centrifuge/go-merkle"
 	"testing"
 	"time"
 )
@@ -391,7 +391,7 @@ func BenchmarkCalculateProofNodeList(b *testing.B) {
 // TestTree_SetHashFunc tests calculating hashes both with sha256 and md5
 func TestTree_SetHashFunc(t *testing.T) {
 	// MD5
-	doctree := NewDocumentTree(merkle.TreeOptions{})
+	doctree := NewDocumentTree(TreeOptions{})
 	hashFuncMd5 := md5.New()
 	doctree.SetHashFunc(hashFuncMd5)
 	err := doctree.FillTree(&documentspb.LongDocumentExample, &documentspb.SaltedLongDocumentExample)
@@ -401,13 +401,13 @@ func TestTree_SetHashFunc(t *testing.T) {
 	assert.Equal(t, expectedRootHash, doctree.rootHash)
 
 	// No hash func set
-	doctreeNoHash := NewDocumentTree(merkle.TreeOptions{})
+	doctreeNoHash := NewDocumentTree(TreeOptions{})
 	err = doctreeNoHash.FillTree(&documentspb.LongDocumentExample, &documentspb.SaltedLongDocumentExample)
 	assert.NotNil(t, err)
 	assert.EqualError(t, err, "DocumentTree.hash is not set")
 
 	// SHA256
-	doctreeSha256 := NewDocumentTree(merkle.TreeOptions{})
+	doctreeSha256 := NewDocumentTree(TreeOptions{})
 	hashFuncSha256 := sha256.New()
 	doctreeSha256.SetHashFunc(hashFuncSha256)
 	err = doctreeSha256.FillTree(&documentspb.LongDocumentExample, &documentspb.SaltedLongDocumentExample)
@@ -418,7 +418,7 @@ func TestTree_SetHashFunc(t *testing.T) {
 }
 
 func TestTree_GenerateStandardProof(t *testing.T) {
-	doctree := NewDocumentTree(merkle.TreeOptions{})
+	doctree := NewDocumentTree(TreeOptions{})
 	hashFunc := sha256.New()
 	doctree.SetHashFunc(hashFunc)
 	err := doctree.FillTree(&documentspb.LongDocumentExample, &documentspb.SaltedLongDocumentExample)
@@ -438,7 +438,7 @@ func TestTree_GenerateStandardProof(t *testing.T) {
 }
 
 func TestTree_GenerateSortedProof(t *testing.T) {
-	doctree := NewDocumentTree(merkle.TreeOptions{EnableHashSorting:true})
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting:true})
 	hashFunc := sha256.New()
 	doctree.SetHashFunc(hashFunc)
 	err := doctree.FillTree(&documentspb.LongDocumentExample, &documentspb.SaltedLongDocumentExample)
@@ -471,7 +471,7 @@ func TestGetStringValueByProperty(t *testing.T) {
 }
 
 func TestCreateStandardProof(t *testing.T) {
-	doctree := NewDocumentTree(merkle.TreeOptions{})
+	doctree := NewDocumentTree(TreeOptions{})
 	hashFunc := sha256.New()
 	doctree.SetHashFunc(hashFunc)
 	err := doctree.FillTree(&documentspb.FilledExampleDocument, &documentspb.ExampleDocumentSalts)
@@ -505,7 +505,7 @@ func TestCreateStandardProof(t *testing.T) {
 }
 
 func TestCreateSortedProof(t *testing.T) {
-	doctree := NewDocumentTree(merkle.TreeOptions{EnableHashSorting:true})
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting:true})
 	hashFunc := sha256.New()
 	doctree.SetHashFunc(hashFunc)
 	err := doctree.FillTree(&documentspb.FilledExampleDocument, &documentspb.ExampleDocumentSalts)
@@ -552,7 +552,7 @@ func Example_complete() {
 	salts := documentspb.SaltedExampleDocument{}
 	FillSalts(&salts)
 
-	doctree := NewDocumentTree(merkle.TreeOptions{})
+	doctree := NewDocumentTree(TreeOptions{})
 	doctree.FillTree(&document, &salts)
 	fmt.Printf("Generated tree: %s\n", doctree.String())
 

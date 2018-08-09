@@ -8,7 +8,7 @@ import (
 	"github.com/centrifuge/precise-proofs/examples/documents"
 	"github.com/centrifuge/precise-proofs/proofs"
 	"crypto/sha256"
-	"github.com/mikiquantum/go-merkle"
+	"github.com/centrifuge/go-merkle"
 )
 
 func printError(err error){
