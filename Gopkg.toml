@@ -43,7 +43,7 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/xsleonard/go-merkle"
+  name = "github.com/centrifuge/go-merkle"
 
 [prune]
   go-tests = true

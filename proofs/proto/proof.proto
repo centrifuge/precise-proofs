@@ -22,5 +22,8 @@ message Proof {
   string property = 1;
   string value = 2;
   bytes salt = 3;
+  // Fills either 'hashes' for standard Merkle trees or 'sortedHashes' for a lexicograhical ordered of a node hash
+  // not both
   repeated MerkleHash hashes = 4;
+  repeated bytes sortedHashes = 5;
 }

@@ -2,6 +2,12 @@
 
 
 [[projects]]
+  branch = "master"
+  name = "github.com/centrifuge/go-merkle"
+  packages = ["."]
+  revision = "eb4cce98822c0dcccc0594b45b8d8ab3fdb48ffa"
+
+[[projects]]
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
@@ -51,15 +57,9 @@
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
   version = "v1.2.2"
 
-[[projects]]
-  branch = "master"
-  name = "github.com/xsleonard/go-merkle"
-  packages = ["."]
-  revision = "c71c7cc334c839f31f3760b2385eab8381daf64e"
-
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f9cbb8f6cbca08412c356d045b7fbc025b69704ecf3ec1c61a1cb2d25a746906"
+  inputs-digest = "66997a92eba443bab40023696b486b7502efc3d44fef21ccc11e5472300880d5"
   solver-name = "gps-cdcl"
   solver-version = 1
