@@ -38,3 +38,15 @@ func NewAllFieldTypes() *AllFieldTypes {
 	m.TimeStampValue = now
 	return &m
 }
+
+var ExampleFilledRepeatedDocument = SimpleRepeatedDocument {
+	ValueA: "ValueAA",
+	ValueB: "ValueBB",
+	ValueC: []string{"ValueCA", "ValueCB"},
+}
+
+var ExampleSaltedRepeatedDocument = SaltedSimpleRepeatedDocument {
+	ValueA: salt,
+	ValueB: salt,
+	ValueC: [][]byte{salt, salt},
+}

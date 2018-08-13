@@ -49,6 +49,7 @@ import (
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/iancoleman/strcase"
 	"github.com/centrifuge/go-merkle"
+	"regexp"
 )
 
 type TreeOptions struct {
@@ -130,6 +131,9 @@ func (doctree *DocumentTree) CreateProof(prop string) (proof proofspb.Proof, err
 		return proofspb.Proof{}, err
 	}
 	salt, err := getByteValueByProperty(prop, doctree.salts)
+	if err != nil {
+		return proofspb.Proof{}, err
+	}
 
 	leaf, err := getIndexOfString(doctree.propertyList, prop)
 	if err != nil {
@@ -246,20 +250,15 @@ func ValueToString(value interface{}) (s string, err error) {
 // LeafNode represents a field that can be hashed to create a merkle tree
 type LeafNode struct {
 	Property string
-	Value    interface{}
+	Value    string
 	Salt     []byte
 }
 
 // ConcatValues concatenates property, value & salt into one byte slice.
-func ConcatValues(prop string, value interface{}, salt []byte) (payload []byte, err error) {
+func ConcatValues(prop string, value string, salt []byte) (payload []byte, err error) {
 	propBytes := []byte(prop)
-	valueString, err := ValueToString(value)
-	if err != nil {
-		return []byte{}, err
-	}
-
 	payload = append(payload, propBytes...)
-	payload = append(payload, []byte(valueString)...)
+	payload = append(payload, []byte(value)...)
 	if len(salt) != 32 {
 		return []byte{}, fmt.Errorf("%s: Salt has incorrect length: %d instead of 32", prop, len(salt))
 	}
@@ -373,14 +372,69 @@ func (f *messageFlattener) generateLeafFromFieldIndex(index int) (err error) {
 		return
 	}
 
-	salt := reflect.Indirect(f.saltsValue).FieldByName(f.messageType.Field(index).Name).Interface().([]byte)
+	if reflect.TypeOf(value).Kind() == reflect.Slice {
+		s := reflect.ValueOf(value)
+		if s.Type() == reflect.TypeOf([]uint8{}) {
+			value = value.([]byte)
+			salt := reflect.Indirect(f.saltsValue).FieldByName(f.messageType.Field(index).Name).Interface().([]byte)
+			valueString, err := ValueToString(value)
+			if err != nil {
+				return err
+			}
+			f.appendLeaf(prop, valueString, salt)
+		} else {
+			for i := 0; i < s.Len(); i++ {
+				propItem := fmt.Sprintf("%s[%d]", prop, i)
+				conv, err := ConvertReflectValueToSupportedPrimitive(s.Index(i))
+				if err != nil {
+					return err
+				}
+				valueString, err := ValueToString(conv)
+				if err != nil {
+					return err
+				}
+
+				salt := reflect.ValueOf(reflect.Indirect(f.saltsValue).FieldByName(f.messageType.Field(index).Name).Interface()).Index(i).Interface().([]byte)
+				f.appendLeaf(propItem, valueString, salt)
+			}
+		}
+	} else if reflect.TypeOf(value).Kind() == reflect.Struct {
+		return errors.New("Nested Structs are not yet suported")
+	} else {
+		valueString, err := ValueToString(value)
+		if err != nil {
+			return err
+		}
+		salt := reflect.Indirect(f.saltsValue).FieldByName(f.messageType.Field(index).Name).Interface().([]byte)
+		f.appendLeaf(prop, valueString, salt)
+	}
+
+	return nil
+}
+
+func ConvertReflectValueToSupportedPrimitive(value reflect.Value) (converted interface{}, err error) {
+	switch t := reflect.TypeOf(value.Interface()); t {
+	case reflect.TypeOf(""):
+		converted = value.Interface().(string)
+	case reflect.TypeOf(int64(0)):
+		converted = value.Interface().(int64)
+	case reflect.TypeOf([]uint8{}):
+		converted = value.Interface().([]uint8)
+	case reflect.TypeOf(timestamp.Timestamp{}):
+		converted = value.Interface().(timestamp.Timestamp)
+	default:
+		return "", errors.New(fmt.Sprintf("Got unsupported value: %t", t))
+	}
+	return
+}
+
+func (f *messageFlattener) appendLeaf(prop string, value string, salt[]byte) {
 	leaf := LeafNode{
 		Property: prop,
 		Value:    value,
 		Salt:     salt,
 	}
 	f.leaves = append(f.leaves, leaf)
-	return nil
 }
 
 // sortLeaves by the property attribute and copies the properties and
@@ -473,23 +527,42 @@ func FlattenMessage(message, messageSalts proto.Message) (nodes [][]byte, propOr
 // getStringValueByProperty gets a value from a struct and returns the value. This method does not yet
 // support nested structs. It converts the value to a string representation.
 func getStringValueByProperty(prop string, message proto.Message) (value string, err error) {
-	prop = strcase.ToCamel(prop)
+	re := regexp.MustCompile(`(.*)(\[(.*)])`)
+	prefix := re.ReplaceAllString(prop, "$1")
+	strIdx := re.ReplaceAllString(prop, "$3")
+	prop = strcase.ToCamel(prefix)
 	v, err := dotaccess.Get(message, prop)
 	if err != nil {
 		return "", err
 	}
-	value, err = ValueToString(v)
+	if reflect.TypeOf(v).Kind() == reflect.Slice {
+		if reflect.ValueOf(v).Type() == reflect.TypeOf([]uint8{}) {
+			value, err = ValueToString(v)
+		} else {
+			idx, err := strconv.Atoi(strIdx)
+			if err != nil {
+				return "", err
+			}
+			conv, err := ConvertReflectValueToSupportedPrimitive(reflect.ValueOf(v).Index(idx))
+			value, err = ValueToString(conv)
+		}
+	} else if reflect.TypeOf(v).Kind() == reflect.Struct {
+		return "", errors.New("Nested Structs are not yet suported")
+	}	else {
+		value, err = ValueToString(v)
+	}
+
 	return
 }
 
-// getByteValueByProperty tries to use the dot notation to access a field. This
-// is used specifically to get the salt value which is always a byte slice.
 func getByteValueByProperty(prop string, message proto.Message) (value []byte, err error) {
-	v, err := dotaccess.Get(message, prop)
+	val, err := getStringValueByProperty(prop, message)
 	if err != nil {
-		return []byte{}, err
+		return value, err
 	}
-	return v.([]byte), nil
+
+	value, err = base64.StdEncoding.DecodeString(val)
+	return value, err
 }
 
 func getIndexOfString(slice []string, match string) (index int, err error) {

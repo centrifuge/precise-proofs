@@ -13,6 +13,7 @@ import (
 	"github.com/centrifuge/go-merkle"
 	"testing"
 	"time"
+	"strconv"
 )
 
 var testSalt = []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225}
@@ -64,22 +65,18 @@ func TestValueToString(t *testing.T) {
 }
 
 func TestConcatValues(t *testing.T) {
-	val, err := ConcatValues("prop", int64(0), testSalt)
+	val, err := ConcatValues("prop", strconv.FormatInt(int64(0), 10), testSalt)
 	assert.Nil(t, err)
 	v, _ := ValueToString(int64(0))
 	expectedPayload := append([]byte("prop"), v...)
 	expectedPayload = append(expectedPayload, testSalt...)
 	assert.Equal(t, expectedPayload, val)
-
-	val, err = ConcatValues("prop", documentspb.FilledExampleDocument, testSalt)
-	assert.NotNil(t, err)
-	assert.Equal(t, []byte{}, val)
 }
 
 func TestConcatNode(t *testing.T) {
 	intLeaf := LeafNode{
 		Property: "fieldName",
-		Value:    int64(42),
+		Value:    strconv.FormatInt(int64(42), 10),
 		Salt:     testSalt,
 	}
 
@@ -99,7 +96,7 @@ func TestConcatNode(t *testing.T) {
 
 	invalidSaltLeaf := LeafNode{
 		Property: "fieldName",
-		Value:    int64(42),
+		Value:    strconv.FormatInt(int64(42), 10),
 		Salt:     []byte{},
 	}
 	_, err = ConcatNode(&invalidSaltLeaf)
@@ -457,6 +454,23 @@ func TestTree_GenerateSortedProof(t *testing.T) {
 
 }
 
+func TestTree_GenerateWithRepeatedFields(t *testing.T) {
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting:true})
+	hashFunc := sha256.New()
+	doctree.SetHashFunc(hashFunc)
+	err := doctree.FillTree(&documentspb.ExampleFilledRepeatedDocument, &documentspb.ExampleSaltedRepeatedDocument)
+	assert.Nil(t, err)
+	expectedRootHash := []byte{0x1b, 0x31, 0xa0, 0x99, 0x8f, 0x65, 0x99, 0xcc, 0x0, 0x92, 0xaa, 0x2f, 0xf3, 0xca, 0x9e, 0xd1, 0x38, 0x36, 0xc8, 0x6f, 0xb2, 0x1b, 0x8c, 0x6e, 0x23, 0x11, 0x46, 0x4b, 0x69, 0x14, 0xd, 0x68}
+	assert.Equal(t, expectedRootHash, doctree.rootHash)
+
+	hashes, err := doctree.pickHashesFromMerkleTreeAsList(0)
+	assert.Nil(t, err)
+	fieldHash := doctree.merkleTree.Nodes[0].Hash
+	valid, err := ValidateProofSortedHashes(fieldHash, hashes, doctree.rootHash, doctree.hash)
+	assert.Nil(t, err)
+	assert.True(t, valid)
+}
+
 func TestGetStringValueByProperty(t *testing.T) {
 	value, err := getStringValueByProperty("valueA", &documentspb.FilledExampleDocument)
 	assert.Nil(t, err)
@@ -531,6 +545,39 @@ func TestCreateSortedProof(t *testing.T) {
 	assert.Nil(t, err)
 
 	falseProof, err := doctree.CreateProof("valueA")
+	falseProof.Value = "Invalid"
+	valid, err = doctree.ValidateProof(&falseProof)
+	assert.False(t, valid)
+	assert.EqualError(t, err, "Hash does not match")
+}
+
+func TestCreateRepeatedSortedProof(t *testing.T) {
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting:true})
+	hashFunc := sha256.New()
+	doctree.SetHashFunc(hashFunc)
+	err := doctree.FillTree(&documentspb.ExampleFilledRepeatedDocument, &documentspb.ExampleSaltedRepeatedDocument)
+	assert.Nil(t, err)
+
+	_, err = doctree.CreateProof("InexistentField")
+	assert.EqualError(t, err, "No such field: InexistentField in obj")
+
+	proof, err := doctree.CreateProof("valueC[1]")
+	assert.Nil(t, err)
+	assert.Equal(t, "valueC[1]", proof.Property)
+	assert.Equal(t, documentspb.ExampleFilledRepeatedDocument.ValueC[1], proof.Value)
+	assert.Equal(t, documentspb.ExampleSaltedRepeatedDocument.ValueC[1], proof.Salt)
+
+	fieldHash, err := CalculateHashForProofField(&proof, hashFunc)
+	rootHash := []byte{0x1b, 0x31, 0xa0, 0x99, 0x8f, 0x65, 0x99, 0xcc, 0x0, 0x92, 0xaa, 0x2f, 0xf3, 0xca, 0x9e, 0xd1, 0x38, 0x36, 0xc8, 0x6f, 0xb2, 0x1b, 0x8c, 0x6e, 0x23, 0x11, 0x46, 0x4b, 0x69, 0x14, 0xd, 0x68}
+	assert.Equal(t, rootHash, doctree.rootHash)
+	valid, err := ValidateProofSortedHashes(fieldHash, proof.SortedHashes, rootHash, doctree.hash)
+	assert.True(t, valid)
+
+	valid, err = doctree.ValidateProof(&proof)
+	assert.True(t, valid)
+	assert.Nil(t, err)
+
+	falseProof, err := doctree.CreateProof("valueC[1]")
 	falseProof.Value = "Invalid"
 	valid, err = doctree.ValidateProof(&falseProof)
 	assert.False(t, valid)

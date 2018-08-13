@@ -31,7 +31,7 @@ func (m *MerkleHash) Reset()         { *m = MerkleHash{} }
 func (m *MerkleHash) String() string { return proto.CompactTextString(m) }
 func (*MerkleHash) ProtoMessage()    {}
 func (*MerkleHash) Descriptor() ([]byte, []int) {
-	return fileDescriptor_proof_f637c77fc95411c6, []int{0}
+	return fileDescriptor_proof_e9c6425bd001bfe2, []int{0}
 }
 func (m *MerkleHash) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_MerkleHash.Unmarshal(m, b)
@@ -66,9 +66,11 @@ func (m *MerkleHash) GetRight() []byte {
 }
 
 type Proof struct {
-	Property             string        `protobuf:"bytes,1,opt,name=property,proto3" json:"property,omitempty"`
-	Value                string        `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
-	Salt                 []byte        `protobuf:"bytes,3,opt,name=salt,proto3" json:"salt,omitempty"`
+	Property string `protobuf:"bytes,1,opt,name=property,proto3" json:"property,omitempty"`
+	Value    string `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	Salt     []byte `protobuf:"bytes,3,opt,name=salt,proto3" json:"salt,omitempty"`
+	// Fills either 'hashes' for standard Merkle trees or 'sortedHashes' for a lexicograhical ordered of a node hash
+	// not both
 	Hashes               []*MerkleHash `protobuf:"bytes,4,rep,name=hashes,proto3" json:"hashes,omitempty"`
 	SortedHashes         [][]byte      `protobuf:"bytes,5,rep,name=sortedHashes,proto3" json:"sortedHashes,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
@@ -80,7 +82,7 @@ func (m *Proof) Reset()         { *m = Proof{} }
 func (m *Proof) String() string { return proto.CompactTextString(m) }
 func (*Proof) ProtoMessage()    {}
 func (*Proof) Descriptor() ([]byte, []int) {
-	return fileDescriptor_proof_f637c77fc95411c6, []int{1}
+	return fileDescriptor_proof_e9c6425bd001bfe2, []int{1}
 }
 func (m *Proof) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Proof.Unmarshal(m, b)
@@ -150,9 +152,9 @@ func init() {
 	proto.RegisterExtension(E_ExcludeFromTree)
 }
 
-func init() { proto.RegisterFile("proofs/proto/proof.proto", fileDescriptor_proof_f637c77fc95411c6) }
+func init() { proto.RegisterFile("proofs/proto/proof.proto", fileDescriptor_proof_e9c6425bd001bfe2) }
 
-var fileDescriptor_proof_f637c77fc95411c6 = []byte{
+var fileDescriptor_proof_e9c6425bd001bfe2 = []byte{
 	// 298 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x54, 0x50, 0x4f, 0x4b, 0x3b, 0x31,
 	0x10, 0x65, 0x7f, 0xfd, 0x43, 0x3b, 0xbf, 0x82, 0x18, 0x3c, 0x84, 0x82, 0xb0, 0x14, 0x0f, 0xc5,
