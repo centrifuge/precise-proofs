@@ -41,26 +41,38 @@ message SimpleItem {
 }
 
 message SaltedSimpleItem {
-  bytes valueB = 1;
+  bytes valueA = 1;
+}
+
+message TwoLevelItem {
+  SimpleItem valueA = 1;
+  string valueB = 2;
+}
+
+message SaltedTwoLevelItem {
+  SaltedSimpleItem valueA = 1;
+  bytes valueB = 2;
 }
 
 message NestedRepeatedDocument {
   string valueA = 1;
   string valueB = 2;
   repeated SimpleItem valueC = 3;
+  TwoLevelItem valueD = 4;
 }
 
 message SaltedNestedRepeatedDocument {
   bytes valueA = 1;
   bytes valueB = 2;
-  repeated bytes valueC = 3;
+  repeated SaltedSimpleItem valueC = 3;
+  SaltedTwoLevelItem valueD = 4;
 }
 //
 
 message SimpleRepeatedDocument {
   string valueA = 1;
   string valueB = 2;
-  repeated string valueC = 3;
+  repeated string valueC = 4;
 }
 
 message SaltedSimpleRepeatedDocument {

@@ -50,3 +50,17 @@ var ExampleSaltedRepeatedDocument = SaltedSimpleRepeatedDocument {
 	ValueB: salt,
 	ValueC: [][]byte{salt, salt},
 }
+
+var ExampleFilledNestedRepeatedDocument = NestedRepeatedDocument{
+	ValueA: "ValueAA",
+	ValueB: "ValueBB",
+	ValueC: []*SimpleItem{{ValueA: "ValueCA"}, {ValueA: "ValueCB"}},
+	ValueD: &TwoLevelItem{ValueA: &SimpleItem{ValueA: "ValueDAA"}, ValueB: "ValueDB"},
+}
+
+var ExampleSaltedNestedRepeatedDocument = SaltedNestedRepeatedDocument{
+	ValueA: salt,
+	ValueB: salt,
+	ValueC: []*SaltedSimpleItem{{ValueA:salt}, {ValueA:salt}},
+	ValueD: &SaltedTwoLevelItem{ValueA:&SaltedSimpleItem{ValueA:salt}, ValueB: salt},
+}

@@ -132,7 +132,8 @@ func TestFlattenMessage(t *testing.T) {
 func TestFlattenMessage_AllFieldTypes(t *testing.T) {
 	message := documentspb.NewAllFieldTypes()
 	messageSalts := documentspb.AllFieldTypesSalts{}
-	FillSalts(&messageSalts)
+	err := FillSalts(message, &messageSalts)
+	assert.Nil(t, err)
 
 	_, fieldOrder, err := FlattenMessage(message, &messageSalts)
 	assert.Equal(t, []string{"string_value", "time_stamp_value"}, fieldOrder)
@@ -142,12 +143,31 @@ func TestFlattenMessage_AllFieldTypes(t *testing.T) {
 
 func TestFillSalts(t *testing.T) {
 	// Fill a properly formatted document
+	exampleDoc := &documentspb.ExampleDocument{}
 	exampleSalts := &documentspb.SaltedExampleDocument{}
-	err := FillSalts(exampleSalts)
+	err := FillSalts(exampleDoc, exampleSalts)
 	assert.Nil(t, err, "Fill salts should not fail")
 
+	fmt.Printf("Salts: %v\n", exampleSalts)
+	fmt.Printf("Second\n")
+
+	exampleFRDoc := &documentspb.ExampleFilledRepeatedDocument
+	exampleFRSalts := &documentspb.SaltedSimpleRepeatedDocument{}
+	err = FillSalts(exampleFRDoc, exampleFRSalts)
+	assert.Nil(t, err, "Fill salts should not fail")
+
+	fmt.Printf("Salts: %v\n", exampleFRSalts)
+	fmt.Printf("third\n")
+
+	exampleFNDoc := &documentspb.ExampleFilledNestedRepeatedDocument
+	exampleFNSalts := &documentspb.SaltedNestedRepeatedDocument{}
+	err = FillSalts(exampleFNDoc, exampleFNSalts)
+	assert.Nil(t, err, "Fill salts should not fail")
+
+	fmt.Printf("Salts: %v\n", exampleFNSalts)
+
 	badExample := &documentspb.ExampleDocument{}
-	err = FillSalts(badExample)
+	err = FillSalts(badExample, badExample)
 	assert.NotNil(t, err, "Fill salts should error because of string")
 }
 
@@ -463,6 +483,27 @@ func TestTree_GenerateWithRepeatedFields(t *testing.T) {
 	expectedRootHash := []byte{0x1b, 0x31, 0xa0, 0x99, 0x8f, 0x65, 0x99, 0xcc, 0x0, 0x92, 0xaa, 0x2f, 0xf3, 0xca, 0x9e, 0xd1, 0x38, 0x36, 0xc8, 0x6f, 0xb2, 0x1b, 0x8c, 0x6e, 0x23, 0x11, 0x46, 0x4b, 0x69, 0x14, 0xd, 0x68}
 	assert.Equal(t, expectedRootHash, doctree.rootHash)
 
+	assert.Equal(t,[]string{"valueA", "valueB", "valueC[0]", "valueC[1]"}, doctree.propertyList )
+
+	hashes, err := doctree.pickHashesFromMerkleTreeAsList(0)
+	assert.Nil(t, err)
+	fieldHash := doctree.merkleTree.Nodes[0].Hash
+	valid, err := ValidateProofSortedHashes(fieldHash, hashes, doctree.rootHash, doctree.hash)
+	assert.Nil(t, err)
+	assert.True(t, valid)
+}
+
+func TestTree_GenerateWithNestedAndRepeatedFields(t *testing.T) {
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting:true})
+	hashFunc := sha256.New()
+	doctree.SetHashFunc(hashFunc)
+	err := doctree.FillTree(&documentspb.ExampleFilledNestedRepeatedDocument, &documentspb.ExampleSaltedNestedRepeatedDocument)
+	assert.Nil(t, err)
+	expectedRootHash := []byte{0x31, 0x4, 0x71, 0xd, 0xb4, 0x60, 0xfc, 0x79, 0xe8, 0xb2, 0xe6, 0xc6, 0x9c, 0x64, 0xf7, 0x11, 0x2, 0x9f, 0x50, 0xc7, 0x61, 0x86, 0xc7, 0x30, 0xe8, 0x8d, 0xe7, 0x2, 0xc2, 0x16, 0xb7, 0xcf}
+	assert.Equal(t, expectedRootHash, doctree.rootHash)
+
+	assert.Equal(t,[]string{"valueA", "valueB", "valueC[0].valueA", "valueC[1].valueA", "valueD.valueA.valueA", "valueD.valueB"}, doctree.propertyList )
+
 	hashes, err := doctree.pickHashesFromMerkleTreeAsList(0)
 	assert.Nil(t, err)
 	fieldHash := doctree.merkleTree.Nodes[0].Hash
@@ -597,7 +638,7 @@ func Example_complete() {
 	// random bytes. SaltedExampleDocument is a protobuf message that has the
 	// same structure as ExampleDocument but has all `bytes` field types.
 	salts := documentspb.SaltedExampleDocument{}
-	FillSalts(&salts)
+	//FillSalts(&salts)
 
 	doctree := NewDocumentTree(TreeOptions{})
 	doctree.FillTree(&document, &salts)

@@ -208,17 +208,15 @@ func (doctree *DocumentTree) ValidateProof(proof *proofspb.Proof) (valid bool, e
 	return
 }
 
-// ValueToString takes any supported interface and returns a string representation of the value. This is used calculate
-// the hash and to create the proof object.
-func ValueToString(value interface{}) (s string, err error) {
+func DereferencePointer(value interface{}) (interface{}) {
 	// nil values should return an empty string
 	if reflect.TypeOf(value) == reflect.TypeOf(nil) {
-		return "", nil
+		return nil
 	}
 
 	// nil pointers should also return an empty string
 	if reflect.TypeOf(value).Kind() == reflect.Ptr && reflect.ValueOf(value).IsNil() {
-		return "", nil
+		return nil
 	}
 
 	// Dereference any pointers
@@ -227,10 +225,22 @@ func ValueToString(value interface{}) (s string, err error) {
 
 		// Check if elem is a zero value, return empty string if it is.
 		if elem == reflect.Zero(reflect.TypeOf(elem)) {
-			return "", nil
+			return nil
 		}
-		value = elem.Interface()
+		return  elem.Interface()
 	}
+
+	return value
+}
+
+// ValueToString takes any supported interface and returns a string representation of the value. This is used calculate
+// the hash and to create the proof object.
+func ValueToString(value interface{}) (s string, err error) {
+	val := DereferencePointer(value)
+	if val == nil {
+		return "", nil
+	}
+	value = val
 
 	switch t := reflect.TypeOf(value); t {
 	case reflect.TypeOf(""):
@@ -287,25 +297,76 @@ func NewSalt() (salt []byte) {
 //
 // This method will fail if there are any fields of type other than []byte (bytes in protobuf) in the
 // message.
-func FillSalts(message proto.Message) (err error) {
-	v := reflect.ValueOf(message).Elem()
+func FillSalts(dataMessage, saltsMessage proto.Message) (err error) {
+	dataMessageValue := reflect.Indirect(reflect.ValueOf(dataMessage))
+	saltsMessageValue := reflect.Indirect(reflect.ValueOf(saltsMessage))
 
-	for i := 0; i < v.NumField(); i++ {
-		f := v.Field(i)
-		// Ignore fields starting with XXX_, those are protobuf internals
-		if strings.HasPrefix(v.Type().Field(i).Name, "XXX_") {
+	for i := 0; i < saltsMessageValue.NumField(); i++ {
+
+		saltsType := reflect.TypeOf(saltsMessageValue.Field(i).Interface())
+		if reflect.TypeOf(saltsMessageValue.Field(i).Interface()).Kind() == reflect.Ptr {
+			saltsType = reflect.TypeOf(saltsMessageValue.Field(i).Interface()).Elem()
+		}
+
+		if strings.HasPrefix(saltsMessageValue.Type().Field(i).Name, "XXX_") {
 			continue
 		}
 
-		if f.Type() != reflect.TypeOf([]uint8{}) {
-			return fmt.Errorf("Invalid type (%s) for field", f.Type().String())
+		fmt.Printf("Type: %v\n", saltsType)
+
+		if saltsType == reflect.TypeOf([]uint8{}) {
+
+			newSalt := NewSalt()
+			saltVal := reflect.ValueOf(newSalt)
+			saltsMessageValue.Field(i).Set(saltVal)
+
+		} else if saltsType.Kind() == reflect.Slice {
+
+			a := reflect.SliceOf(reflect.TypeOf(saltsMessageValue.Field(i).Interface()))
+			newSlice := reflect.MakeSlice(a.Elem(), dataMessageValue.Field(i).Len(), dataMessageValue.Field(i).Len())
+			saltsMessageValue.Field(i).Set(newSlice)
+
+			for j := 0; j < dataMessageValue.Field(i).Len(); j++ {
+				stype := reflect.TypeOf(saltsMessageValue.Field(i).Index(j).Interface())
+				saltsMessageValue.Field(i).Index(j).Set(reflect.Indirect(reflect.New(stype)))
+				sval := reflect.Indirect(saltsMessageValue.Field(i).Index(j))
+
+				var checkType reflect.Type
+				if reflect.TypeOf(saltsMessageValue.Field(i).Index(j).Interface()).Kind() == reflect.Ptr {
+					checkType = reflect.TypeOf(saltsMessageValue.Field(i).Index(j).Interface()).Elem()
+				} else {
+					checkType = reflect.TypeOf(saltsMessageValue.Field(i).Index(j).Interface())
+				}
+
+				if checkType.Kind() == reflect.Struct {
+					saltsMessageValue.Field(i).Index(j).Set(reflect.New(checkType))
+					err = FillSalts(dataMessageValue.Field(i).Index(j).Interface().(proto.Message), saltsMessageValue.Field(i).Index(j).Interface().(proto.Message))
+
+				} else {
+					if reflect.TypeOf(sval.Interface()) != reflect.TypeOf([]uint8{}) {
+						return fmt.Errorf("Invalid type (%s) for field", reflect.TypeOf(sval.Interface()).String())
+					}
+					newSalt := NewSalt()
+					saltVal := reflect.ValueOf(newSalt)
+					saltsMessageValue.Field(i).Index(j).Set(saltVal)
+				}
+			}
+
+		} else if saltsType.Kind() == reflect.Struct {
+			stype := reflect.TypeOf(saltsMessageValue.Field(i).Interface())
+			saltsMessageValue.Field(i).Set(reflect.New(stype.Elem()))
+			err = FillSalts(dataMessageValue.Field(i).Interface().(proto.Message), saltsMessageValue.Field(i).Interface().(proto.Message))
+		} else {
+			if saltsType != reflect.TypeOf([]uint8{}) {
+				return fmt.Errorf("Invalid type (%s) for field", reflect.TypeOf(saltsMessageValue.Field(i).Interface()).String())
+			}
+			newSalt := NewSalt()
+			saltVal := reflect.ValueOf(newSalt)
+			saltsMessageValue.Field(i).Set(saltVal)
 		}
-		salt := NewSalt()
-		saltVal := reflect.ValueOf(salt)
-		f.Set(saltVal)
 	}
 
-	return nil
+	return
 }
 
 // LeafList is a list implementation that can be sorted by the LeafNode.Property value. This is needed for ordering all
@@ -352,64 +413,110 @@ type messageFlattener struct {
 	propOrder      []string
 }
 
-// generateLeafFromFieldIndex adds the LeafNode to LeafList for a field by it's
-// index in the Message struct.
-func (f *messageFlattener) generateLeafFromFieldIndex(index int) (err error) {
-	// Ignore fields starting with XXX_, those are protobuf internals
-	if strings.HasPrefix(f.messageType.Field(index).Name, "XXX_") {
-		return nil
-	}
+func (f *messageFlattener) generateLeavesFromParent(propPrefix string, fcurrent *messageFlattener) (err error) {
 
-	tag := f.messageType.Field(index).Tag.Get("protobuf")
-	value := f.messageValue.Field(index).Interface()
-	prop, err := getPropertyNameFromProtobufTag(tag)
-	if err != nil {
+	if err := fcurrent.parseExtensions(); err != nil {
 		return err
 	}
 
-	// Check if the field has an exclude_from_tree option
-	if _, ok := f.excludedFields[prop]; ok {
-		return
-	}
+	for i := 0; i < fcurrent.messageValue.NumField(); i++ {
 
-	if reflect.TypeOf(value).Kind() == reflect.Slice {
-		s := reflect.ValueOf(value)
-		if s.Type() == reflect.TypeOf([]uint8{}) {
-			value = value.([]byte)
-			salt := reflect.Indirect(f.saltsValue).FieldByName(f.messageType.Field(index).Name).Interface().([]byte)
+		// Ignore fields starting with XXX_, those are protobuf internals
+		if strings.HasPrefix(fcurrent.messageType.Field(i).Name, "XXX_") {
+			return nil
+		}
+
+		tag := fcurrent.messageType.Field(i).Tag.Get("protobuf")
+		reflectValue := fcurrent.messageValue.Field(i)
+		value := reflectValue.Interface()
+		saltsValue := fcurrent.saltsValue.Field(i)
+		salts := saltsValue.Interface()
+
+		prop, err := getPropertyNameFromProtobufTag(tag)
+		if err != nil {
+			return err
+		}
+
+		// Check if the field has an exclude_from_tree option
+		if _, ok := fcurrent.excludedFields[prop]; ok {
+
+			return nil
+		}
+
+		value = DereferencePointer(value)
+		salts = DereferencePointer(salts)
+
+		if reflect.TypeOf(value).Kind() == reflect.Slice {
+			s := reflect.ValueOf(value)
+			ss := reflect.ValueOf(salts)
+
+			if s.Type() == reflect.TypeOf([]uint8{}) { //Specific case where byte is internally represented as []uint8, but we want to treat it as a whole
+				value = value.([]byte)
+				salt := reflect.Indirect(fcurrent.saltsValue).FieldByName(fcurrent.messageType.Field(i).Name).Interface().([]byte)
+				valueString, err := ValueToString(value)
+				if err != nil {
+					return err
+				}
+				f.appendLeaf(prop, valueString, salt)
+				continue
+			}
+			//f.appendLeaf(fmt.Sprintf("%s%s.length", propPrefix, prop), strconv.Itoa(s.Len()), []byte{})
+			for j := 0; j < s.Len(); j++ {
+				sval := reflect.Indirect(s.Index(j))
+				if reflect.TypeOf(sval.Interface()).Kind() == reflect.Struct {
+
+					if reflect.TypeOf(s.Index(j).Interface()) == reflect.TypeOf(timestamp.Timestamp{}) { //Specific case where we support serialization for a non primitive complex struct
+						valueString, err := ValueToString(s.Index(j).Interface())
+						if err != nil {
+							return err
+						}
+						salt := reflect.Indirect(fcurrent.saltsValue).FieldByName(fcurrent.messageType.Field(j).Name).Interface().([]byte)
+						f.appendLeaf(fmt.Sprintf("%s%s", propPrefix, prop), valueString, salt)
+					} else {
+						propItem := fmt.Sprintf("%s%s[%d]", propPrefix, prop, j)
+						saltsValue := ss.Index(j).Interface().(proto.Message)
+						fchild := NewMessageFlattener(s.Index(j).Interface().(proto.Message), saltsValue)
+						err = f.generateLeavesFromParent(fmt.Sprintf("%s%s.", propPrefix, propItem), fchild)
+					}
+				} else {
+					propItem := fmt.Sprintf("%s%s[%d]", propPrefix, prop, j)
+					conv, err := ConvertReflectValueToSupportedPrimitive(s.Index(j))
+					if err != nil {
+						return err
+					}
+					valueString, err := ValueToString(conv)
+					if err != nil {
+						return err
+					}
+
+					salt := reflect.Indirect(fcurrent.saltsValue).FieldByName(fcurrent.messageType.Field(j).Name).Interface().([]byte)
+					f.appendLeaf(propItem, valueString, salt)
+				}
+			}
+
+		} else if reflect.TypeOf(value).Kind() == reflect.Struct {
+			if reflect.TypeOf(value) == reflect.TypeOf(timestamp.Timestamp{}) { //Specific case where we support serialization for a non primitive complex struct
+				valueString, err := ValueToString(value)
+				if err != nil {
+					return err
+				}
+				salt := reflect.Indirect(fcurrent.saltsValue).FieldByName(fcurrent.messageType.Field(i).Name).Interface().([]byte)
+				f.appendLeaf(fmt.Sprintf("%s%s", propPrefix, prop), valueString, salt)
+			} else {
+				fchild := NewMessageFlattener(reflectValue.Addr().Elem().Interface().(proto.Message), saltsValue.Addr().Elem().Interface().(proto.Message))
+				err = f.generateLeavesFromParent(fmt.Sprintf("%s%s.",propPrefix, prop), fchild)
+			}
+		} else {
 			valueString, err := ValueToString(value)
 			if err != nil {
 				return err
 			}
-			f.appendLeaf(prop, valueString, salt)
-		} else {
-			for i := 0; i < s.Len(); i++ {
-				propItem := fmt.Sprintf("%s[%d]", prop, i)
-				conv, err := ConvertReflectValueToSupportedPrimitive(s.Index(i))
-				if err != nil {
-					return err
-				}
-				valueString, err := ValueToString(conv)
-				if err != nil {
-					return err
-				}
-
-				salt := reflect.ValueOf(reflect.Indirect(f.saltsValue).FieldByName(f.messageType.Field(index).Name).Interface()).Index(i).Interface().([]byte)
-				f.appendLeaf(propItem, valueString, salt)
-			}
+			salt := reflect.Indirect(fcurrent.saltsValue).FieldByName(fcurrent.messageType.Field(i).Name).Interface().([]byte)
+			f.appendLeaf(fmt.Sprintf("%s%s", propPrefix, prop), valueString, salt)
 		}
-	} else if reflect.TypeOf(value).Kind() == reflect.Struct {
-		return errors.New("Nested Structs are not yet suported")
-	} else {
-		valueString, err := ValueToString(value)
-		if err != nil {
-			return err
-		}
-		salt := reflect.Indirect(f.saltsValue).FieldByName(f.messageType.Field(index).Name).Interface().([]byte)
-		f.appendLeaf(prop, valueString, salt)
 	}
 
-	return nil
+	return
 }
 
 func ConvertReflectValueToSupportedPrimitive(value reflect.Value) (converted interface{}, err error) {
@@ -506,15 +613,9 @@ func NewMessageFlattener(message, messageSalts proto.Message) *messageFlattener 
 func FlattenMessage(message, messageSalts proto.Message) (nodes [][]byte, propOrder []string, err error) {
 	f := NewMessageFlattener(message, messageSalts)
 
-	if err := f.parseExtensions(); err != nil {
-		return [][]byte{}, []string{}, err
-	}
-
-	for i := 0; i < f.messageValue.NumField(); i++ {
-		err := f.generateLeafFromFieldIndex(i)
-		if err != nil {
-			return [][]byte{}, []string{}, err
-		}
+	err = f.generateLeavesFromParent("", f)
+	if err != nil {
+		return
 	}
 
 	err = f.sortLeaves()

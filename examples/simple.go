@@ -8,7 +8,6 @@ import (
 	"github.com/centrifuge/precise-proofs/examples/documents"
 	"github.com/centrifuge/precise-proofs/proofs"
 	"crypto/sha256"
-	"github.com/centrifuge/go-merkle"
 )
 
 func printError(err error){
@@ -33,7 +32,7 @@ func main () {
 	proofs.FillSalts(&salts)
 
 	//doctree := proofs.NewDocumentTree(merkle.TreeOptions{EnableHashSorting:true})
-	doctree := proofs.NewDocumentTree(merkle.TreeOptions{})
+	doctree := proofs.NewDocumentTree(proofs.TreeOptions{})
 
 	//Setting the desired hash function that is used to generate the tree
 	sha256Hash := sha256.New()
