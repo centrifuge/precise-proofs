@@ -72,7 +72,7 @@ message SaltedNestedRepeatedDocument {
 message SimpleRepeatedDocument {
   string valueA = 1;
   string valueB = 2;
-  repeated string valueC = 4;
+  repeated string valueC = 3;
 }
 
 message SaltedSimpleRepeatedDocument {

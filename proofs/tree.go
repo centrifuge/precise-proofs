@@ -42,14 +42,14 @@ import (
 	"strings"
 
 	"github.com/centrifuge/precise-proofs/proofs/proto"
-	"github.com/go-bongo/go-dotaccess"
 	"github.com/golang/protobuf/descriptor"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/iancoleman/strcase"
 	"github.com/centrifuge/go-merkle"
 	"regexp"
+	"github.com/iancoleman/strcase"
+	"github.com/oleiade/reflections"
 )
 
 type TreeOptions struct {
@@ -302,17 +302,17 @@ func FillSalts(dataMessage, saltsMessage proto.Message) (err error) {
 	saltsMessageValue := reflect.Indirect(reflect.ValueOf(saltsMessage))
 
 	for i := 0; i < saltsMessageValue.NumField(); i++ {
+		valueField := dataMessageValue.Field(i)
+		saltsField := saltsMessageValue.Field(i)
+		saltsType := reflect.TypeOf(saltsField.Interface())
 
-		saltsType := reflect.TypeOf(saltsMessageValue.Field(i).Interface())
-		if reflect.TypeOf(saltsMessageValue.Field(i).Interface()).Kind() == reflect.Ptr {
-			saltsType = reflect.TypeOf(saltsMessageValue.Field(i).Interface()).Elem()
+		if saltsType.Kind() == reflect.Ptr {
+			saltsType = saltsType.Elem()
 		}
 
 		if strings.HasPrefix(saltsMessageValue.Type().Field(i).Name, "XXX_") {
 			continue
 		}
-
-		fmt.Printf("Type: %v\n", saltsType)
 
 		if saltsType == reflect.TypeOf([]uint8{}) {
 
@@ -321,49 +321,53 @@ func FillSalts(dataMessage, saltsMessage proto.Message) (err error) {
 			saltsMessageValue.Field(i).Set(saltVal)
 
 		} else if saltsType.Kind() == reflect.Slice {
+			a := reflect.SliceOf(saltsType.Elem())
+			newSlice := reflect.MakeSlice(a, valueField.Len(), valueField.Len())
+			saltsField.Set(newSlice)
+			//// Set first element of list as the length salt
+			//newSalt := NewSalt()
+			//saltVal := reflect.ValueOf(newSalt)
+			//saltsMessageValue.Field(i).Index(0).Set(saltVal)
 
-			a := reflect.SliceOf(reflect.TypeOf(saltsMessageValue.Field(i).Interface()))
-			newSlice := reflect.MakeSlice(a.Elem(), dataMessageValue.Field(i).Len(), dataMessageValue.Field(i).Len())
-			saltsMessageValue.Field(i).Set(newSlice)
-
-			for j := 0; j < dataMessageValue.Field(i).Len(); j++ {
-				stype := reflect.TypeOf(saltsMessageValue.Field(i).Index(j).Interface())
-				saltsMessageValue.Field(i).Index(j).Set(reflect.Indirect(reflect.New(stype)))
-				sval := reflect.Indirect(saltsMessageValue.Field(i).Index(j))
+			for j := 0; j < valueField.Len(); j++ {
+				dataFieldItem := dataMessageValue.Field(i).Index(j)
+				saltsFieldItem := saltsMessageValue.Field(i).Index(j)
+				saltsFieldItemType := reflect.TypeOf(saltsFieldItem.Interface())
+				saltsFieldItem.Set(reflect.Indirect(reflect.New(saltsFieldItemType)))
 
 				var checkType reflect.Type
-				if reflect.TypeOf(saltsMessageValue.Field(i).Index(j).Interface()).Kind() == reflect.Ptr {
-					checkType = reflect.TypeOf(saltsMessageValue.Field(i).Index(j).Interface()).Elem()
+				if reflect.TypeOf(saltsFieldItem.Interface()).Kind() == reflect.Ptr {
+					checkType = reflect.TypeOf(saltsFieldItem.Interface()).Elem()
 				} else {
-					checkType = reflect.TypeOf(saltsMessageValue.Field(i).Index(j).Interface())
+					checkType = reflect.TypeOf(saltsFieldItem.Interface())
 				}
 
 				if checkType.Kind() == reflect.Struct {
-					saltsMessageValue.Field(i).Index(j).Set(reflect.New(checkType))
-					err = FillSalts(dataMessageValue.Field(i).Index(j).Interface().(proto.Message), saltsMessageValue.Field(i).Index(j).Interface().(proto.Message))
-
+					saltsFieldItem.Set(reflect.New(checkType))
+					err = FillSalts(dataFieldItem.Interface().(proto.Message), saltsFieldItem.Interface().(proto.Message))
 				} else {
-					if reflect.TypeOf(sval.Interface()) != reflect.TypeOf([]uint8{}) {
-						return fmt.Errorf("Invalid type (%s) for field", reflect.TypeOf(sval.Interface()).String())
+					deRefSaltsFieldItem := reflect.Indirect(saltsFieldItem)
+					if reflect.TypeOf(deRefSaltsFieldItem.Interface()) != reflect.TypeOf([]uint8{}) {
+						return fmt.Errorf("Invalid type (%s) for field", reflect.TypeOf(deRefSaltsFieldItem.Interface()).String())
 					}
 					newSalt := NewSalt()
 					saltVal := reflect.ValueOf(newSalt)
-					saltsMessageValue.Field(i).Index(j).Set(saltVal)
+					saltsFieldItem.Set(saltVal)
 				}
 			}
 
 		} else if saltsType.Kind() == reflect.Struct {
-			stype := reflect.TypeOf(saltsMessageValue.Field(i).Interface())
-			saltsMessageValue.Field(i).Set(reflect.New(stype.Elem()))
-			err = FillSalts(dataMessageValue.Field(i).Interface().(proto.Message), saltsMessageValue.Field(i).Interface().(proto.Message))
+			saltsField.Set(reflect.New(saltsType))
+			err = FillSalts(valueField.Interface().(proto.Message), saltsField.Interface().(proto.Message))
 		} else {
 			if saltsType != reflect.TypeOf([]uint8{}) {
-				return fmt.Errorf("Invalid type (%s) for field", reflect.TypeOf(saltsMessageValue.Field(i).Interface()).String())
+				return fmt.Errorf("Invalid type (%s) for field", reflect.TypeOf(saltsField.Interface()).String())
 			}
 			newSalt := NewSalt()
 			saltVal := reflect.ValueOf(newSalt)
-			saltsMessageValue.Field(i).Set(saltVal)
+			saltsField.Set(saltVal)
 		}
+
 	}
 
 	return
@@ -420,17 +424,24 @@ func (f *messageFlattener) generateLeavesFromParent(propPrefix string, fcurrent 
 	}
 
 	for i := 0; i < fcurrent.messageValue.NumField(); i++ {
+		valueField := fcurrent.messageValue.Field(i)
+		valueType := reflect.TypeOf(valueField.Interface())
+		reflectValueFieldType := fcurrent.messageType.Field(i)
+
+		if valueType.Kind() == reflect.Ptr {
+			valueType = valueType.Elem()
+		}
 
 		// Ignore fields starting with XXX_, those are protobuf internals
-		if strings.HasPrefix(fcurrent.messageType.Field(i).Name, "XXX_") {
+		if strings.HasPrefix(reflectValueFieldType.Name, "XXX_") {
 			return nil
 		}
 
-		tag := fcurrent.messageType.Field(i).Tag.Get("protobuf")
+		tag := reflectValueFieldType.Tag.Get("protobuf")
 		reflectValue := fcurrent.messageValue.Field(i)
 		value := reflectValue.Interface()
-		saltsValue := fcurrent.saltsValue.Field(i)
-		salts := saltsValue.Interface()
+		reflectSaltsValue := fcurrent.saltsValue.Field(i)
+		salts := reflectSaltsValue.Interface()
 
 		prop, err := getPropertyNameFromProtobufTag(tag)
 		if err != nil {
@@ -439,20 +450,19 @@ func (f *messageFlattener) generateLeavesFromParent(propPrefix string, fcurrent 
 
 		// Check if the field has an exclude_from_tree option
 		if _, ok := fcurrent.excludedFields[prop]; ok {
-
 			return nil
 		}
 
 		value = DereferencePointer(value)
 		salts = DereferencePointer(salts)
 
-		if reflect.TypeOf(value).Kind() == reflect.Slice {
+		if valueType.Kind() == reflect.Slice {
 			s := reflect.ValueOf(value)
 			ss := reflect.ValueOf(salts)
 
 			if s.Type() == reflect.TypeOf([]uint8{}) { //Specific case where byte is internally represented as []uint8, but we want to treat it as a whole
 				value = value.([]byte)
-				salt := reflect.Indirect(fcurrent.saltsValue).FieldByName(fcurrent.messageType.Field(i).Name).Interface().([]byte)
+				salt := reflect.Indirect(fcurrent.saltsValue).FieldByName(reflectValueFieldType.Name).Interface().([]byte)
 				valueString, err := ValueToString(value)
 				if err != nil {
 					return err
@@ -460,7 +470,13 @@ func (f *messageFlattener) generateLeavesFromParent(propPrefix string, fcurrent 
 				f.appendLeaf(prop, valueString, salt)
 				continue
 			}
-			//f.appendLeaf(fmt.Sprintf("%s%s.length", propPrefix, prop), strconv.Itoa(s.Len()), []byte{})
+
+			//if fcurrent.saltsValue.FieldByName(fcurrent.messageType.Field(i).Name).Len() <= s.Len() {
+			//	return errors.New(fmt.Sprintf("Salts length provided does not match standard n+1 for field %s", fcurrent.messageType.Field(i).Name))
+			//}
+
+			//salt := fcurrent.saltsValue.FieldByName(fcurrent.messageType.Field(i).Name).Index(0).Interface().([]byte)
+			//f.appendLeaf(fmt.Sprintf("%s%s.length", propPrefix, prop), strconv.Itoa(s.Len()), salt)
 			for j := 0; j < s.Len(); j++ {
 				sval := reflect.Indirect(s.Index(j))
 				if reflect.TypeOf(sval.Interface()).Kind() == reflect.Struct {
@@ -470,7 +486,8 @@ func (f *messageFlattener) generateLeavesFromParent(propPrefix string, fcurrent 
 						if err != nil {
 							return err
 						}
-						salt := reflect.Indirect(fcurrent.saltsValue).FieldByName(fcurrent.messageType.Field(j).Name).Interface().([]byte)
+						//salt := fcurrent.saltsValue.FieldByName(fcurrent.messageType.Field(i).Name).Index(j+1).Interface().([]byte) // j+1 as we reserve salts[0] to length of slice
+						salt := fcurrent.saltsValue.FieldByName(fcurrent.messageType.Field(i).Name).Index(j).Interface().([]byte) // j+1 as we reserve salts[0] to length of slice
 						f.appendLeaf(fmt.Sprintf("%s%s", propPrefix, prop), valueString, salt)
 					} else {
 						propItem := fmt.Sprintf("%s%s[%d]", propPrefix, prop, j)
@@ -489,21 +506,22 @@ func (f *messageFlattener) generateLeavesFromParent(propPrefix string, fcurrent 
 						return err
 					}
 
-					salt := reflect.Indirect(fcurrent.saltsValue).FieldByName(fcurrent.messageType.Field(j).Name).Interface().([]byte)
+					//salt := fcurrent.saltsValue.FieldByName(fcurrent.messageType.Field(i).Name).Index(j+1).Interface().([]byte) // j+1 as we reserve salts[0] to length of slice
+					salt := fcurrent.saltsValue.FieldByName(fcurrent.messageType.Field(i).Name).Index(j).Interface().([]byte) // j+1 as we reserve salts[0] to length of slice
 					f.appendLeaf(propItem, valueString, salt)
 				}
 			}
 
-		} else if reflect.TypeOf(value).Kind() == reflect.Struct {
-			if reflect.TypeOf(value) == reflect.TypeOf(timestamp.Timestamp{}) { //Specific case where we support serialization for a non primitive complex struct
+		} else if valueType.Kind() == reflect.Struct {
+			if valueType == reflect.TypeOf(timestamp.Timestamp{}) { //Specific case where we support serialization for a non primitive complex struct
 				valueString, err := ValueToString(value)
 				if err != nil {
 					return err
 				}
-				salt := reflect.Indirect(fcurrent.saltsValue).FieldByName(fcurrent.messageType.Field(i).Name).Interface().([]byte)
+				salt := fcurrent.saltsValue.FieldByName(reflectValueFieldType.Name).Interface().([]byte)
 				f.appendLeaf(fmt.Sprintf("%s%s", propPrefix, prop), valueString, salt)
 			} else {
-				fchild := NewMessageFlattener(reflectValue.Addr().Elem().Interface().(proto.Message), saltsValue.Addr().Elem().Interface().(proto.Message))
+				fchild := NewMessageFlattener(reflectValue.Interface().(proto.Message), reflectSaltsValue.Interface().(proto.Message))
 				err = f.generateLeavesFromParent(fmt.Sprintf("%s%s.",propPrefix, prop), fchild)
 			}
 		} else {
@@ -511,7 +529,7 @@ func (f *messageFlattener) generateLeavesFromParent(propPrefix string, fcurrent 
 			if err != nil {
 				return err
 			}
-			salt := reflect.Indirect(fcurrent.saltsValue).FieldByName(fcurrent.messageType.Field(i).Name).Interface().([]byte)
+			salt := reflect.Indirect(fcurrent.saltsValue).FieldByName(reflectValueFieldType.Name).Interface().([]byte)
 			f.appendLeaf(fmt.Sprintf("%s%s", propPrefix, prop), valueString, salt)
 		}
 	}
@@ -599,9 +617,9 @@ func (f *messageFlattener) parseExtensions() (err error) {
 func NewMessageFlattener(message, messageSalts proto.Message) *messageFlattener {
 	f := messageFlattener{message: message, salts: messageSalts}
 	f.leaves = LeafList{}
-	f.messageValue = reflect.ValueOf(message).Elem()
+	f.messageValue = reflect.Indirect(reflect.ValueOf(message))
 	f.messageType = f.messageValue.Type()
-	f.saltsValue = reflect.ValueOf(messageSalts).Elem()
+	f.saltsValue = reflect.Indirect(reflect.ValueOf(messageSalts))
 	f.excludedFields = make(map[string]struct{})
 	return &f
 }
@@ -625,34 +643,82 @@ func FlattenMessage(message, messageSalts proto.Message) (nodes [][]byte, propOr
 	return f.nodes, f.propOrder, nil
 }
 
-// getStringValueByProperty gets a value from a struct and returns the value. This method does not yet
-// support nested structs. It converts the value to a string representation.
-func getStringValueByProperty(prop string, message proto.Message) (value string, err error) {
-	re := regexp.MustCompile(`(.*)(\[(.*)])`)
-	prefix := re.ReplaceAllString(prop, "$1")
-	strIdx := re.ReplaceAllString(prop, "$3")
-	prop = strcase.ToCamel(prefix)
-	v, err := dotaccess.Get(message, prop)
-	if err != nil {
-		return "", err
-	}
-	if reflect.TypeOf(v).Kind() == reflect.Slice {
-		if reflect.ValueOf(v).Type() == reflect.TypeOf([]uint8{}) {
-			value, err = ValueToString(v)
+// normalizeDottedProperty performs camel case conversion without removing slice characters ([])
+func normalizeDottedProperty(prop string) (string) {
+	arr := strings.Split(prop, ".")
+	for idx, key := range arr {
+		var propAux string
+		re := regexp.MustCompile(`(.*)(\[(.*)])`)
+		if re.MatchString(key) {
+			prefix := re.ReplaceAllString(key, "$1")
+			strIdx := re.ReplaceAllString(key, "$3")
+			propAux = fmt.Sprintf("%s[%s]", strcase.ToCamel(prefix), strIdx)
 		} else {
+			propAux = strcase.ToCamel(key)
+		}
+
+		if idx == 0 {
+			prop = fmt.Sprintf("%s", propAux)
+		} else {
+			prop = fmt.Sprintf("%s.%s", prop, propAux)
+		}
+	}
+	return prop
+}
+
+// getDottedValueByProperty takes a dotted property and retrieves the interface value of an object
+// It supports nested fields and slices
+func getDottedValueByProperty(prop string, value interface{}) (interface{}, error) {
+	prop = normalizeDottedProperty(prop)
+	if reflect.TypeOf(value).Kind() != reflect.Struct && reflect.TypeOf(value).Kind() != reflect.Ptr {
+		return nil, errors.New("non-struct interface not supported")
+	}
+	arr := strings.Split(prop, ".")
+	value = DereferencePointer(value)
+	var err error
+	for _, key := range arr {
+		re := regexp.MustCompile(`(.*)(\[(.*)])`)
+		if re.MatchString(key) {
+			prefix := re.ReplaceAllString(key, "$1")
+			strIdx := re.ReplaceAllString(key, "$3")
 			idx, err := strconv.Atoi(strIdx)
 			if err != nil {
-				return "", err
+				return nil, err
 			}
-			conv, err := ConvertReflectValueToSupportedPrimitive(reflect.ValueOf(v).Index(idx))
-			value, err = ValueToString(conv)
+			value, err = reflections.GetField(value, prefix)
+			if err != nil {
+				return nil, err
+			}
+			if value == nil {
+				return nil, nil
+			}
+			if reflect.ValueOf(value).Len() <= idx {
+				return nil, errors.New("Index out of bounds for slice element")
+			}
+			value = reflect.ValueOf(value).Index(idx).Interface()
+		} else {
+			value, err = reflections.GetField(value, key)
+			if err != nil {
+				return nil, err
+			}
+			if value == nil {
+				return nil, nil
+			}
 		}
-	} else if reflect.TypeOf(v).Kind() == reflect.Struct {
-		return "", errors.New("Nested Structs are not yet suported")
-	}	else {
-		value, err = ValueToString(v)
+
 	}
 
+	return value, nil
+}
+
+// getStringValueByProperty returns the value of a struct. It converts the value to a string representation.
+func getStringValueByProperty(prop string, message proto.Message) (value string, err error) {
+	var valueInterface interface{}
+	valueInterface, err = getDottedValueByProperty(prop, message)
+	if err != nil {
+		return
+	}
+	value, err = ValueToString(valueInterface)
 	return
 }
 

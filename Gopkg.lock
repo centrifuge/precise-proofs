@@ -14,12 +14,6 @@
   version = "v1.1.0"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/go-bongo/go-dotaccess"
-  packages = ["."]
-  revision = "ae070a2d2a38fd7233e255ded21fb26fe36b4796"
-
-[[projects]]
   name = "github.com/golang/protobuf"
   packages = [
     "descriptor",
@@ -60,6 +54,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "66997a92eba443bab40023696b486b7502efc3d44fef21ccc11e5472300880d5"
+  inputs-digest = "893319e23a33a11e81c43f05e21af7a71734e0676f3c5383cedfb43bb1347468"
   solver-name = "gps-cdcl"
   solver-version = 1

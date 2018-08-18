@@ -26,8 +26,8 @@
 
 
 [[constraint]]
+  name = "github.com/oleiade/reflections"
   branch = "master"
-  name = "github.com/go-bongo/go-dotaccess"
 
 [[constraint]]
   name = "github.com/golang/protobuf"

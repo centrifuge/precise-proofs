@@ -104,6 +104,21 @@ func TestConcatNode(t *testing.T) {
 
 }
 
+func TestGetDottedValueByProperty(t *testing.T) {
+	doc := &documentspb.ExampleFilledNestedRepeatedDocument
+	value, err := getDottedValueByProperty("valueD.valueB", doc)
+	assert.Nil(t, err)
+	assert.Equal(t, "ValueDB", value)
+
+	value, err = getDottedValueByProperty("valueD.valueA.valueA", doc)
+	assert.Nil(t, err)
+	assert.Equal(t, "ValueDAA", value)
+
+	value, err = getDottedValueByProperty("valueC[1].valueA", doc)
+	assert.Nil(t, err)
+	assert.Equal(t, "ValueCB", value)
+}
+
 func TestFlattenMessage(t *testing.T) {
 	message := documentspb.ExampleDocument{
 		ValueA: "Foo",
@@ -148,27 +163,40 @@ func TestFillSalts(t *testing.T) {
 	err := FillSalts(exampleDoc, exampleSalts)
 	assert.Nil(t, err, "Fill salts should not fail")
 
-	fmt.Printf("Salts: %v\n", exampleSalts)
-	fmt.Printf("Second\n")
+	assert.NotNil(t, exampleSalts.ValueA)
 
 	exampleFRDoc := &documentspb.ExampleFilledRepeatedDocument
 	exampleFRSalts := &documentspb.SaltedSimpleRepeatedDocument{}
 	err = FillSalts(exampleFRDoc, exampleFRSalts)
 	assert.Nil(t, err, "Fill salts should not fail")
 
-	fmt.Printf("Salts: %v\n", exampleFRSalts)
-	fmt.Printf("third\n")
+	assert.Equal(t, len(exampleFRDoc.ValueC), len(exampleFRSalts.ValueC))
+	assert.NotNil(t, exampleFRSalts.ValueC[0])
 
 	exampleFNDoc := &documentspb.ExampleFilledNestedRepeatedDocument
 	exampleFNSalts := &documentspb.SaltedNestedRepeatedDocument{}
 	err = FillSalts(exampleFNDoc, exampleFNSalts)
 	assert.Nil(t, err, "Fill salts should not fail")
 
-	fmt.Printf("Salts: %v\n", exampleFNSalts)
+	assert.Equal(t, len(exampleFNDoc.ValueC), len(exampleFNSalts.ValueC))
+	assert.NotNil(t, exampleFNSalts.ValueC[0].ValueA)
+	assert.NotNil(t, exampleFNSalts.ValueD.ValueA.ValueA)
+
+	_, fieldOrder, err := FlattenMessage(exampleFNDoc, exampleFNSalts)
+	assert.Nil(t, err)
+	assert.Equal(t, []string{"valueA", "valueB", "valueC[0].valueA", "valueC[1].valueA", "valueD.valueA.valueA", "valueD.valueB"}, fieldOrder)
 
 	badExample := &documentspb.ExampleDocument{}
 	err = FillSalts(badExample, badExample)
 	assert.NotNil(t, err, "Fill salts should error because of string")
+}
+
+func TestFlattenMessageFromAlreadyFilledSalts(t *testing.T) {
+	exampleDoc := &documentspb.ExampleFilledNestedRepeatedDocument
+	exampleSaltedDoc := &documentspb.ExampleSaltedNestedRepeatedDocument
+	_, fieldOrder, err := FlattenMessage(exampleDoc, exampleSaltedDoc)
+	assert.Nil(t, err)
+	assert.Equal(t, []string{"valueA", "valueB", "valueC[0].valueA", "valueC[1].valueA", "valueD.valueA.valueA", "valueD.valueB"}, fieldOrder)
 }
 
 func TestTree_Generate(t *testing.T) {
@@ -623,6 +651,77 @@ func TestCreateRepeatedSortedProof(t *testing.T) {
 	valid, err = doctree.ValidateProof(&falseProof)
 	assert.False(t, valid)
 	assert.EqualError(t, err, "Hash does not match")
+}
+
+func TestCreateRepeatedSortedProofAutoSalts(t *testing.T) {
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting:true})
+	hashFunc := sha256.New()
+	doctree.SetHashFunc(hashFunc)
+	docSalts := &documentspb.SaltedNestedRepeatedDocument{}
+	err := FillSalts(&documentspb.ExampleFilledNestedRepeatedDocument, docSalts)
+	assert.Nil(t, err)
+
+	err = doctree.FillTree(&documentspb.ExampleFilledNestedRepeatedDocument, docSalts)
+	assert.Nil(t, err)
+
+	_, err = doctree.CreateProof("InexistentField")
+	assert.EqualError(t, err, "No such field: InexistentField in obj")
+
+	proof, err := doctree.CreateProof("valueA")
+	assert.Nil(t, err)
+	assert.Equal(t, "valueA", proof.Property)
+	assert.Equal(t, documentspb.ExampleFilledRepeatedDocument.ValueA, proof.Value)
+	assert.Equal(t, docSalts.ValueA, proof.Salt)
+
+	fieldHash, err := CalculateHashForProofField(&proof, hashFunc)
+	valid, err := ValidateProofSortedHashes(fieldHash, proof.SortedHashes, doctree.rootHash, doctree.hash)
+	assert.True(t, valid)
+
+	valid, err = doctree.ValidateProof(&proof)
+	assert.True(t, valid)
+	assert.Nil(t, err)
+
+	falseProof, err := doctree.CreateProof("valueA")
+	falseProof.Value = "Invalid"
+	valid, err = doctree.ValidateProof(&falseProof)
+	assert.False(t, valid)
+	assert.EqualError(t, err, "Hash does not match")
+}
+
+func TestCreateProofFromRepeatedField(t *testing.T) {
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting:true})
+	hashFunc := sha256.New()
+	doctree.SetHashFunc(hashFunc)
+	docSalts := &documentspb.SaltedNestedRepeatedDocument{}
+	err := FillSalts(&documentspb.ExampleFilledNestedRepeatedDocument, docSalts)
+	assert.Nil(t, err)
+
+	err = doctree.FillTree(&documentspb.ExampleFilledNestedRepeatedDocument, docSalts)
+	assert.Nil(t, err)
+
+	proof, err := doctree.CreateProof("valueC[1].valueA")
+	assert.Nil(t, err)
+	assert.Equal(t, "valueC[1].valueA", proof.Property)
+	assert.Equal(t, documentspb.ExampleFilledNestedRepeatedDocument.ValueC[1].ValueA, proof.Value)
+	assert.Equal(t, docSalts.ValueC[1].ValueA, proof.Salt)
+}
+
+func TestCreateProofFromNestedField(t *testing.T) {
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting:true})
+	hashFunc := sha256.New()
+	doctree.SetHashFunc(hashFunc)
+	docSalts := &documentspb.SaltedNestedRepeatedDocument{}
+	err := FillSalts(&documentspb.ExampleFilledNestedRepeatedDocument, docSalts)
+	assert.Nil(t, err)
+
+	err = doctree.FillTree(&documentspb.ExampleFilledNestedRepeatedDocument, docSalts)
+	assert.Nil(t, err)
+
+	proof, err := doctree.CreateProof("valueD.valueA.valueA")
+	assert.Nil(t, err)
+	assert.Equal(t, "valueD.valueA.valueA", proof.Property)
+	assert.Equal(t, documentspb.ExampleFilledNestedRepeatedDocument.ValueD.ValueA.ValueA, proof.Value)
+	assert.Equal(t, docSalts.ValueD.ValueA.ValueA, proof.Salt)
 }
 
 func Example_complete() {
