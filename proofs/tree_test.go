@@ -133,7 +133,7 @@ func TestFlattenMessage(t *testing.T) {
 		ValueCamelCased: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		ValueNotIgnored: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 	}
-	flattened, propOrder, err := FlattenMessage(&message, &messageSalts, SaltsLengthSuffixDefault)
+	flattened, propOrder, err := FlattenMessage(&message, &messageSalts, DefaultSaltsLengthSuffix)
 	assert.Nil(t, err)
 	assert.Equal(t, 7, len(flattened))
 	assert.Equal(t, []string{"ValueCamelCased", "value1", "value2", "valueA", "valueB", "value_bytes1", "value_not_ignored"}, propOrder)
@@ -150,7 +150,7 @@ func TestFlattenMessage_AllFieldTypes(t *testing.T) {
 	err := FillSalts(message, &messageSalts)
 	assert.Nil(t, err)
 
-	_, fieldOrder, err := FlattenMessage(message, &messageSalts, SaltsLengthSuffixDefault)
+	_, fieldOrder, err := FlattenMessage(message, &messageSalts, DefaultSaltsLengthSuffix)
 	assert.Equal(t, []string{"string_value", "time_stamp_value"}, fieldOrder)
 	assert.Nil(t, err)
 
@@ -206,7 +206,7 @@ func TestFlattenMessageFromAutoFillSalts(t *testing.T) {
 	assert.NotNil(t, exampleFNSalts.ValueC[0].ValueA)
 	assert.NotNil(t, exampleFNSalts.ValueD.ValueA.ValueA)
 
-	_, fieldOrder, err := FlattenMessage(exampleFNDoc, exampleFNSalts, SaltsLengthSuffixDefault)
+	_, fieldOrder, err := FlattenMessage(exampleFNDoc, exampleFNSalts, DefaultSaltsLengthSuffix)
 	assert.Nil(t, err)
 	assert.Equal(t, []string{"valueA", "valueB", "valueC.length", "valueC[0].valueA", "valueC[1].valueA", "valueD.valueA.valueA", "valueD.valueB"}, fieldOrder)
 }
@@ -214,7 +214,7 @@ func TestFlattenMessageFromAutoFillSalts(t *testing.T) {
 func TestFlattenMessageFromAlreadyFilledSalts(t *testing.T) {
 	exampleDoc := &documentspb.ExampleFilledNestedRepeatedDocument
 	exampleSaltedDoc := &documentspb.ExampleSaltedNestedRepeatedDocument
-	_, fieldOrder, err := FlattenMessage(exampleDoc, exampleSaltedDoc, SaltsLengthSuffixDefault)
+	_, fieldOrder, err := FlattenMessage(exampleDoc, exampleSaltedDoc, DefaultSaltsLengthSuffix)
 	assert.Nil(t, err)
 	assert.Equal(t, []string{"valueA", "valueB", "valueC.length", "valueC[0].valueA", "valueC[1].valueA", "valueD.valueA.valueA", "valueD.valueB"}, fieldOrder)
 }
@@ -235,7 +235,7 @@ func TestTree_Generate(t *testing.T) {
 		ValueCamelCased: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 	}
 
-	flattened, _, err := FlattenMessage(&protoMessage, &messageSalts, SaltsLengthSuffixDefault)
+	flattened, _, err := FlattenMessage(&protoMessage, &messageSalts, DefaultSaltsLengthSuffix)
 	assert.Nil(t, err)
 	tree := merkle.NewTree()
 	sha256Hash := sha256.New()
@@ -261,7 +261,7 @@ func TestSortedHashTree_Generate(t *testing.T) {
 		ValueCamelCased: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 	}
 
-	flattened, _, err := FlattenMessage(&protoMessage, &messageSalts, SaltsLengthSuffixDefault)
+	flattened, _, err := FlattenMessage(&protoMessage, &messageSalts, DefaultSaltsLengthSuffix)
 	assert.Nil(t, err)
 	tree := merkle.NewTreeWithOpts(merkle.TreeOptions{ EnableHashSorting: true })
 	sha256Hash := sha256.New()

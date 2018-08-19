@@ -52,7 +52,7 @@ import (
 	"github.com/oleiade/reflections"
 )
 
-const SaltsLengthSuffixDefault = "Length"
+const DefaultSaltsLengthSuffix = "Length"
 
 type TreeOptions struct {
 	EnableHashSorting bool
@@ -84,7 +84,7 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 	if proofOpts.EnableHashSorting {
 		opts.EnableHashSorting = proofOpts.EnableHashSorting
 	}
-	saltsLengthSuffix := SaltsLengthSuffixDefault
+	saltsLengthSuffix := DefaultSaltsLengthSuffix
 	if proofOpts.SaltsLengthSuffix != "" {
 		saltsLengthSuffix = proofOpts.SaltsLengthSuffix
 	}
@@ -323,19 +323,13 @@ func FillSalts(dataMessage, saltsMessage proto.Message) (err error) {
 		}
 
 		if saltsType == reflect.TypeOf([]uint8{}) {
-
 			newSalt := NewSalt()
 			saltVal := reflect.ValueOf(newSalt)
 			saltsMessageValue.Field(i).Set(saltVal)
-
 		} else if saltsType.Kind() == reflect.Slice {
-			a := reflect.SliceOf(saltsType.Elem())
-			newSlice := reflect.MakeSlice(a, valueField.Len(), valueField.Len())
+			sliceType := reflect.SliceOf(saltsType.Elem())
+			newSlice := reflect.MakeSlice(sliceType, valueField.Len(), valueField.Len())
 			saltsField.Set(newSlice)
-			//// Set first element of list as the length salt
-			//newSalt := NewSalt()
-			//saltVal := reflect.ValueOf(newSalt)
-			//saltsMessageValue.Field(i).Index(0).Set(saltVal)
 
 			for j := 0; j < valueField.Len(); j++ {
 				dataFieldItem := dataMessageValue.Field(i).Index(j)
@@ -426,9 +420,9 @@ type messageFlattener struct {
 	saltsLengthSuffix string
 }
 
-func (f *messageFlattener) generateLeavesFromParent(propPrefix string, fcurrent *messageFlattener) (err error) {
+func (f *messageFlattener) generateLeaves(propPrefix string, fcurrent *messageFlattener) (err error) {
 
-	if err := fcurrent.parseExtensions(); err != nil {
+	if err = fcurrent.parseExtensions(); err != nil {
 		return err
 	}
 
@@ -437,28 +431,28 @@ func (f *messageFlattener) generateLeavesFromParent(propPrefix string, fcurrent 
 		valueType := reflect.TypeOf(valueField.Interface())
 		reflectValueFieldType := fcurrent.messageType.Field(i)
 
+		// Pointer dereference for correct type checks
 		if valueType.Kind() == reflect.Ptr {
 			valueType = valueType.Elem()
 		}
 
 		// Ignore fields starting with XXX_, those are protobuf internals
 		if strings.HasPrefix(reflectValueFieldType.Name, "XXX_") {
-			return nil
+			continue
 		}
 
 		tag := reflectValueFieldType.Tag.Get("protobuf")
-		prop, err := getPropertyNameFromProtobufTag(tag)
-		if err != nil {
-			return err
+		prop, err1 := getPropertyNameFromProtobufTag(tag)
+		if err1 != nil {
+			return err1
 		}
 
 		// Check if the field has an exclude_from_tree option
 		if _, ok := fcurrent.excludedFields[prop]; ok {
-			return nil
+			continue
 		}
 
-		reflectValue := fcurrent.messageValue.Field(i)
-		value := reflectValue.Interface()
+		value := valueField.Interface()
 		reflectSaltsValue := fcurrent.saltsValue.FieldByName(reflectValueFieldType.Name)
 		salts := reflectSaltsValue.Interface()
 
@@ -466,96 +460,70 @@ func (f *messageFlattener) generateLeavesFromParent(propPrefix string, fcurrent 
 		salts = DereferencePointer(salts)
 
 		if valueType.Kind() == reflect.Slice {
-			s := reflect.ValueOf(value)
-			ss := reflect.ValueOf(salts)
-
-			if s.Type() == reflect.TypeOf([]uint8{}) { //Specific case where byte is internally represented as []uint8, but we want to treat it as a whole
-				value = value.([]byte)
+			sliceValue := reflect.ValueOf(value)
+			if sliceValue.Type() == reflect.TypeOf([]uint8{}) { //Specific case where byte is internally represented as []uint8, but we want to treat it as a whole
 				salt := reflect.Indirect(fcurrent.saltsValue).FieldByName(reflectValueFieldType.Name).Interface().([]byte)
-				valueString, err := ValueToString(value)
-				if err != nil {
-					return err
-				}
-				f.appendLeaf(prop, valueString, salt)
-				continue
-			}
-
-			saltedFieldValue := fcurrent.saltsValue.FieldByName(fmt.Sprintf("%s%s", fcurrent.messageType.Field(i).Name, fcurrent.saltsLengthSuffix))
-			salt := saltedFieldValue.Interface().([]byte)
-			f.appendLeaf(fmt.Sprintf("%s%s.length", propPrefix, prop), strconv.Itoa(s.Len()), salt)
-			for j := 0; j < s.Len(); j++ {
-				sval := reflect.Indirect(s.Index(j))
-				if reflect.TypeOf(sval.Interface()).Kind() == reflect.Struct {
-
-					if reflect.TypeOf(s.Index(j).Interface()) == reflect.TypeOf(timestamp.Timestamp{}) { //Specific case where we support serialization for a non primitive complex struct
-						valueString, err := ValueToString(s.Index(j).Interface())
-						if err != nil {
-							return err
-						}
-						//salt := fcurrent.saltsValue.FieldByName(fcurrent.messageType.Field(i).Name).Index(j+1).Interface().([]byte) // j+1 as we reserve salts[0] to length of slice
-						salt := fcurrent.saltsValue.FieldByName(fcurrent.messageType.Field(i).Name).Index(j).Interface().([]byte) // j+1 as we reserve salts[0] to length of slice
-						f.appendLeaf(fmt.Sprintf("%s%s", propPrefix, prop), valueString, salt)
-					} else {
-						propItem := fmt.Sprintf("%s%s[%d]", propPrefix, prop, j)
-						saltsValue := ss.Index(j).Interface().(proto.Message)
-						fchild := NewMessageFlattener(s.Index(j).Interface().(proto.Message), saltsValue, f.saltsLengthSuffix)
-						err = f.generateLeavesFromParent(fmt.Sprintf("%s%s.", propPrefix, propItem), fchild)
-					}
-				} else {
-					propItem := fmt.Sprintf("%s%s[%d]", propPrefix, prop, j)
-					conv, err := ConvertReflectValueToSupportedPrimitive(s.Index(j))
-					if err != nil {
-						return err
-					}
-					valueString, err := ValueToString(conv)
-					if err != nil {
-						return err
-					}
-
-					//salt := fcurrent.saltsValue.FieldByName(fcurrent.messageType.Field(i).Name).Index(j+1).Interface().([]byte) // j+1 as we reserve salts[0] to length of slice
-					salt := fcurrent.saltsValue.FieldByName(fcurrent.messageType.Field(i).Name).Index(j).Interface().([]byte) // j+1 as we reserve salts[0] to length of slice
-					f.appendLeaf(propItem, valueString, salt)
-				}
-			}
-
-		} else if valueType.Kind() == reflect.Struct {
-			if valueType == reflect.TypeOf(timestamp.Timestamp{}) { //Specific case where we support serialization for a non primitive complex struct
-				valueString, err := ValueToString(value)
-				if err != nil {
-					return err
-				}
-				salt := fcurrent.saltsValue.FieldByName(reflectValueFieldType.Name).Interface().([]byte)
-				f.appendLeaf(fmt.Sprintf("%s%s", propPrefix, prop), valueString, salt)
+				err = f.handleAppendLeaf(propPrefix, prop, value.([]byte), salt)
 			} else {
-				fchild := NewMessageFlattener(reflectValue.Interface().(proto.Message), reflectSaltsValue.Interface().(proto.Message), f.saltsLengthSuffix)
-				err = f.generateLeavesFromParent(fmt.Sprintf("%s%s.",propPrefix, prop), fchild)
+				err = f.handleSlice(propPrefix, prop, fcurrent, i, sliceValue, salts)
 			}
+		} else if valueType.Kind() == reflect.Struct {
+			err = f.handleStruct(propPrefix, prop, valueField, valueType, reflectSaltsValue.Interface())
 		} else {
-			valueString, err := ValueToString(value)
-			if err != nil {
-				return err
-			}
 			salt := reflect.Indirect(fcurrent.saltsValue).FieldByName(reflectValueFieldType.Name).Interface().([]byte)
-			f.appendLeaf(fmt.Sprintf("%s%s", propPrefix, prop), valueString, salt)
+			err = f.handleAppendLeaf(propPrefix, prop, value, salt)
+		}
+
+		if err != nil {
+			return
 		}
 	}
 
 	return
 }
 
-func ConvertReflectValueToSupportedPrimitive(value reflect.Value) (converted interface{}, err error) {
-	switch t := reflect.TypeOf(value.Interface()); t {
-	case reflect.TypeOf(""):
-		converted = value.Interface().(string)
-	case reflect.TypeOf(int64(0)):
-		converted = value.Interface().(int64)
-	case reflect.TypeOf([]uint8{}):
-		converted = value.Interface().([]uint8)
-	case reflect.TypeOf(timestamp.Timestamp{}):
-		converted = value.Interface().(timestamp.Timestamp)
-	default:
-		return "", errors.New(fmt.Sprintf("Got unsupported value: %t", t))
+func (f *messageFlattener) handleSlice(propPrefix string, prop string, fcurrent *messageFlattener, i int, sliceValue reflect.Value, salts interface{}) (err error) {
+	if !sliceValue.IsValid() {
+		return fmt.Errorf("Invalid value provided: %v", sliceValue)
 	}
+	ss := reflect.ValueOf(salts)
+
+	// Append length of slice as tree leaf
+	saltedFieldValue := fcurrent.saltsValue.FieldByName(fmt.Sprintf("%s%s", fcurrent.messageType.Field(i).Name, fcurrent.saltsLengthSuffix))
+	salt := saltedFieldValue.Interface().([]byte)
+	f.appendLeaf(fmt.Sprintf("%s%s.length", propPrefix, prop), strconv.Itoa(sliceValue.Len()), salt)
+	//
+
+	for j := 0; j < sliceValue.Len(); j++ {
+		sval := reflect.Indirect(sliceValue.Index(j))
+		if reflect.TypeOf(sval.Interface()).Kind() == reflect.Struct {
+			err = f.handleStruct(propPrefix, fmt.Sprintf("%s[%d]", prop, j), sliceValue.Index(j), reflect.TypeOf(sliceValue.Index(j).Interface()), ss.Index(j).Interface())
+		} else {
+			propItem := fmt.Sprintf("%s[%d]", prop, j)
+			salt := fcurrent.saltsValue.FieldByName(fcurrent.messageType.Field(i).Name).Index(j).Interface().([]byte)
+			err = f.handleAppendLeaf(propPrefix, propItem, sliceValue.Index(j).Interface(), salt)
+		}
+	}
+
+	return
+}
+
+func (f *messageFlattener) handleStruct(propPrefix string, prop string, valueField reflect.Value, valueType reflect.Type, salts interface{}) (err error) {
+	if valueType == reflect.TypeOf(timestamp.Timestamp{}) { //Specific case where we support serialization for a non primitive complex struct
+		err = f.handleAppendLeaf(propPrefix, prop, valueField.Interface(), salts.([]byte))
+	} else {
+		fchild := NewMessageFlattener(valueField.Interface().(proto.Message), salts.(proto.Message), f.saltsLengthSuffix)
+		err = f.generateLeaves(fmt.Sprintf("%s%s.", propPrefix, prop), fchild)
+	}
+	return
+}
+
+func (f *messageFlattener) handleAppendLeaf(propPrefix string, prop string, value interface{}, salts interface{}) (err error) {
+	valueString, err := ValueToString(value)
+	if err != nil {
+		return err
+	}
+	f.appendLeaf(fmt.Sprintf("%s%s", propPrefix, prop), valueString, salts.([]byte))
 	return
 }
 
@@ -638,7 +606,7 @@ func NewMessageFlattener(message, messageSalts proto.Message, saltsLengthSuffix 
 func FlattenMessage(message, messageSalts proto.Message, saltsLengthSuffix string) (nodes [][]byte, propOrder []string, err error) {
 	f := NewMessageFlattener(message, messageSalts, saltsLengthSuffix)
 
-	err = f.generateLeavesFromParent("", f)
+	err = f.generateLeaves("", f)
 	if err != nil {
 		return
 	}
