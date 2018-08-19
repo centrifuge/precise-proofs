@@ -28,6 +28,11 @@ Above example would result in the following tree:
 
 ![Merkle tree example](https://raw.githubusercontent.com/centrifuge/precise-proofs/master/docs/tree.png)
 
+
+### Nested and Repeated Structures
+Currently the library supports Nested Structs and Repeated/List Fields
+See examples here: `examples/documents/example.proto`
+
 ## Proof format - Standard
 This library defines a proof format that ensures both human readable, concise and secure Merkle proofs:
 
@@ -61,6 +66,8 @@ This implementation allows for more concise representation of proofs, saving som
 ```
 
 There are a few things to note:
+* Correspondent Salts Protobuf should have an additional field for each repeated field that exists in the original 
+  protobuf document. See examples under `examples/documents/example.proto`
 * When calculating the hash of the leaf, the dot notation of the property, the value and salt should
   be concatenated to produce the hash.
 * The default proof expects values of documents to be salted to prevent rainbow table lookups.
