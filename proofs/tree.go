@@ -52,18 +52,22 @@ import (
 	"github.com/oleiade/reflections"
 )
 
+const SaltsLengthSuffixDefault = "Length"
+
 type TreeOptions struct {
 	EnableHashSorting bool
+	SaltsLengthSuffix string
 }
 
 // DocumentTree is a helper object to create a merkleTree and proofs for fields in the document
 type DocumentTree struct {
-	propertyList []string
-	merkleTree   merkle.Tree
-	rootHash     []byte
-	salts        proto.Message
-	document     proto.Message
-	hash         hash.Hash
+	propertyList 			[]string
+	merkleTree   			merkle.Tree
+	rootHash     			[]byte
+	salts        			proto.Message
+	document     			proto.Message
+	hash         			hash.Hash
+	saltsLengthSuffix string
 }
 
 func (doctree *DocumentTree) String() string {
@@ -80,7 +84,11 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 	if proofOpts.EnableHashSorting {
 		opts.EnableHashSorting = proofOpts.EnableHashSorting
 	}
-	return DocumentTree{[]string{}, merkle.NewTreeWithOpts(opts), []byte{}, nil, nil, nil}
+	saltsLengthSuffix := SaltsLengthSuffixDefault
+	if proofOpts.SaltsLengthSuffix != "" {
+		saltsLengthSuffix = proofOpts.SaltsLengthSuffix
+	}
+	return DocumentTree{[]string{}, merkle.NewTreeWithOpts(opts), []byte{}, nil, nil, nil, saltsLengthSuffix}
 }
 
 // SetHashFunc to an implementation of hash.Hash of your choice
@@ -94,7 +102,7 @@ func (doctree *DocumentTree) FillTree(document, salts proto.Message) (err error)
 		return fmt.Errorf("DocumentTree.hash is not set")
 	}
 
-	leaves, propertyList, err := FlattenMessage(document, salts)
+	leaves, propertyList, err := FlattenMessage(document, salts, doctree.saltsLengthSuffix)
 	if err != nil {
 		return err
 	}
@@ -302,9 +310,9 @@ func FillSalts(dataMessage, saltsMessage proto.Message) (err error) {
 	saltsMessageValue := reflect.Indirect(reflect.ValueOf(saltsMessage))
 
 	for i := 0; i < saltsMessageValue.NumField(); i++ {
-		valueField := dataMessageValue.Field(i)
 		saltsField := saltsMessageValue.Field(i)
 		saltsType := reflect.TypeOf(saltsField.Interface())
+		valueField := dataMessageValue.FieldByName(saltsMessageValue.Type().Field(i).Name)
 
 		if saltsType.Kind() == reflect.Ptr {
 			saltsType = saltsType.Elem()
@@ -406,15 +414,16 @@ func getPropertyNameFromProtobufTag(tag string) (name string, err error) {
 
 // messageFlattener takes a proto.Message and flattens it to a list of ordered nodes.
 type messageFlattener struct {
-	message        proto.Message
-	messageType    reflect.Type
-	messageValue   reflect.Value
-	excludedFields map[string]struct{}
-	salts          proto.Message
-	saltsValue     reflect.Value
-	leaves         LeafList
-	nodes          [][]byte
-	propOrder      []string
+	message        		proto.Message
+	messageType    		reflect.Type
+	messageValue   		reflect.Value
+	excludedFields 		map[string]struct{}
+	salts          		proto.Message
+	saltsValue     		reflect.Value
+	leaves         		LeafList
+	nodes          		[][]byte
+	propOrder      		[]string
+	saltsLengthSuffix string
 }
 
 func (f *messageFlattener) generateLeavesFromParent(propPrefix string, fcurrent *messageFlattener) (err error) {
@@ -438,11 +447,6 @@ func (f *messageFlattener) generateLeavesFromParent(propPrefix string, fcurrent 
 		}
 
 		tag := reflectValueFieldType.Tag.Get("protobuf")
-		reflectValue := fcurrent.messageValue.Field(i)
-		value := reflectValue.Interface()
-		reflectSaltsValue := fcurrent.saltsValue.Field(i)
-		salts := reflectSaltsValue.Interface()
-
 		prop, err := getPropertyNameFromProtobufTag(tag)
 		if err != nil {
 			return err
@@ -452,6 +456,11 @@ func (f *messageFlattener) generateLeavesFromParent(propPrefix string, fcurrent 
 		if _, ok := fcurrent.excludedFields[prop]; ok {
 			return nil
 		}
+
+		reflectValue := fcurrent.messageValue.Field(i)
+		value := reflectValue.Interface()
+		reflectSaltsValue := fcurrent.saltsValue.FieldByName(reflectValueFieldType.Name)
+		salts := reflectSaltsValue.Interface()
 
 		value = DereferencePointer(value)
 		salts = DereferencePointer(salts)
@@ -471,12 +480,9 @@ func (f *messageFlattener) generateLeavesFromParent(propPrefix string, fcurrent 
 				continue
 			}
 
-			//if fcurrent.saltsValue.FieldByName(fcurrent.messageType.Field(i).Name).Len() <= s.Len() {
-			//	return errors.New(fmt.Sprintf("Salts length provided does not match standard n+1 for field %s", fcurrent.messageType.Field(i).Name))
-			//}
-
-			//salt := fcurrent.saltsValue.FieldByName(fcurrent.messageType.Field(i).Name).Index(0).Interface().([]byte)
-			//f.appendLeaf(fmt.Sprintf("%s%s.length", propPrefix, prop), strconv.Itoa(s.Len()), salt)
+			saltedFieldValue := fcurrent.saltsValue.FieldByName(fmt.Sprintf("%s%s", fcurrent.messageType.Field(i).Name, fcurrent.saltsLengthSuffix))
+			salt := saltedFieldValue.Interface().([]byte)
+			f.appendLeaf(fmt.Sprintf("%s%s.length", propPrefix, prop), strconv.Itoa(s.Len()), salt)
 			for j := 0; j < s.Len(); j++ {
 				sval := reflect.Indirect(s.Index(j))
 				if reflect.TypeOf(sval.Interface()).Kind() == reflect.Struct {
@@ -492,7 +498,7 @@ func (f *messageFlattener) generateLeavesFromParent(propPrefix string, fcurrent 
 					} else {
 						propItem := fmt.Sprintf("%s%s[%d]", propPrefix, prop, j)
 						saltsValue := ss.Index(j).Interface().(proto.Message)
-						fchild := NewMessageFlattener(s.Index(j).Interface().(proto.Message), saltsValue)
+						fchild := NewMessageFlattener(s.Index(j).Interface().(proto.Message), saltsValue, f.saltsLengthSuffix)
 						err = f.generateLeavesFromParent(fmt.Sprintf("%s%s.", propPrefix, propItem), fchild)
 					}
 				} else {
@@ -521,7 +527,7 @@ func (f *messageFlattener) generateLeavesFromParent(propPrefix string, fcurrent 
 				salt := fcurrent.saltsValue.FieldByName(reflectValueFieldType.Name).Interface().([]byte)
 				f.appendLeaf(fmt.Sprintf("%s%s", propPrefix, prop), valueString, salt)
 			} else {
-				fchild := NewMessageFlattener(reflectValue.Interface().(proto.Message), reflectSaltsValue.Interface().(proto.Message))
+				fchild := NewMessageFlattener(reflectValue.Interface().(proto.Message), reflectSaltsValue.Interface().(proto.Message), f.saltsLengthSuffix)
 				err = f.generateLeavesFromParent(fmt.Sprintf("%s%s.",propPrefix, prop), fchild)
 			}
 		} else {
@@ -614,22 +620,23 @@ func (f *messageFlattener) parseExtensions() (err error) {
 }
 
 // NewMessageFlattener instantiates a flattener for the given document
-func NewMessageFlattener(message, messageSalts proto.Message) *messageFlattener {
+func NewMessageFlattener(message, messageSalts proto.Message, saltsLengthSuffix string) *messageFlattener {
 	f := messageFlattener{message: message, salts: messageSalts}
 	f.leaves = LeafList{}
 	f.messageValue = reflect.Indirect(reflect.ValueOf(message))
 	f.messageType = f.messageValue.Type()
 	f.saltsValue = reflect.Indirect(reflect.ValueOf(messageSalts))
 	f.excludedFields = make(map[string]struct{})
+	f.saltsLengthSuffix = saltsLengthSuffix
 	return &f
 }
 
 // FlattenMessage takes a protobuf message struct and flattens it into an array
-// of nodes. This currently doesn't support nested structures and lists.
+// of nodes.
 //
 // The fields are sorted lexicographically by their protobuf field names.
-func FlattenMessage(message, messageSalts proto.Message) (nodes [][]byte, propOrder []string, err error) {
-	f := NewMessageFlattener(message, messageSalts)
+func FlattenMessage(message, messageSalts proto.Message, saltsLengthSuffix string) (nodes [][]byte, propOrder []string, err error) {
+	f := NewMessageFlattener(message, messageSalts, saltsLengthSuffix)
 
 	err = f.generateLeavesFromParent("", f)
 	if err != nil {

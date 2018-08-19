@@ -28,7 +28,7 @@ Above example would result in the following tree:
 
 ![Merkle tree example](https://raw.githubusercontent.com/centrifuge/precise-proofs/master/docs/tree.png)
 
-## Proof format
+## Proof format - Standard
 This library defines a proof format that ensures both human readable, concise and secure Merkle proofs:
 
 ```js,
@@ -44,6 +44,22 @@ This library defines a proof format that ensures both human readable, concise an
 }
 ```
 
+## Proof format - hashed ordered
+This implementation allows for more concise representation of proofs, saving some space that is valuable for on-chain verifications
+```js,
+{
+    "property":"ValueA",
+    "value":"Example",
+    "salt":"1VWQFUGCXl1AYS0iAULHQow4XEjgJF/TpAuOO2Rnm+E=",
+    "hashes":[  
+        "kYXAGhDdPiFMq1ZQMOZiKmSf1S1eHNgJ6BIPSIExOj8=",
+        "GDgT7Km6NK6k4N/Id4CZXErL3p6clNX7sVnlNyegdG0=",
+        "qOZzS+YM8t1OfC87zEKgkKz6q0f3wwk5+ed+PR/2cDA="
+    ]
+}
+
+```
+
 There are a few things to note:
 * When calculating the hash of the leaf, the dot notation of the property, the value and salt should
   be concatenated to produce the hash.
@@ -55,6 +71,20 @@ There are a few things to note:
 
 Google's [protobuf](https://developers.google.com/protocol-buffers/docs/gotutorial) is a space efficient and fast format
 to serialize data in a portable way. It's easy to generate JSON out of
+
+## Tree Options
+### EnableHashSorting
+As described above, this is the flag to pass to implement a merkle tree with sorted hashes
+
+### SaltsLengthSuffix
+As precise proofs support repeated fields, when generating the merkle tree we need to add a leave that represents the length of the slice. 
+
+The default suffix is `Length`, although it is customizable so it does not collide with potential field names of your own proto structs.
+
+When creating the tree instance:
+```
+doctree := proofs.NewDocumentTree(proofs.TreeOptions{SaltsLengthSuffix: "CustomSuffixLength"})
+```
 
 ## Usage:
 
@@ -73,9 +103,11 @@ See below code sample (`examples/simple.go`) for a usage example.
 	// random bytes. SaltedExampleDocument is a protobuf message that has the
 	// same structure as ExampleDocument but has all `bytes` field types.
 	salts := documentspb.SaltedExampleDocument{}
-	FillSalts(&salts)
-
-	doctree := NewDocumentTree()
+	FillSalts(&document, &salts)
+  
+  //doctree := proofs.NewDocumentTree(merkle.TreeOptions{EnableHashSorting:true})
+  //doctree := proofs.NewDocumentTree(proofs.TreeOptions{SaltsLengthSuffix: "CustomSuffixLength"})
+  doctree := proofs.NewDocumentTree(proofs.TreeOptions{})
 	doctree.FillTree(&document, &salts)
 	fmt.Printf("Generated tree: %s\n", doctree.String())
 	// Output:
@@ -95,5 +127,4 @@ See below code sample (`examples/simple.go`) for a usage example.
 
 ### Missing features
 The following features are being worked on:
-* Support for nested documents
 * Add support for more types, currently only timestamp.Timestamp, []byte, int64 and string types are supported

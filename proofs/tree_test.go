@@ -133,7 +133,7 @@ func TestFlattenMessage(t *testing.T) {
 		ValueCamelCased: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		ValueNotIgnored: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 	}
-	flattened, propOrder, err := FlattenMessage(&message, &messageSalts)
+	flattened, propOrder, err := FlattenMessage(&message, &messageSalts, SaltsLengthSuffixDefault)
 	assert.Nil(t, err)
 	assert.Equal(t, 7, len(flattened))
 	assert.Equal(t, []string{"ValueCamelCased", "value1", "value2", "valueA", "valueB", "value_bytes1", "value_not_ignored"}, propOrder)
@@ -150,7 +150,7 @@ func TestFlattenMessage_AllFieldTypes(t *testing.T) {
 	err := FillSalts(message, &messageSalts)
 	assert.Nil(t, err)
 
-	_, fieldOrder, err := FlattenMessage(message, &messageSalts)
+	_, fieldOrder, err := FlattenMessage(message, &messageSalts, SaltsLengthSuffixDefault)
 	assert.Equal(t, []string{"string_value", "time_stamp_value"}, fieldOrder)
 	assert.Nil(t, err)
 
@@ -169,6 +169,7 @@ func TestFillSalts(t *testing.T) {
 	exampleFRSalts := &documentspb.SaltedSimpleRepeatedDocument{}
 	err = FillSalts(exampleFRDoc, exampleFRSalts)
 	assert.Nil(t, err, "Fill salts should not fail")
+	assert.NotNil(t, exampleFRSalts.ValueCLength)
 
 	assert.Equal(t, len(exampleFRDoc.ValueC), len(exampleFRSalts.ValueC))
 	assert.NotNil(t, exampleFRSalts.ValueC[0])
@@ -182,21 +183,40 @@ func TestFillSalts(t *testing.T) {
 	assert.NotNil(t, exampleFNSalts.ValueC[0].ValueA)
 	assert.NotNil(t, exampleFNSalts.ValueD.ValueA.ValueA)
 
-	_, fieldOrder, err := FlattenMessage(exampleFNDoc, exampleFNSalts)
-	assert.Nil(t, err)
-	assert.Equal(t, []string{"valueA", "valueB", "valueC[0].valueA", "valueC[1].valueA", "valueD.valueA.valueA", "valueD.valueB"}, fieldOrder)
+	exampleFTRDoc := &documentspb.ExampleFilledTwoLevelRepeatedDocument
+	exampleFTRSalts := &documentspb.SaltedTwoLevelRepeatedDocument{}
+	err = FillSalts(exampleFTRDoc, exampleFTRSalts)
+	assert.Nil(t, err, "Fill salts should not fail")
+
+	assert.NotNil(t, exampleFTRSalts.ValueBLength)
+	assert.NotNil(t, exampleFTRSalts.ValueB[0].ValueALength)
 
 	badExample := &documentspb.ExampleDocument{}
 	err = FillSalts(badExample, badExample)
 	assert.NotNil(t, err, "Fill salts should error because of string")
 }
 
+func TestFlattenMessageFromAutoFillSalts(t *testing.T) {
+	exampleFNDoc := &documentspb.ExampleFilledNestedRepeatedDocument
+	exampleFNSalts := &documentspb.SaltedNestedRepeatedDocument{}
+	err := FillSalts(exampleFNDoc, exampleFNSalts)
+	assert.Nil(t, err, "Fill salts should not fail")
+
+	assert.Equal(t, len(exampleFNDoc.ValueC), len(exampleFNSalts.ValueC))
+	assert.NotNil(t, exampleFNSalts.ValueC[0].ValueA)
+	assert.NotNil(t, exampleFNSalts.ValueD.ValueA.ValueA)
+
+	_, fieldOrder, err := FlattenMessage(exampleFNDoc, exampleFNSalts, SaltsLengthSuffixDefault)
+	assert.Nil(t, err)
+	assert.Equal(t, []string{"valueA", "valueB", "valueC.length", "valueC[0].valueA", "valueC[1].valueA", "valueD.valueA.valueA", "valueD.valueB"}, fieldOrder)
+}
+
 func TestFlattenMessageFromAlreadyFilledSalts(t *testing.T) {
 	exampleDoc := &documentspb.ExampleFilledNestedRepeatedDocument
 	exampleSaltedDoc := &documentspb.ExampleSaltedNestedRepeatedDocument
-	_, fieldOrder, err := FlattenMessage(exampleDoc, exampleSaltedDoc)
+	_, fieldOrder, err := FlattenMessage(exampleDoc, exampleSaltedDoc, SaltsLengthSuffixDefault)
 	assert.Nil(t, err)
-	assert.Equal(t, []string{"valueA", "valueB", "valueC[0].valueA", "valueC[1].valueA", "valueD.valueA.valueA", "valueD.valueB"}, fieldOrder)
+	assert.Equal(t, []string{"valueA", "valueB", "valueC.length", "valueC[0].valueA", "valueC[1].valueA", "valueD.valueA.valueA", "valueD.valueB"}, fieldOrder)
 }
 
 func TestTree_Generate(t *testing.T) {
@@ -215,7 +235,7 @@ func TestTree_Generate(t *testing.T) {
 		ValueCamelCased: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 	}
 
-	flattened, _, err := FlattenMessage(&protoMessage, &messageSalts)
+	flattened, _, err := FlattenMessage(&protoMessage, &messageSalts, SaltsLengthSuffixDefault)
 	assert.Nil(t, err)
 	tree := merkle.NewTree()
 	sha256Hash := sha256.New()
@@ -241,7 +261,7 @@ func TestSortedHashTree_Generate(t *testing.T) {
 		ValueCamelCased: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 	}
 
-	flattened, _, err := FlattenMessage(&protoMessage, &messageSalts)
+	flattened, _, err := FlattenMessage(&protoMessage, &messageSalts, SaltsLengthSuffixDefault)
 	assert.Nil(t, err)
 	tree := merkle.NewTreeWithOpts(merkle.TreeOptions{ EnableHashSorting: true })
 	sha256Hash := sha256.New()
@@ -508,10 +528,10 @@ func TestTree_GenerateWithRepeatedFields(t *testing.T) {
 	doctree.SetHashFunc(hashFunc)
 	err := doctree.FillTree(&documentspb.ExampleFilledRepeatedDocument, &documentspb.ExampleSaltedRepeatedDocument)
 	assert.Nil(t, err)
-	expectedRootHash := []byte{0x1b, 0x31, 0xa0, 0x99, 0x8f, 0x65, 0x99, 0xcc, 0x0, 0x92, 0xaa, 0x2f, 0xf3, 0xca, 0x9e, 0xd1, 0x38, 0x36, 0xc8, 0x6f, 0xb2, 0x1b, 0x8c, 0x6e, 0x23, 0x11, 0x46, 0x4b, 0x69, 0x14, 0xd, 0x68}
+	expectedRootHash := []byte{0xfa, 0x84, 0xf0, 0x2c, 0xed, 0xea, 0x3, 0x99, 0x80, 0xd6, 0x2f, 0xfb, 0x7, 0x19, 0xc6, 0xe2, 0x36, 0x71, 0x99, 0xb4, 0xe4, 0x56, 0xe9, 0xa4, 0xf4, 0x96, 0xde, 0xa, 0xef, 0xbc, 0xd1, 0xd}
 	assert.Equal(t, expectedRootHash, doctree.rootHash)
 
-	assert.Equal(t,[]string{"valueA", "valueB", "valueC[0]", "valueC[1]"}, doctree.propertyList )
+	assert.Equal(t,[]string{"valueA", "valueB", "valueC.length", "valueC[0]", "valueC[1]"}, doctree.propertyList )
 
 	hashes, err := doctree.pickHashesFromMerkleTreeAsList(0)
 	assert.Nil(t, err)
@@ -527,10 +547,10 @@ func TestTree_GenerateWithNestedAndRepeatedFields(t *testing.T) {
 	doctree.SetHashFunc(hashFunc)
 	err := doctree.FillTree(&documentspb.ExampleFilledNestedRepeatedDocument, &documentspb.ExampleSaltedNestedRepeatedDocument)
 	assert.Nil(t, err)
-	expectedRootHash := []byte{0x31, 0x4, 0x71, 0xd, 0xb4, 0x60, 0xfc, 0x79, 0xe8, 0xb2, 0xe6, 0xc6, 0x9c, 0x64, 0xf7, 0x11, 0x2, 0x9f, 0x50, 0xc7, 0x61, 0x86, 0xc7, 0x30, 0xe8, 0x8d, 0xe7, 0x2, 0xc2, 0x16, 0xb7, 0xcf}
+	expectedRootHash := []byte{0x9a, 0x83, 0x33, 0xe7, 0x72, 0x54, 0x1b, 0x67, 0x5c, 0x3, 0x0, 0x9a, 0x1d, 0xa0, 0xa5, 0x15, 0xac, 0xeb, 0x0, 0x96, 0x6, 0x9c, 0xfb, 0x15, 0x90, 0x52, 0x6e, 0xa8, 0x74, 0x8, 0x7, 0x49}
 	assert.Equal(t, expectedRootHash, doctree.rootHash)
 
-	assert.Equal(t,[]string{"valueA", "valueB", "valueC[0].valueA", "valueC[1].valueA", "valueD.valueA.valueA", "valueD.valueB"}, doctree.propertyList )
+	assert.Equal(t,[]string{"valueA", "valueB", "valueC.length", "valueC[0].valueA", "valueC[1].valueA", "valueD.valueA.valueA", "valueD.valueB"}, doctree.propertyList )
 
 	hashes, err := doctree.pickHashesFromMerkleTreeAsList(0)
 	assert.Nil(t, err)
@@ -637,7 +657,7 @@ func TestCreateRepeatedSortedProof(t *testing.T) {
 	assert.Equal(t, documentspb.ExampleSaltedRepeatedDocument.ValueC[1], proof.Salt)
 
 	fieldHash, err := CalculateHashForProofField(&proof, hashFunc)
-	rootHash := []byte{0x1b, 0x31, 0xa0, 0x99, 0x8f, 0x65, 0x99, 0xcc, 0x0, 0x92, 0xaa, 0x2f, 0xf3, 0xca, 0x9e, 0xd1, 0x38, 0x36, 0xc8, 0x6f, 0xb2, 0x1b, 0x8c, 0x6e, 0x23, 0x11, 0x46, 0x4b, 0x69, 0x14, 0xd, 0x68}
+	rootHash := []byte{0xfa, 0x84, 0xf0, 0x2c, 0xed, 0xea, 0x3, 0x99, 0x80, 0xd6, 0x2f, 0xfb, 0x7, 0x19, 0xc6, 0xe2, 0x36, 0x71, 0x99, 0xb4, 0xe4, 0x56, 0xe9, 0xa4, 0xf4, 0x96, 0xde, 0xa, 0xef, 0xbc, 0xd1, 0xd}
 	assert.Equal(t, rootHash, doctree.rootHash)
 	valid, err := ValidateProofSortedHashes(fieldHash, proof.SortedHashes, rootHash, doctree.hash)
 	assert.True(t, valid)
