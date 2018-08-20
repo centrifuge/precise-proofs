@@ -377,7 +377,7 @@ func handleFillSaltsSlice(saltsType reflect.Type, saltsField reflect.Value, valu
 
 func handleFillSaltsStruct(saltsField reflect.Value, saltsType reflect.Type, valueField reflect.Value) (err error) {
 	if saltsType.Kind() != reflect.Struct {
-		fmt.Errorf("Invalid type (%s) for field", saltsType.String())
+		return fmt.Errorf("Invalid type (%s) for field", saltsType.String())
 	}
 	saltsField.Set(reflect.New(saltsType))
 	err = FillSalts(valueField.Interface().(proto.Message), saltsField.Interface().(proto.Message))
