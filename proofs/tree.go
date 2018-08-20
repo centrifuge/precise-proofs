@@ -331,6 +331,10 @@ func FillSalts(dataMessage, saltsMessage proto.Message) (err error) {
 			return fmt.Errorf("Invalid type (%s) for field", reflect.TypeOf(saltsField.Interface()).String())
 		}
 
+		if err != nil {
+			return
+		}
+
 	}
 
 	return
