@@ -761,7 +761,7 @@ func Example_complete() {
 	// random bytes. SaltedExampleDocument is a protobuf message that has the
 	// same structure as ExampleDocument but has all `bytes` field types.
 	salts := documentspb.SaltedExampleDocument{}
-	//FillSalts(&salts)
+	FillSalts(&document, &salts)
 
 	doctree := NewDocumentTree(TreeOptions{})
 	doctree.FillTree(&document, &salts)

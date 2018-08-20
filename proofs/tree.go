@@ -67,7 +67,7 @@ type DocumentTree struct {
 	salts        			proto.Message
 	document     			proto.Message
 	hash         			hash.Hash
-	saltsLengthSuffix string
+	saltsLengthSuffix	string
 }
 
 func (doctree *DocumentTree) String() string {
@@ -244,11 +244,10 @@ func DereferencePointer(value interface{}) (interface{}) {
 // ValueToString takes any supported interface and returns a string representation of the value. This is used calculate
 // the hash and to create the proof object.
 func ValueToString(value interface{}) (s string, err error) {
-	val := DereferencePointer(value)
-	if val == nil {
+	value = DereferencePointer(value)
+	if value == nil {
 		return "", nil
 	}
-	value = val
 
 	switch t := reflect.TypeOf(value); t {
 	case reflect.TypeOf(""):
@@ -304,7 +303,7 @@ func NewSalt() (salt []byte) {
 // random values.
 //
 // This method will fail if there are any fields of type other than []byte (bytes in protobuf) in the
-// message.
+// message leaf.
 func FillSalts(dataMessage, saltsMessage proto.Message) (err error) {
 	dataMessageValue := reflect.Indirect(reflect.ValueOf(dataMessage))
 	saltsMessageValue := reflect.Indirect(reflect.ValueOf(saltsMessage))
@@ -323,55 +322,71 @@ func FillSalts(dataMessage, saltsMessage proto.Message) (err error) {
 		}
 
 		if saltsType == reflect.TypeOf([]uint8{}) {
-			newSalt := NewSalt()
-			saltVal := reflect.ValueOf(newSalt)
-			saltsMessageValue.Field(i).Set(saltVal)
+			err = handleFillSaltsValue(saltsField)
 		} else if saltsType.Kind() == reflect.Slice {
-			sliceType := reflect.SliceOf(saltsType.Elem())
-			newSlice := reflect.MakeSlice(sliceType, valueField.Len(), valueField.Len())
-			saltsField.Set(newSlice)
-
-			for j := 0; j < valueField.Len(); j++ {
-				dataFieldItem := dataMessageValue.Field(i).Index(j)
-				saltsFieldItem := saltsMessageValue.Field(i).Index(j)
-				saltsFieldItemType := reflect.TypeOf(saltsFieldItem.Interface())
-				saltsFieldItem.Set(reflect.Indirect(reflect.New(saltsFieldItemType)))
-
-				var checkType reflect.Type
-				if reflect.TypeOf(saltsFieldItem.Interface()).Kind() == reflect.Ptr {
-					checkType = reflect.TypeOf(saltsFieldItem.Interface()).Elem()
-				} else {
-					checkType = reflect.TypeOf(saltsFieldItem.Interface())
-				}
-
-				if checkType.Kind() == reflect.Struct {
-					saltsFieldItem.Set(reflect.New(checkType))
-					err = FillSalts(dataFieldItem.Interface().(proto.Message), saltsFieldItem.Interface().(proto.Message))
-				} else {
-					deRefSaltsFieldItem := reflect.Indirect(saltsFieldItem)
-					if reflect.TypeOf(deRefSaltsFieldItem.Interface()) != reflect.TypeOf([]uint8{}) {
-						return fmt.Errorf("Invalid type (%s) for field", reflect.TypeOf(deRefSaltsFieldItem.Interface()).String())
-					}
-					newSalt := NewSalt()
-					saltVal := reflect.ValueOf(newSalt)
-					saltsFieldItem.Set(saltVal)
-				}
-			}
-
+			err = handleFillSaltsSlice(saltsType, saltsField, valueField)
 		} else if saltsType.Kind() == reflect.Struct {
-			saltsField.Set(reflect.New(saltsType))
-			err = FillSalts(valueField.Interface().(proto.Message), saltsField.Interface().(proto.Message))
+			err = handleFillSaltsStruct(saltsField, saltsType, valueField)
 		} else {
-			if saltsType != reflect.TypeOf([]uint8{}) {
-				return fmt.Errorf("Invalid type (%s) for field", reflect.TypeOf(saltsField.Interface()).String())
-			}
-			newSalt := NewSalt()
-			saltVal := reflect.ValueOf(newSalt)
-			saltsField.Set(saltVal)
+			return fmt.Errorf("Invalid type (%s) for field", reflect.TypeOf(saltsField.Interface()).String())
 		}
 
 	}
 
+	return
+}
+
+func handleFillSaltsSlice(saltsType reflect.Type, saltsField reflect.Value, valueField reflect.Value) (err error) {
+	if saltsType.Kind() != reflect.Slice || reflect.TypeOf(valueField.Interface()).Kind() != reflect.Slice {
+		return fmt.Errorf("Invalid type (%s) or (%s) for field", saltsType.String(), reflect.TypeOf(valueField.Interface()).String())
+	}
+
+	sliceType := reflect.SliceOf(saltsType.Elem())
+	newSlice := reflect.MakeSlice(sliceType, valueField.Len(), valueField.Len())
+	saltsField.Set(newSlice)
+
+	for j := 0; j < valueField.Len(); j++ {
+		dataFieldItem := valueField.Index(j)
+		saltsFieldItem := saltsField.Index(j)
+		saltsFieldItemType := reflect.TypeOf(saltsFieldItem.Interface())
+		saltsFieldItem.Set(reflect.Indirect(reflect.New(saltsFieldItemType)))
+
+		var checkType reflect.Type
+		if reflect.TypeOf(saltsFieldItem.Interface()).Kind() == reflect.Ptr {
+			checkType = reflect.TypeOf(saltsFieldItem.Interface()).Elem()
+		} else {
+			checkType = reflect.TypeOf(saltsFieldItem.Interface())
+		}
+
+		if checkType.Kind() == reflect.Struct {
+			err = handleFillSaltsStruct(saltsFieldItem, checkType, dataFieldItem)
+		} else {
+			err = handleFillSaltsValue(reflect.Indirect(saltsFieldItem))
+		}
+
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+func handleFillSaltsStruct(saltsField reflect.Value, saltsType reflect.Type, valueField reflect.Value) (err error) {
+	if saltsType.Kind() != reflect.Struct {
+		fmt.Errorf("Invalid type (%s) for field", saltsType.String())
+	}
+	saltsField.Set(reflect.New(saltsType))
+	err = FillSalts(valueField.Interface().(proto.Message), saltsField.Interface().(proto.Message))
+	return
+}
+
+func handleFillSaltsValue(saltsField reflect.Value) (err error) {
+	if reflect.TypeOf(saltsField.Interface()) != reflect.TypeOf([]uint8{}) {
+		return fmt.Errorf("Invalid type (%s) for field", reflect.TypeOf(saltsField.Interface()).String())
+	}
+	newSalt := NewSalt()
+	saltVal := reflect.ValueOf(newSalt)
+	saltsField.Set(saltVal)
 	return
 }
 
