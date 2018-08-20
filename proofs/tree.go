@@ -436,7 +436,7 @@ type messageFlattener struct {
 	leaves         		LeafList
 	nodes          		[][]byte
 	propOrder      		[]string
-	saltsLengthSuffix string
+	saltsLengthSuffix	string
 }
 
 func (f *messageFlattener) generateLeaves(propPrefix string, fcurrent *messageFlattener) (err error) {
