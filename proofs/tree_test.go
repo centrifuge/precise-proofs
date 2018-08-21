@@ -104,6 +104,16 @@ func TestConcatNode(t *testing.T) {
 
 }
 
+func TestNormalizeDottedProperty(t *testing.T) {
+	value := "valueA.valueB[0].valueC"
+	expected := "ValueA.ValueB[0].ValueC"
+	assert.Equal(t, expected, normalizeDottedProperty(value))
+
+	value = "value_a.value_b.valueC[4].value"
+	expected = "ValueA.ValueB.ValueC[4].Value"
+	assert.Equal(t, expected, normalizeDottedProperty(value))
+}
+
 func TestGetDottedValueByProperty(t *testing.T) {
 	doc := &documentspb.ExampleFilledNestedRepeatedDocument
 	value, err := getDottedValueByProperty("valueD.valueB", doc)

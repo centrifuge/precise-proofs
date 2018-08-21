@@ -33,6 +33,39 @@ Above example would result in the following tree:
 Currently the library supports Nested Structs and Repeated/List Fields
 See examples here: `examples/documents/example.proto`
 
+Nested and repeated fields will be flattened following a dotted notation:
+Given the following example:
+
+```js,
+
+message NestedDocument {
+  string fieldA = 1;
+  repeated Document fieldB = 2;
+}
+
+message Document {
+  string fieldA = 1;
+}
+
+message NestedDocumentSalt {
+  bytes fieldA = 1;
+  repeated DocumentSalted fieldB = 2;
+  bytes fieldBLength = 3;
+}
+
+message DocumentSalted {
+  bytes fieldA = 1;
+}
+
+```
+A tree will be created out of this document by flattening all the fields values as leaves. 
+Example of flattening of NestedDocument.fieldB[2].fieldA:
+ 
+FieldName: `NestedDocument.fieldB[2].fieldA`
+FieldValue: `Value(NestedDocument.fieldB[2].fieldA)`
+SaltFieldValue: `Value(NestedDocumentSalt.fieldB[2].fieldA)` 
+HashCalculation: `FieldName+FieldValue+SaltFieldValue`
+
 ## Proof format - Standard
 This library defines a proof format that ensures both human readable, concise and secure Merkle proofs:
 
@@ -66,13 +99,35 @@ This implementation allows for more concise representation of proofs, saving som
 ```
 
 There are a few things to note:
-* Correspondent Salts Protobuf should have an additional field for each repeated field that exists in the original 
-  protobuf document. See examples under `examples/documents/example.proto`
 * When calculating the hash of the leaf, the dot notation of the property, the value and salt should
   be concatenated to produce the hash.
 * The default proof expects values of documents to be salted to prevent rainbow table lookups.
 * The value is included in the file as a string value not a native type. 
 
+## Additional Salt field for slice fields
+As lists have variable length and we want them to be part of the merkle tree in a way that it is possible to know 
+when a list field start and end within the tree, we included an additional leaf value that is the length of the list.
+
+Considerations:
+Document Protobuf will not need to be modified.
+Equivalent Salt protobuf for that document will need to add one extra field for each field that is defined as `repeated`.
+The suffix of the slice field needs to end in: `Length` or customized as described below by setting up SaltsLengthSuffix option.
+
+For example:
+```js,
+message Document {
+  string fieldA = 1;
+  repeated string fieldB = 2;
+}
+
+message DocumentSalt {
+  bytes fieldA = 1;
+  repeated bytes fieldB = 2;
+  bytes fieldBLength = 3;
+}
+
+``` 
+See more examples under `examples/documents/example.proto`
 
 ## Why protobuf?
 
@@ -84,7 +139,7 @@ to serialize data in a portable way. It's easy to generate JSON out of
 As described above, this is the flag to pass to implement a merkle tree with sorted hashes
 
 ### SaltsLengthSuffix
-As precise proofs support repeated fields, when generating the merkle tree we need to add a leave that represents the length of the slice. 
+As precise proofs support repeated fields, when generating the merkle tree we need to add a leaf that represents the length of the slice. 
 
 The default suffix is `Length`, although it is customizable so it does not collide with potential field names of your own proto structs.
 
@@ -112,8 +167,6 @@ See below code sample (`examples/simple.go`) for a usage example.
 	salts := documentspb.SaltedExampleDocument{}
 	FillSalts(&document, &salts)
   
-  //doctree := proofs.NewDocumentTree(merkle.TreeOptions{EnableHashSorting:true})
-  //doctree := proofs.NewDocumentTree(proofs.TreeOptions{SaltsLengthSuffix: "CustomSuffixLength"})
   doctree := proofs.NewDocumentTree(proofs.TreeOptions{})
 	doctree.FillTree(&document, &salts)
 	fmt.Printf("Generated tree: %s\n", doctree.String())

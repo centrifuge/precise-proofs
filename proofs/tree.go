@@ -49,7 +49,6 @@ import (
 	"github.com/centrifuge/go-merkle"
 	"regexp"
 	"github.com/iancoleman/strcase"
-	"github.com/oleiade/reflections"
 )
 
 const DefaultSaltsLengthSuffix = "Length"
@@ -131,21 +130,22 @@ func (doctree *DocumentTree) Document() proto.Message {
 // CreateProof takes a property in dot notation and returns a Proof object for the given field
 func (doctree *DocumentTree) CreateProof(prop string) (proof proofspb.Proof, err error) {
 	if doctree.IsEmpty() {
-		return proofspb.Proof{}, fmt.Errorf("Can't create proof for empty merkleTree")
+		err = fmt.Errorf("Can't create proof for empty merkleTree")
+		return
 	}
 
 	value, err := getStringValueByProperty(prop, doctree.document)
 	if err != nil {
-		return proofspb.Proof{}, err
+		return
 	}
 	salt, err := getByteValueByProperty(prop, doctree.salts)
 	if err != nil {
-		return proofspb.Proof{}, err
+		return
 	}
 
 	leaf, err := getIndexOfString(doctree.propertyList, prop)
 	if err != nil {
-		return proofspb.Proof{}, err
+		return
 	}
 
 	if doctree.merkleTree.Options.EnableHashSorting {
@@ -217,28 +217,12 @@ func (doctree *DocumentTree) ValidateProof(proof *proofspb.Proof) (valid bool, e
 }
 
 func DereferencePointer(value interface{}) (interface{}) {
-	// nil values should return an empty string
-	if reflect.TypeOf(value) == reflect.TypeOf(nil) {
+	reflectValue := reflect.Indirect(reflect.ValueOf(value))
+	if !reflectValue.IsValid() {
 		return nil
 	}
 
-	// nil pointers should also return an empty string
-	if reflect.TypeOf(value).Kind() == reflect.Ptr && reflect.ValueOf(value).IsNil() {
-		return nil
-	}
-
-	// Dereference any pointers
-	if reflect.TypeOf(value).Kind() == reflect.Ptr {
-		elem := reflect.ValueOf(value).Elem()
-
-		// Check if elem is a zero value, return empty string if it is.
-		if elem == reflect.Zero(reflect.TypeOf(elem)) {
-			return nil
-		}
-		return  elem.Interface()
-	}
-
-	return value
+	return reflectValue.Interface()
 }
 
 // ValueToString takes any supported interface and returns a string representation of the value. This is used calculate
@@ -310,7 +294,7 @@ func FillSalts(dataMessage, saltsMessage proto.Message) (err error) {
 
 	for i := 0; i < saltsMessageValue.NumField(); i++ {
 		saltsField := saltsMessageValue.Field(i)
-		saltsType := reflect.TypeOf(saltsField.Interface())
+		saltsType := saltsField.Type()
 		valueField := dataMessageValue.FieldByName(saltsMessageValue.Type().Field(i).Name)
 
 		if saltsType.Kind() == reflect.Ptr {
@@ -501,8 +485,10 @@ func (f *messageFlattener) generateLeaves(propPrefix string, fcurrent *messageFl
 	return
 }
 
-func (f *messageFlattener) handleSlice(propPrefix string, prop string, fcurrent *messageFlattener, i int, sliceValue reflect.Value, salts interface{}) (err error) {
-	if !sliceValue.IsValid() {
+func (f *messageFlattener) handleSlice(propPrefix string, prop string, fcurrent *messageFlattener, i int,
+	sliceValue reflect.Value, salts interface{}) (err error) {
+
+		if !sliceValue.IsValid() {
 		return fmt.Errorf("Invalid value provided: %v", sliceValue)
 	}
 	ss := reflect.ValueOf(salts)
@@ -511,12 +497,12 @@ func (f *messageFlattener) handleSlice(propPrefix string, prop string, fcurrent 
 	saltedFieldValue := fcurrent.saltsValue.FieldByName(fmt.Sprintf("%s%s", fcurrent.messageType.Field(i).Name, fcurrent.saltsLengthSuffix))
 	salt := saltedFieldValue.Interface().([]byte)
 	f.appendLeaf(fmt.Sprintf("%s%s.length", propPrefix, prop), strconv.Itoa(sliceValue.Len()), salt)
-	//
 
 	for j := 0; j < sliceValue.Len(); j++ {
 		sval := reflect.Indirect(sliceValue.Index(j))
 		if reflect.TypeOf(sval.Interface()).Kind() == reflect.Struct {
-			err = f.handleStruct(propPrefix, fmt.Sprintf("%s[%d]", prop, j), sliceValue.Index(j), reflect.TypeOf(sliceValue.Index(j).Interface()), ss.Index(j).Interface())
+			err = f.handleStruct(propPrefix, fmt.Sprintf("%s[%d]", prop, j), sliceValue.Index(j),
+				reflect.TypeOf(sliceValue.Index(j).Interface()), ss.Index(j).Interface())
 		} else {
 			propItem := fmt.Sprintf("%s[%d]", prop, j)
 			salt := fcurrent.saltsValue.FieldByName(fcurrent.messageType.Field(i).Name).Index(j).Interface().([]byte)
@@ -679,7 +665,7 @@ func getDottedValueByProperty(prop string, value interface{}) (interface{}, erro
 			if err != nil {
 				return nil, err
 			}
-			value, err = reflections.GetField(value, prefix)
+			value, err = GetFieldOfStruct(value, prefix)
 			if err != nil {
 				return nil, err
 			}
@@ -691,7 +677,7 @@ func getDottedValueByProperty(prop string, value interface{}) (interface{}, erro
 			}
 			value = reflect.ValueOf(value).Index(idx).Interface()
 		} else {
-			value, err = reflections.GetField(value, key)
+			value, err = GetFieldOfStruct(value, key)
 			if err != nil {
 				return nil, err
 			}
@@ -733,6 +719,30 @@ func getIndexOfString(slice []string, match string) (index int, err error) {
 		}
 	}
 	return index, fmt.Errorf("getIndexOfString: No match found")
+}
+
+func GetFieldOfStruct(obj interface{}, name string) (interface{}, error) {
+	if !hasValidType(obj, []reflect.Kind{reflect.Struct, reflect.Ptr}) {
+		return nil, errors.New("GetFieldOfStruct invoked with a non-struct interface")
+	}
+
+	objValue := reflect.Indirect(reflect.ValueOf(obj))
+	field := objValue.FieldByName(name)
+	if !field.IsValid() {
+		return nil, fmt.Errorf("No such field: %s in obj", name)
+	}
+
+	return field.Interface(), nil
+}
+
+func hasValidType(obj interface{}, types []reflect.Kind) bool {
+	for _, t := range types {
+		if reflect.TypeOf(obj).Kind() == t {
+			return true
+		}
+	}
+
+	return false
 }
 
 // HashTwoValues concatenate two hashes to calculate hash out of the result. This is used in the merkleTree calculation code

@@ -34,12 +34,6 @@
   revision = "90d371a664d668ca3e61d3ddddf1916662959f11"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/oleiade/reflections"
-  packages = ["."]
-  revision = "0e86b3c98b2ff33e30c85cfe97d9a63d439fe7eb"
-
-[[projects]]
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
@@ -54,6 +48,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "893319e23a33a11e81c43f05e21af7a71734e0676f3c5383cedfb43bb1347468"
+  inputs-digest = "a20c79bae94267d5082be669f5e8096a45ece77a99f6ac787b086645f4196d50"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -35,7 +35,6 @@ message AllFieldTypesSalts {
   bytes time_stamp_value = 2;
 }
 
-// Placeholder for Nested + Repeated Fields
 message SimpleItem {
   string valueA = 1;
 }
@@ -103,9 +102,6 @@ message SaltedNestedRepeatedDocument {
   bytes valueCLength = 4;
   SaltedTwoLevelItem valueD = 5;
 }
-
-
-//
 
 message LongDocument {
   int64 value0 = 16;

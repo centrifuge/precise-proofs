@@ -26,10 +26,6 @@
 
 
 [[constraint]]
-  name = "github.com/oleiade/reflections"
-  branch = "master"
-
-[[constraint]]
   name = "github.com/golang/protobuf"
   version = "1.1.0"
 
