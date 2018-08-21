@@ -41,13 +41,14 @@ import (
 	"strconv"
 	"strings"
 
+	"regexp"
+
+	"github.com/centrifuge/go-merkle"
 	"github.com/centrifuge/precise-proofs/proofs/proto"
 	"github.com/golang/protobuf/descriptor"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/centrifuge/go-merkle"
-	"regexp"
 	"github.com/iancoleman/strcase"
 )
 
@@ -60,13 +61,13 @@ type TreeOptions struct {
 
 // DocumentTree is a helper object to create a merkleTree and proofs for fields in the document
 type DocumentTree struct {
-	propertyList 			[]string
-	merkleTree   			merkle.Tree
-	rootHash     			[]byte
-	salts        			proto.Message
-	document     			proto.Message
-	hash         			hash.Hash
-	saltsLengthSuffix	string
+	propertyList      []string
+	merkleTree        merkle.Tree
+	rootHash          []byte
+	salts             proto.Message
+	document          proto.Message
+	hash              hash.Hash
+	saltsLengthSuffix string
 }
 
 func (doctree *DocumentTree) String() string {
@@ -216,7 +217,7 @@ func (doctree *DocumentTree) ValidateProof(proof *proofspb.Proof) (valid bool, e
 	return
 }
 
-func DereferencePointer(value interface{}) (interface{}) {
+func DereferencePointer(value interface{}) interface{} {
 	reflectValue := reflect.Indirect(reflect.ValueOf(value))
 	if !reflectValue.IsValid() {
 		return nil
@@ -411,16 +412,16 @@ func getPropertyNameFromProtobufTag(tag string) (name string, err error) {
 
 // messageFlattener takes a proto.Message and flattens it to a list of ordered nodes.
 type messageFlattener struct {
-	message        		proto.Message
-	messageType    		reflect.Type
-	messageValue   		reflect.Value
-	excludedFields 		map[string]struct{}
-	salts          		proto.Message
-	saltsValue     		reflect.Value
-	leaves         		LeafList
-	nodes          		[][]byte
-	propOrder      		[]string
-	saltsLengthSuffix	string
+	message           proto.Message
+	messageType       reflect.Type
+	messageValue      reflect.Value
+	excludedFields    map[string]struct{}
+	salts             proto.Message
+	saltsValue        reflect.Value
+	leaves            LeafList
+	nodes             [][]byte
+	propOrder         []string
+	saltsLengthSuffix string
 }
 
 func (f *messageFlattener) generateLeaves(propPrefix string, fcurrent *messageFlattener) (err error) {
@@ -488,7 +489,7 @@ func (f *messageFlattener) generateLeaves(propPrefix string, fcurrent *messageFl
 func (f *messageFlattener) handleSlice(propPrefix string, prop string, fcurrent *messageFlattener, i int,
 	sliceValue reflect.Value, salts interface{}) (err error) {
 
-		if !sliceValue.IsValid() {
+	if !sliceValue.IsValid() {
 		return fmt.Errorf("Invalid value provided: %v", sliceValue)
 	}
 	ss := reflect.ValueOf(salts)
@@ -532,7 +533,7 @@ func (f *messageFlattener) handleAppendLeaf(propPrefix string, prop string, valu
 	return
 }
 
-func (f *messageFlattener) appendLeaf(prop string, value string, salt[]byte) {
+func (f *messageFlattener) appendLeaf(prop string, value string, salt []byte) {
 	leaf := LeafNode{
 		Property: prop,
 		Value:    value,
@@ -624,7 +625,7 @@ func FlattenMessage(message, messageSalts proto.Message, saltsLengthSuffix strin
 }
 
 // normalizeDottedProperty performs camel case conversion without removing slice characters ([])
-func normalizeDottedProperty(prop string) (string) {
+func normalizeDottedProperty(prop string) string {
 	arr := strings.Split(prop, ".")
 	for idx, key := range arr {
 		var propAux string

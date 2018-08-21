@@ -6,14 +6,15 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"testing"
+	"time"
+
+	"github.com/centrifuge/go-merkle"
 	"github.com/centrifuge/precise-proofs/examples/documents"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/assert"
-	"github.com/centrifuge/go-merkle"
-	"testing"
-	"time"
-	"strconv"
 )
 
 var testSalt = []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225}
@@ -277,7 +278,7 @@ func TestSortedHashTree_Generate(t *testing.T) {
 
 	flattened, _, err := FlattenMessage(&protoMessage, &messageSalts, DefaultSaltsLengthSuffix)
 	assert.Nil(t, err)
-	tree := merkle.NewTreeWithOpts(merkle.TreeOptions{ EnableHashSorting: true })
+	tree := merkle.NewTreeWithOpts(merkle.TreeOptions{EnableHashSorting: true})
 	sha256Hash := sha256.New()
 	tree.Generate(flattened, sha256Hash)
 	h := tree.Root().Hash
@@ -517,7 +518,7 @@ func TestTree_GenerateStandardProof(t *testing.T) {
 }
 
 func TestTree_GenerateSortedProof(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{EnableHashSorting:true})
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true})
 	hashFunc := sha256.New()
 	doctree.SetHashFunc(hashFunc)
 	err := doctree.FillTree(&documentspb.LongDocumentExample, &documentspb.SaltedLongDocumentExample)
@@ -537,7 +538,7 @@ func TestTree_GenerateSortedProof(t *testing.T) {
 }
 
 func TestTree_GenerateWithRepeatedFields(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{EnableHashSorting:true})
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true})
 	hashFunc := sha256.New()
 	doctree.SetHashFunc(hashFunc)
 	err := doctree.FillTree(&documentspb.ExampleFilledRepeatedDocument, &documentspb.ExampleSaltedRepeatedDocument)
@@ -545,7 +546,7 @@ func TestTree_GenerateWithRepeatedFields(t *testing.T) {
 	expectedRootHash := []byte{0xfa, 0x84, 0xf0, 0x2c, 0xed, 0xea, 0x3, 0x99, 0x80, 0xd6, 0x2f, 0xfb, 0x7, 0x19, 0xc6, 0xe2, 0x36, 0x71, 0x99, 0xb4, 0xe4, 0x56, 0xe9, 0xa4, 0xf4, 0x96, 0xde, 0xa, 0xef, 0xbc, 0xd1, 0xd}
 	assert.Equal(t, expectedRootHash, doctree.rootHash)
 
-	assert.Equal(t,[]string{"valueA", "valueB", "valueC.length", "valueC[0]", "valueC[1]"}, doctree.propertyList )
+	assert.Equal(t, []string{"valueA", "valueB", "valueC.length", "valueC[0]", "valueC[1]"}, doctree.propertyList)
 
 	hashes, err := doctree.pickHashesFromMerkleTreeAsList(0)
 	assert.Nil(t, err)
@@ -556,7 +557,7 @@ func TestTree_GenerateWithRepeatedFields(t *testing.T) {
 }
 
 func TestTree_GenerateWithNestedAndRepeatedFields(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{EnableHashSorting:true})
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true})
 	hashFunc := sha256.New()
 	doctree.SetHashFunc(hashFunc)
 	err := doctree.FillTree(&documentspb.ExampleFilledNestedRepeatedDocument, &documentspb.ExampleSaltedNestedRepeatedDocument)
@@ -564,7 +565,7 @@ func TestTree_GenerateWithNestedAndRepeatedFields(t *testing.T) {
 	expectedRootHash := []byte{0x9a, 0x83, 0x33, 0xe7, 0x72, 0x54, 0x1b, 0x67, 0x5c, 0x3, 0x0, 0x9a, 0x1d, 0xa0, 0xa5, 0x15, 0xac, 0xeb, 0x0, 0x96, 0x6, 0x9c, 0xfb, 0x15, 0x90, 0x52, 0x6e, 0xa8, 0x74, 0x8, 0x7, 0x49}
 	assert.Equal(t, expectedRootHash, doctree.rootHash)
 
-	assert.Equal(t,[]string{"valueA", "valueB", "valueC.length", "valueC[0].valueA", "valueC[1].valueA", "valueD.valueA.valueA", "valueD.valueB"}, doctree.propertyList )
+	assert.Equal(t, []string{"valueA", "valueB", "valueC.length", "valueC[0].valueA", "valueC[1].valueA", "valueD.valueA.valueA", "valueD.valueB"}, doctree.propertyList)
 
 	hashes, err := doctree.pickHashesFromMerkleTreeAsList(0)
 	assert.Nil(t, err)
@@ -622,7 +623,7 @@ func TestCreateStandardProof(t *testing.T) {
 }
 
 func TestCreateSortedProof(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{EnableHashSorting:true})
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true})
 	hashFunc := sha256.New()
 	doctree.SetHashFunc(hashFunc)
 	err := doctree.FillTree(&documentspb.FilledExampleDocument, &documentspb.ExampleDocumentSalts)
@@ -655,7 +656,7 @@ func TestCreateSortedProof(t *testing.T) {
 }
 
 func TestCreateRepeatedSortedProof(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{EnableHashSorting:true})
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true})
 	hashFunc := sha256.New()
 	doctree.SetHashFunc(hashFunc)
 	err := doctree.FillTree(&documentspb.ExampleFilledRepeatedDocument, &documentspb.ExampleSaltedRepeatedDocument)
@@ -688,7 +689,7 @@ func TestCreateRepeatedSortedProof(t *testing.T) {
 }
 
 func TestCreateRepeatedSortedProofAutoSalts(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{EnableHashSorting:true})
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true})
 	hashFunc := sha256.New()
 	doctree.SetHashFunc(hashFunc)
 	docSalts := &documentspb.SaltedNestedRepeatedDocument{}
@@ -723,7 +724,7 @@ func TestCreateRepeatedSortedProofAutoSalts(t *testing.T) {
 }
 
 func TestCreateProofFromRepeatedField(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{EnableHashSorting:true})
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true})
 	hashFunc := sha256.New()
 	doctree.SetHashFunc(hashFunc)
 	docSalts := &documentspb.SaltedNestedRepeatedDocument{}
@@ -741,7 +742,7 @@ func TestCreateProofFromRepeatedField(t *testing.T) {
 }
 
 func TestCreateProofFromNestedField(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{EnableHashSorting:true})
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true})
 	hashFunc := sha256.New()
 	doctree.SetHashFunc(hashFunc)
 	docSalts := &documentspb.SaltedNestedRepeatedDocument{}
