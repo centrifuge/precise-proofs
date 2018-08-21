@@ -128,6 +128,27 @@ func TestGetDottedValueByProperty(t *testing.T) {
 	value, err = getDottedValueByProperty("valueC[1].valueA", doc)
 	assert.Nil(t, err)
 	assert.Equal(t, "ValueCB", value)
+
+	wrongDoc := "wrong!"
+	value, err = getDottedValueByProperty("valueC[1]", wrongDoc)
+	assert.NotNil(t, err)
+	assert.Error(t, err, "non-struct interface not supported")
+}
+
+func TestGetFieldOfStruct(t *testing.T) {
+	doc := &documentspb.FilledExampleDocument
+	value, err := GetFieldOfStruct(doc, "ValueA")
+	assert.Nil(t, err)
+	assert.Equal(t, "Example", value.(string))
+
+	value, err = GetFieldOfStruct(doc, "WrongField")
+	assert.NotNil(t, err)
+	assert.Error(t, err, "No such field: WrongField in obj")
+
+	wrongDoc := "wrong!"
+	value, err = GetFieldOfStruct(wrongDoc, "ValueA")
+	assert.NotNil(t, err)
+	assert.Error(t, err, "GetFieldOfStruct invoked with a non-struct interface")
 }
 
 func TestFlattenMessage(t *testing.T) {
