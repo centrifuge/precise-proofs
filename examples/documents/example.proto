@@ -35,6 +35,74 @@ message AllFieldTypesSalts {
   bytes time_stamp_value = 2;
 }
 
+message SimpleItem {
+  string valueA = 1;
+}
+
+message SaltedSimpleItem {
+  bytes valueA = 1;
+}
+
+message RepeatedItem {
+  repeated SimpleItem valueA = 1;
+  string valueB = 2;
+}
+
+message SaltedRepeatedItem {
+  repeated SaltedSimpleItem valueA = 1;
+  bytes valueALength = 2;
+  bytes valueB = 3;
+}
+
+message TwoLevelRepeatedDocument {
+  string valueA = 1;
+  repeated RepeatedItem valueB = 2;
+}
+
+message SaltedTwoLevelRepeatedDocument {
+  bytes valueA = 1;
+  repeated SaltedRepeatedItem valueB = 2;
+  bytes valueBLength = 3;
+}
+
+message SimpleRepeatedDocument {
+  string valueA = 1;
+  string valueB = 2;
+  repeated string valueC = 3;
+}
+
+message SaltedSimpleRepeatedDocument {
+  bytes valueA = 1;
+  bytes valueB = 2;
+  repeated bytes valueC = 3;
+  bytes valueCLength = 4;
+}
+
+message TwoLevelItem {
+  SimpleItem valueA = 1;
+  string valueB = 2;
+}
+
+message SaltedTwoLevelItem {
+  SaltedSimpleItem valueA = 1;
+  bytes valueB = 2;
+}
+
+message NestedRepeatedDocument {
+  string valueA = 1;
+  string valueB = 2;
+  repeated SimpleItem valueC = 3;
+  TwoLevelItem valueD = 4;
+}
+
+message SaltedNestedRepeatedDocument {
+  bytes valueA = 1;
+  bytes valueB = 2;
+  repeated SaltedSimpleItem valueC = 3;
+  bytes valueCLength = 4;
+  SaltedTwoLevelItem valueD = 5;
+}
+
 message LongDocument {
   int64 value0 = 16;
   int64 value1 = 1;

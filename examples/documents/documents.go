@@ -38,3 +38,42 @@ func NewAllFieldTypes() *AllFieldTypes {
 	m.TimeStampValue = now
 	return &m
 }
+
+var ExampleFilledRepeatedDocument = SimpleRepeatedDocument {
+	ValueA: "ValueAA",
+	ValueB: "ValueBB",
+	ValueC: []string{"ValueCA", "ValueCB"},
+}
+
+var ExampleSaltedRepeatedDocument = SaltedSimpleRepeatedDocument {
+	ValueA: salt,
+	ValueB: salt,
+	ValueC: [][]byte{salt, salt},
+	ValueCLength: salt,
+}
+
+var ExampleFilledTwoLevelRepeatedDocument = TwoLevelRepeatedDocument{
+	ValueA: "ValueAA",
+	ValueB: []*RepeatedItem{{ValueA: []*SimpleItem{{ValueA:"ValueBAAA"},{ValueA: "ValueBAAB"}}, ValueB: "ValueBBA"}},
+}
+
+var ExampleSaltedTwoLevelRepeatedDocument = SaltedTwoLevelRepeatedDocument{
+	ValueA: salt,
+	ValueB: []*SaltedRepeatedItem{{ValueA: []*SaltedSimpleItem{{ValueA: salt},{ValueA: salt}}, ValueALength: salt,ValueB: salt}},
+	ValueBLength: salt,
+}
+
+var ExampleFilledNestedRepeatedDocument = NestedRepeatedDocument{
+	ValueA: "ValueAA",
+	ValueB: "ValueBB",
+	ValueC: []*SimpleItem{{ValueA: "ValueCA"}, {ValueA: "ValueCB"}},
+	ValueD: &TwoLevelItem{ValueA: &SimpleItem{ValueA: "ValueDAA"}, ValueB: "ValueDB"},
+}
+
+var ExampleSaltedNestedRepeatedDocument = SaltedNestedRepeatedDocument{
+	ValueA: salt,
+	ValueB: salt,
+	ValueC: []*SaltedSimpleItem{{ValueA:salt}, {ValueA:salt}},
+	ValueCLength: salt,
+	ValueD: &SaltedTwoLevelItem{ValueA:&SaltedSimpleItem{ValueA:salt}, ValueB: salt},
+}

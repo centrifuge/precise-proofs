@@ -41,28 +41,39 @@ import (
 	"strconv"
 	"strings"
 
+	"regexp"
+
+	"github.com/centrifuge/go-merkle"
 	"github.com/centrifuge/precise-proofs/proofs/proto"
-	"github.com/go-bongo/go-dotaccess"
 	"github.com/golang/protobuf/descriptor"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/iancoleman/strcase"
-	"github.com/centrifuge/go-merkle"
 )
 
+const DefaultSaltsLengthSuffix = "Length"
+
+/*
+Allows to pass certain options to the tree generation logic. Currently support:
+	1. EnableHashSorting: Implement a merkle tree with sorted hashes
+	2. SaltsLengthSuffix: As precise proofs support repeated fields, when generating the merkle tree we need to add a leaf that represents the length of the slice.
+	The default suffix is `Length`, although it is customizable so it does not collide with potential field names of your own proto structs.
+*/
 type TreeOptions struct {
 	EnableHashSorting bool
+	SaltsLengthSuffix string
 }
 
 // DocumentTree is a helper object to create a merkleTree and proofs for fields in the document
 type DocumentTree struct {
-	propertyList []string
-	merkleTree   merkle.Tree
-	rootHash     []byte
-	salts        proto.Message
-	document     proto.Message
-	hash         hash.Hash
+	propertyList      []string
+	merkleTree        merkle.Tree
+	rootHash          []byte
+	salts             proto.Message
+	document          proto.Message
+	hash              hash.Hash
+	saltsLengthSuffix string
 }
 
 func (doctree *DocumentTree) String() string {
@@ -79,7 +90,11 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 	if proofOpts.EnableHashSorting {
 		opts.EnableHashSorting = proofOpts.EnableHashSorting
 	}
-	return DocumentTree{[]string{}, merkle.NewTreeWithOpts(opts), []byte{}, nil, nil, nil}
+	saltsLengthSuffix := DefaultSaltsLengthSuffix
+	if proofOpts.SaltsLengthSuffix != "" {
+		saltsLengthSuffix = proofOpts.SaltsLengthSuffix
+	}
+	return DocumentTree{[]string{}, merkle.NewTreeWithOpts(opts), []byte{}, nil, nil, nil, saltsLengthSuffix}
 }
 
 // SetHashFunc to an implementation of hash.Hash of your choice
@@ -93,7 +108,7 @@ func (doctree *DocumentTree) FillTree(document, salts proto.Message) (err error)
 		return fmt.Errorf("DocumentTree.hash is not set")
 	}
 
-	leaves, propertyList, err := FlattenMessage(document, salts)
+	leaves, propertyList, err := FlattenMessage(document, salts, doctree.saltsLengthSuffix)
 	if err != nil {
 		return err
 	}
@@ -122,18 +137,22 @@ func (doctree *DocumentTree) Document() proto.Message {
 // CreateProof takes a property in dot notation and returns a Proof object for the given field
 func (doctree *DocumentTree) CreateProof(prop string) (proof proofspb.Proof, err error) {
 	if doctree.IsEmpty() {
-		return proofspb.Proof{}, fmt.Errorf("Can't create proof for empty merkleTree")
+		err = fmt.Errorf("Can't create proof for empty merkleTree")
+		return
 	}
 
 	value, err := getStringValueByProperty(prop, doctree.document)
 	if err != nil {
-		return proofspb.Proof{}, err
+		return
 	}
 	salt, err := getByteValueByProperty(prop, doctree.salts)
+	if err != nil {
+		return
+	}
 
 	leaf, err := getIndexOfString(doctree.propertyList, prop)
 	if err != nil {
-		return proofspb.Proof{}, err
+		return
 	}
 
 	if doctree.merkleTree.Options.EnableHashSorting {
@@ -204,28 +223,21 @@ func (doctree *DocumentTree) ValidateProof(proof *proofspb.Proof) (valid bool, e
 	return
 }
 
+func dereferencePointer(value interface{}) interface{} {
+	reflectValue := reflect.Indirect(reflect.ValueOf(value))
+	if !reflectValue.IsValid() {
+		return nil
+	}
+
+	return reflectValue.Interface()
+}
+
 // ValueToString takes any supported interface and returns a string representation of the value. This is used calculate
 // the hash and to create the proof object.
 func ValueToString(value interface{}) (s string, err error) {
-	// nil values should return an empty string
-	if reflect.TypeOf(value) == reflect.TypeOf(nil) {
+	value = dereferencePointer(value)
+	if value == nil {
 		return "", nil
-	}
-
-	// nil pointers should also return an empty string
-	if reflect.TypeOf(value).Kind() == reflect.Ptr && reflect.ValueOf(value).IsNil() {
-		return "", nil
-	}
-
-	// Dereference any pointers
-	if reflect.TypeOf(value).Kind() == reflect.Ptr {
-		elem := reflect.ValueOf(value).Elem()
-
-		// Check if elem is a zero value, return empty string if it is.
-		if elem == reflect.Zero(reflect.TypeOf(elem)) {
-			return "", nil
-		}
-		value = elem.Interface()
 	}
 
 	switch t := reflect.TypeOf(value); t {
@@ -246,20 +258,15 @@ func ValueToString(value interface{}) (s string, err error) {
 // LeafNode represents a field that can be hashed to create a merkle tree
 type LeafNode struct {
 	Property string
-	Value    interface{}
+	Value    string
 	Salt     []byte
 }
 
 // ConcatValues concatenates property, value & salt into one byte slice.
-func ConcatValues(prop string, value interface{}, salt []byte) (payload []byte, err error) {
+func ConcatValues(prop string, value string, salt []byte) (payload []byte, err error) {
 	propBytes := []byte(prop)
-	valueString, err := ValueToString(value)
-	if err != nil {
-		return []byte{}, err
-	}
-
 	payload = append(payload, propBytes...)
-	payload = append(payload, []byte(valueString)...)
+	payload = append(payload, []byte(value)...)
 	if len(salt) != 32 {
 		return []byte{}, fmt.Errorf("%s: Salt has incorrect length: %d instead of 32", prop, len(salt))
 	}
@@ -287,26 +294,99 @@ func NewSalt() (salt []byte) {
 // random values.
 //
 // This method will fail if there are any fields of type other than []byte (bytes in protobuf) in the
-// message.
-func FillSalts(message proto.Message) (err error) {
-	v := reflect.ValueOf(message).Elem()
+// message leaf.
+//
+// The `saltsMessage` protobuf value provided will need to add one extra field for each field that is defined as `repeated`.
+//
+// The suffix of the slice field needs to end in: `Length` or customized as described above.
+func FillSalts(dataMessage, saltsMessage proto.Message) (err error) {
+	dataMessageValue := reflect.Indirect(reflect.ValueOf(dataMessage))
+	saltsMessageValue := reflect.Indirect(reflect.ValueOf(saltsMessage))
 
-	for i := 0; i < v.NumField(); i++ {
-		f := v.Field(i)
-		// Ignore fields starting with XXX_, those are protobuf internals
-		if strings.HasPrefix(v.Type().Field(i).Name, "XXX_") {
+	for i := 0; i < saltsMessageValue.NumField(); i++ {
+		saltsField := saltsMessageValue.Field(i)
+		saltsType := saltsField.Type()
+		valueField := dataMessageValue.FieldByName(saltsMessageValue.Type().Field(i).Name)
+
+		if saltsType.Kind() == reflect.Ptr {
+			saltsType = saltsType.Elem()
+		}
+
+		if strings.HasPrefix(saltsMessageValue.Type().Field(i).Name, "XXX_") {
 			continue
 		}
 
-		if f.Type() != reflect.TypeOf([]uint8{}) {
-			return fmt.Errorf("Invalid type (%s) for field", f.Type().String())
+		if saltsType == reflect.TypeOf([]uint8{}) {
+			err = handleFillSaltsValue(saltsField)
+		} else if saltsType.Kind() == reflect.Slice {
+			err = handleFillSaltsSlice(saltsType, saltsField, valueField)
+		} else if saltsType.Kind() == reflect.Struct {
+			err = handleFillSaltsStruct(saltsField, saltsType, valueField)
+		} else {
+			return fmt.Errorf("Invalid type (%s) for field", reflect.TypeOf(saltsField.Interface()).String())
 		}
-		salt := NewSalt()
-		saltVal := reflect.ValueOf(salt)
-		f.Set(saltVal)
+
+		if err != nil {
+			return
+		}
+
 	}
 
-	return nil
+	return
+}
+
+func handleFillSaltsSlice(saltsType reflect.Type, saltsField reflect.Value, valueField reflect.Value) (err error) {
+	if saltsType.Kind() != reflect.Slice || reflect.TypeOf(valueField.Interface()).Kind() != reflect.Slice {
+		return fmt.Errorf("Invalid type (%s) or (%s) for field", saltsType.String(), reflect.TypeOf(valueField.Interface()).String())
+	}
+
+	sliceType := reflect.SliceOf(saltsType.Elem())
+	newSlice := reflect.MakeSlice(sliceType, valueField.Len(), valueField.Len())
+	saltsField.Set(newSlice)
+
+	for j := 0; j < valueField.Len(); j++ {
+		dataFieldItem := valueField.Index(j)
+		saltsFieldItem := saltsField.Index(j)
+		saltsFieldItemType := reflect.TypeOf(saltsFieldItem.Interface())
+		saltsFieldItem.Set(reflect.Indirect(reflect.New(saltsFieldItemType)))
+
+		var checkType reflect.Type
+		if reflect.TypeOf(saltsFieldItem.Interface()).Kind() == reflect.Ptr {
+			checkType = reflect.TypeOf(saltsFieldItem.Interface()).Elem()
+		} else {
+			checkType = reflect.TypeOf(saltsFieldItem.Interface())
+		}
+
+		if checkType.Kind() == reflect.Struct {
+			err = handleFillSaltsStruct(saltsFieldItem, checkType, dataFieldItem)
+		} else {
+			err = handleFillSaltsValue(reflect.Indirect(saltsFieldItem))
+		}
+
+		if err != nil {
+			return
+		}
+	}
+	return
+}
+
+func handleFillSaltsStruct(saltsField reflect.Value, saltsType reflect.Type, valueField reflect.Value) (err error) {
+	if saltsType.Kind() != reflect.Struct {
+		return fmt.Errorf("Invalid type (%s) for field", saltsType.String())
+	}
+	saltsField.Set(reflect.New(saltsType))
+	err = FillSalts(valueField.Interface().(proto.Message), saltsField.Interface().(proto.Message))
+	return
+}
+
+func handleFillSaltsValue(saltsField reflect.Value) (err error) {
+	if reflect.TypeOf(saltsField.Interface()) != reflect.TypeOf([]uint8{}) {
+		return fmt.Errorf("Invalid type (%s) for field", reflect.TypeOf(saltsField.Interface()).String())
+	}
+	newSalt := NewSalt()
+	saltVal := reflect.ValueOf(newSalt)
+	saltsField.Set(saltVal)
+	return
 }
 
 // LeafList is a list implementation that can be sorted by the LeafNode.Property value. This is needed for ordering all
@@ -342,45 +422,134 @@ func getPropertyNameFromProtobufTag(tag string) (name string, err error) {
 
 // messageFlattener takes a proto.Message and flattens it to a list of ordered nodes.
 type messageFlattener struct {
-	message        proto.Message
-	messageType    reflect.Type
-	messageValue   reflect.Value
-	excludedFields map[string]struct{}
-	salts          proto.Message
-	saltsValue     reflect.Value
-	leaves         LeafList
-	nodes          [][]byte
-	propOrder      []string
+	message           proto.Message
+	messageType       reflect.Type
+	messageValue      reflect.Value
+	excludedFields    map[string]struct{}
+	salts             proto.Message
+	saltsValue        reflect.Value
+	leaves            LeafList
+	nodes             [][]byte
+	propOrder         []string
+	saltsLengthSuffix string
 }
 
-// generateLeafFromFieldIndex adds the LeafNode to LeafList for a field by it's
-// index in the Message struct.
-func (f *messageFlattener) generateLeafFromFieldIndex(index int) (err error) {
-	// Ignore fields starting with XXX_, those are protobuf internals
-	if strings.HasPrefix(f.messageType.Field(index).Name, "XXX_") {
-		return nil
-	}
+func (f *messageFlattener) generateLeaves(propPrefix string, fcurrent *messageFlattener) (err error) {
 
-	tag := f.messageType.Field(index).Tag.Get("protobuf")
-	value := f.messageValue.Field(index).Interface()
-	prop, err := getPropertyNameFromProtobufTag(tag)
-	if err != nil {
+	if err = fcurrent.parseExtensions(); err != nil {
 		return err
 	}
 
-	// Check if the field has an exclude_from_tree option
-	if _, ok := f.excludedFields[prop]; ok {
-		return
+	for i := 0; i < fcurrent.messageValue.NumField(); i++ {
+		valueField := fcurrent.messageValue.Field(i)
+		valueType := reflect.TypeOf(valueField.Interface())
+		reflectValueFieldType := fcurrent.messageType.Field(i)
+
+		// Pointer dereference for correct type checks
+		if valueType.Kind() == reflect.Ptr {
+			valueType = valueType.Elem()
+		}
+
+		// Ignore fields starting with XXX_, those are protobuf internals
+		if strings.HasPrefix(reflectValueFieldType.Name, "XXX_") {
+			continue
+		}
+
+		tag := reflectValueFieldType.Tag.Get("protobuf")
+		prop, err1 := getPropertyNameFromProtobufTag(tag)
+		if err1 != nil {
+			return err1
+		}
+
+		// Check if the field has an exclude_from_tree option
+		if _, ok := fcurrent.excludedFields[prop]; ok {
+			continue
+		}
+
+		value := valueField.Interface()
+		reflectSaltsValue := fcurrent.saltsValue.FieldByName(reflectValueFieldType.Name)
+		salts := reflectSaltsValue.Interface()
+
+		value = dereferencePointer(value)
+		salts = dereferencePointer(salts)
+
+		if valueType.Kind() == reflect.Slice {
+			sliceValue := reflect.ValueOf(value)
+			if sliceValue.Type() == reflect.TypeOf([]uint8{}) { //Specific case where byte is internally represented as []uint8, but we want to treat it as a whole
+				salt := reflect.Indirect(fcurrent.saltsValue).FieldByName(reflectValueFieldType.Name).Interface().([]byte)
+				err = f.handleAppendLeaf(propPrefix, prop, value.([]byte), salt)
+			} else {
+				err = f.handleSlice(propPrefix, prop, fcurrent, i, sliceValue, salts)
+			}
+		} else if valueType.Kind() == reflect.Struct {
+			err = f.handleStruct(propPrefix, prop, valueField, valueType, reflectSaltsValue.Interface())
+		} else {
+			salt := reflect.Indirect(fcurrent.saltsValue).FieldByName(reflectValueFieldType.Name).Interface().([]byte)
+			err = f.handleAppendLeaf(propPrefix, prop, value, salt)
+		}
+
+		if err != nil {
+			return
+		}
 	}
 
-	salt := reflect.Indirect(f.saltsValue).FieldByName(f.messageType.Field(index).Name).Interface().([]byte)
+	return
+}
+
+func (f *messageFlattener) handleSlice(propPrefix string, prop string, fcurrent *messageFlattener, i int,
+	sliceValue reflect.Value, salts interface{}) (err error) {
+
+	if !sliceValue.IsValid() {
+		return fmt.Errorf("Invalid value provided: %v", sliceValue)
+	}
+	ss := reflect.ValueOf(salts)
+
+	// Append length of slice as tree leaf
+	saltedFieldValue := fcurrent.saltsValue.FieldByName(fmt.Sprintf("%s%s", fcurrent.messageType.Field(i).Name, fcurrent.saltsLengthSuffix))
+	salt := saltedFieldValue.Interface().([]byte)
+	f.appendLeaf(fmt.Sprintf("%s%s.length", propPrefix, prop), strconv.Itoa(sliceValue.Len()), salt)
+
+	for j := 0; j < sliceValue.Len(); j++ {
+		sval := reflect.Indirect(sliceValue.Index(j))
+		if reflect.TypeOf(sval.Interface()).Kind() == reflect.Struct {
+			err = f.handleStruct(propPrefix, fmt.Sprintf("%s[%d]", prop, j), sliceValue.Index(j),
+				reflect.TypeOf(sliceValue.Index(j).Interface()), ss.Index(j).Interface())
+		} else {
+			propItem := fmt.Sprintf("%s[%d]", prop, j)
+			salt := fcurrent.saltsValue.FieldByName(fcurrent.messageType.Field(i).Name).Index(j).Interface().([]byte)
+			err = f.handleAppendLeaf(propPrefix, propItem, sliceValue.Index(j).Interface(), salt)
+		}
+	}
+
+	return
+}
+
+func (f *messageFlattener) handleStruct(propPrefix string, prop string, valueField reflect.Value, valueType reflect.Type, salts interface{}) (err error) {
+	if valueType == reflect.TypeOf(timestamp.Timestamp{}) { //Specific case where we support serialization for a non primitive complex struct
+		err = f.handleAppendLeaf(propPrefix, prop, valueField.Interface(), salts.([]byte))
+	} else {
+		fchild := NewMessageFlattener(valueField.Interface().(proto.Message), salts.(proto.Message), f.saltsLengthSuffix)
+		err = f.generateLeaves(fmt.Sprintf("%s%s.", propPrefix, prop), fchild)
+	}
+	return
+}
+
+func (f *messageFlattener) handleAppendLeaf(propPrefix string, prop string, value interface{}, salts interface{}) (err error) {
+	valueString, err := ValueToString(value)
+	if err != nil {
+		return err
+	}
+	f.appendLeaf(fmt.Sprintf("%s%s", propPrefix, prop), valueString, salts.([]byte))
+	return
+}
+
+func (f *messageFlattener) appendLeaf(prop string, value string, salt []byte) {
 	leaf := LeafNode{
 		Property: prop,
 		Value:    value,
 		Salt:     salt,
 	}
 	f.leaves = append(f.leaves, leaf)
-	return nil
 }
 
 // sortLeaves by the property attribute and copies the properties and
@@ -435,32 +604,27 @@ func (f *messageFlattener) parseExtensions() (err error) {
 }
 
 // NewMessageFlattener instantiates a flattener for the given document
-func NewMessageFlattener(message, messageSalts proto.Message) *messageFlattener {
+func NewMessageFlattener(message, messageSalts proto.Message, saltsLengthSuffix string) *messageFlattener {
 	f := messageFlattener{message: message, salts: messageSalts}
 	f.leaves = LeafList{}
-	f.messageValue = reflect.ValueOf(message).Elem()
+	f.messageValue = reflect.Indirect(reflect.ValueOf(message))
 	f.messageType = f.messageValue.Type()
-	f.saltsValue = reflect.ValueOf(messageSalts).Elem()
+	f.saltsValue = reflect.Indirect(reflect.ValueOf(messageSalts))
 	f.excludedFields = make(map[string]struct{})
+	f.saltsLengthSuffix = saltsLengthSuffix
 	return &f
 }
 
 // FlattenMessage takes a protobuf message struct and flattens it into an array
-// of nodes. This currently doesn't support nested structures and lists.
+// of nodes.
 //
 // The fields are sorted lexicographically by their protobuf field names.
-func FlattenMessage(message, messageSalts proto.Message) (nodes [][]byte, propOrder []string, err error) {
-	f := NewMessageFlattener(message, messageSalts)
+func FlattenMessage(message, messageSalts proto.Message, saltsLengthSuffix string) (nodes [][]byte, propOrder []string, err error) {
+	f := NewMessageFlattener(message, messageSalts, saltsLengthSuffix)
 
-	if err := f.parseExtensions(); err != nil {
-		return [][]byte{}, []string{}, err
-	}
-
-	for i := 0; i < f.messageValue.NumField(); i++ {
-		err := f.generateLeafFromFieldIndex(i)
-		if err != nil {
-			return [][]byte{}, []string{}, err
-		}
+	err = f.generateLeaves("", f)
+	if err != nil {
+		return
 	}
 
 	err = f.sortLeaves()
@@ -470,26 +634,96 @@ func FlattenMessage(message, messageSalts proto.Message) (nodes [][]byte, propOr
 	return f.nodes, f.propOrder, nil
 }
 
-// getStringValueByProperty gets a value from a struct and returns the value. This method does not yet
-// support nested structs. It converts the value to a string representation.
-func getStringValueByProperty(prop string, message proto.Message) (value string, err error) {
-	prop = strcase.ToCamel(prop)
-	v, err := dotaccess.Get(message, prop)
-	if err != nil {
-		return "", err
+// normalizeDottedProperty performs camel case conversion without removing slice characters ([])
+func normalizeDottedProperty(prop string) string {
+	arr := strings.Split(prop, ".")
+	for idx, key := range arr {
+		var propAux string
+		re := regexp.MustCompile(`(.*)(\[(.*)])`)
+		if re.MatchString(key) {
+			prefix := re.ReplaceAllString(key, "$1")
+			strIdx := re.ReplaceAllString(key, "$3")
+			propAux = fmt.Sprintf("%s[%s]", strcase.ToCamel(prefix), strIdx)
+		} else {
+			propAux = strcase.ToCamel(key)
+		}
+
+		if idx == 0 {
+			prop = fmt.Sprintf("%s", propAux)
+		} else {
+			prop = fmt.Sprintf("%s.%s", prop, propAux)
+		}
 	}
-	value, err = ValueToString(v)
+	return prop
+}
+
+// getDottedValueByProperty takes a dotted property and retrieves the interface value of an object
+//
+// If field along the path does not exists, it returns error
+//
+// If value is not set, returns a nil value
+//
+// It supports nested fields and slices
+func getDottedValueByProperty(prop string, value interface{}) (interface{}, error) {
+	prop = normalizeDottedProperty(prop)
+	if reflect.TypeOf(value).Kind() != reflect.Struct && reflect.TypeOf(value).Kind() != reflect.Ptr {
+		return nil, errors.New("non-struct interface not supported")
+	}
+	arr := strings.Split(prop, ".")
+	value = dereferencePointer(value)
+	var err error
+	for _, key := range arr {
+		re := regexp.MustCompile(`(.*)(\[(.*)])`)
+		if re.MatchString(key) {
+			prefix := re.ReplaceAllString(key, "$1")
+			strIdx := re.ReplaceAllString(key, "$3")
+			idx, err := strconv.Atoi(strIdx)
+			if err != nil {
+				return nil, err
+			}
+			value, err = getFieldOfStruct(value, prefix)
+			if err != nil {
+				return nil, err
+			}
+			if reflect.ValueOf(value).Len() <= idx {
+				return nil, errors.New("Index out of bounds for slice element")
+			}
+			value = reflect.ValueOf(value).Index(idx).Interface()
+		} else {
+			value, err = getFieldOfStruct(value, key)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		if value == nil {
+			return nil, nil
+		}
+
+	}
+
+	return value, nil
+}
+
+// getStringValueByProperty returns the value of a struct. It converts the value to a string representation.
+func getStringValueByProperty(prop string, message proto.Message) (value string, err error) {
+	var valueInterface interface{}
+	valueInterface, err = getDottedValueByProperty(prop, message)
+	if err != nil {
+		return
+	}
+	value, err = ValueToString(valueInterface)
 	return
 }
 
-// getByteValueByProperty tries to use the dot notation to access a field. This
-// is used specifically to get the salt value which is always a byte slice.
 func getByteValueByProperty(prop string, message proto.Message) (value []byte, err error) {
-	v, err := dotaccess.Get(message, prop)
+	val, err := getStringValueByProperty(prop, message)
 	if err != nil {
-		return []byte{}, err
+		return value, err
 	}
-	return v.([]byte), nil
+
+	value, err = base64.StdEncoding.DecodeString(val)
+	return value, err
 }
 
 func getIndexOfString(slice []string, match string) (index int, err error) {
@@ -499,6 +733,30 @@ func getIndexOfString(slice []string, match string) (index int, err error) {
 		}
 	}
 	return index, fmt.Errorf("getIndexOfString: No match found")
+}
+
+func getFieldOfStruct(obj interface{}, name string) (interface{}, error) {
+	if !hasValidType(obj, []reflect.Kind{reflect.Struct, reflect.Ptr}) {
+		return nil, errors.New("getFieldOfStruct invoked with a non-struct interface")
+	}
+
+	objValue := reflect.Indirect(reflect.ValueOf(obj))
+	field := objValue.FieldByName(name)
+	if !field.IsValid() {
+		return nil, fmt.Errorf("No such field: %s in obj", name)
+	}
+
+	return field.Interface(), nil
+}
+
+func hasValidType(obj interface{}, types []reflect.Kind) bool {
+	for _, t := range types {
+		if reflect.TypeOf(obj).Kind() == t {
+			return true
+		}
+	}
+
+	return false
 }
 
 // HashTwoValues concatenate two hashes to calculate hash out of the result. This is used in the merkleTree calculation code

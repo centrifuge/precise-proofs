@@ -8,7 +8,6 @@ import (
 	"github.com/centrifuge/precise-proofs/examples/documents"
 	"github.com/centrifuge/precise-proofs/proofs"
 	"crypto/sha256"
-	"github.com/centrifuge/go-merkle"
 )
 
 func printError(err error){
@@ -30,10 +29,9 @@ func main () {
 	// random bytes. SaltedExampleDocument is a protobuf message that has the
 	// same structure as ExampleDocument but has all `bytes` field types.
 	salts := documentspb.SaltedExampleDocument{}
-	proofs.FillSalts(&salts)
+	proofs.FillSalts(&document, &salts)
 
-	//doctree := proofs.NewDocumentTree(merkle.TreeOptions{EnableHashSorting:true})
-	doctree := proofs.NewDocumentTree(merkle.TreeOptions{})
+	doctree := proofs.NewDocumentTree(proofs.TreeOptions{})
 
 	//Setting the desired hash function that is used to generate the tree
 	sha256Hash := sha256.New()

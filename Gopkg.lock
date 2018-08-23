@@ -14,12 +14,6 @@
   version = "v1.1.0"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/go-bongo/go-dotaccess"
-  packages = ["."]
-  revision = "ae070a2d2a38fd7233e255ded21fb26fe36b4796"
-
-[[projects]]
   name = "github.com/golang/protobuf"
   packages = [
     "descriptor",
@@ -40,12 +34,6 @@
   revision = "90d371a664d668ca3e61d3ddddf1916662959f11"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/oleiade/reflections"
-  packages = ["."]
-  revision = "0e86b3c98b2ff33e30c85cfe97d9a63d439fe7eb"
-
-[[projects]]
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
@@ -60,6 +48,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "66997a92eba443bab40023696b486b7502efc3d44fef21ccc11e5472300880d5"
+  inputs-digest = "a20c79bae94267d5082be669f5e8096a45ece77a99f6ac787b086645f4196d50"
   solver-name = "gps-cdcl"
   solver-version = 1
