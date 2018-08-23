@@ -31,8 +31,6 @@ func main () {
 	salts := documentspb.SaltedExampleDocument{}
 	proofs.FillSalts(&document, &salts)
 
-	//doctree := proofs.NewDocumentTree(proofs.TreeOptions{EnableHashSorting:true})
-	//doctree := proofs.NewDocumentTree(proofs.TreeOptions{SaltsLengthSuffix: "CustomSuffixLength"})
 	doctree := proofs.NewDocumentTree(proofs.TreeOptions{})
 
 	//Setting the desired hash function that is used to generate the tree

@@ -137,18 +137,18 @@ func TestGetDottedValueByProperty(t *testing.T) {
 
 func TestGetFieldOfStruct(t *testing.T) {
 	doc := &documentspb.FilledExampleDocument
-	value, err := GetFieldOfStruct(doc, "ValueA")
+	value, err := getFieldOfStruct(doc, "ValueA")
 	assert.Nil(t, err)
 	assert.Equal(t, "Example", value.(string))
 
-	value, err = GetFieldOfStruct(doc, "WrongField")
+	value, err = getFieldOfStruct(doc, "WrongField")
 	assert.NotNil(t, err)
 	assert.Error(t, err, "No such field: WrongField in obj")
 
 	wrongDoc := "wrong!"
-	value, err = GetFieldOfStruct(wrongDoc, "ValueA")
+	value, err = getFieldOfStruct(wrongDoc, "ValueA")
 	assert.NotNil(t, err)
-	assert.Error(t, err, "GetFieldOfStruct invoked with a non-struct interface")
+	assert.Error(t, err, "getFieldOfStruct invoked with a non-struct interface")
 }
 
 func TestFlattenMessage(t *testing.T) {

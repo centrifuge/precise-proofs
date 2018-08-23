@@ -54,6 +54,12 @@ import (
 
 const DefaultSaltsLengthSuffix = "Length"
 
+/*
+Allows to pass certain options to the tree generation logic. Currently support:
+	1. EnableHashSorting: Implement a merkle tree with sorted hashes
+	2. SaltsLengthSuffix: As precise proofs support repeated fields, when generating the merkle tree we need to add a leaf that represents the length of the slice.
+	The default suffix is `Length`, although it is customizable so it does not collide with potential field names of your own proto structs.
+*/
 type TreeOptions struct {
 	EnableHashSorting bool
 	SaltsLengthSuffix string
@@ -217,7 +223,7 @@ func (doctree *DocumentTree) ValidateProof(proof *proofspb.Proof) (valid bool, e
 	return
 }
 
-func DereferencePointer(value interface{}) interface{} {
+func dereferencePointer(value interface{}) interface{} {
 	reflectValue := reflect.Indirect(reflect.ValueOf(value))
 	if !reflectValue.IsValid() {
 		return nil
@@ -229,7 +235,7 @@ func DereferencePointer(value interface{}) interface{} {
 // ValueToString takes any supported interface and returns a string representation of the value. This is used calculate
 // the hash and to create the proof object.
 func ValueToString(value interface{}) (s string, err error) {
-	value = DereferencePointer(value)
+	value = dereferencePointer(value)
 	if value == nil {
 		return "", nil
 	}
@@ -289,6 +295,10 @@ func NewSalt() (salt []byte) {
 //
 // This method will fail if there are any fields of type other than []byte (bytes in protobuf) in the
 // message leaf.
+//
+// The `saltsMessage` protobuf value provided will need to add one extra field for each field that is defined as `repeated`.
+//
+// The suffix of the slice field needs to end in: `Length` or customized as described above.
 func FillSalts(dataMessage, saltsMessage proto.Message) (err error) {
 	dataMessageValue := reflect.Indirect(reflect.ValueOf(dataMessage))
 	saltsMessageValue := reflect.Indirect(reflect.ValueOf(saltsMessage))
@@ -460,8 +470,8 @@ func (f *messageFlattener) generateLeaves(propPrefix string, fcurrent *messageFl
 		reflectSaltsValue := fcurrent.saltsValue.FieldByName(reflectValueFieldType.Name)
 		salts := reflectSaltsValue.Interface()
 
-		value = DereferencePointer(value)
-		salts = DereferencePointer(salts)
+		value = dereferencePointer(value)
+		salts = dereferencePointer(salts)
 
 		if valueType.Kind() == reflect.Slice {
 			sliceValue := reflect.ValueOf(value)
@@ -648,6 +658,11 @@ func normalizeDottedProperty(prop string) string {
 }
 
 // getDottedValueByProperty takes a dotted property and retrieves the interface value of an object
+//
+// If field along the path does not exists, it returns error
+//
+// If value is not set, returns a nil value
+//
 // It supports nested fields and slices
 func getDottedValueByProperty(prop string, value interface{}) (interface{}, error) {
 	prop = normalizeDottedProperty(prop)
@@ -655,7 +670,7 @@ func getDottedValueByProperty(prop string, value interface{}) (interface{}, erro
 		return nil, errors.New("non-struct interface not supported")
 	}
 	arr := strings.Split(prop, ".")
-	value = DereferencePointer(value)
+	value = dereferencePointer(value)
 	var err error
 	for _, key := range arr {
 		re := regexp.MustCompile(`(.*)(\[(.*)])`)
@@ -666,25 +681,23 @@ func getDottedValueByProperty(prop string, value interface{}) (interface{}, erro
 			if err != nil {
 				return nil, err
 			}
-			value, err = GetFieldOfStruct(value, prefix)
+			value, err = getFieldOfStruct(value, prefix)
 			if err != nil {
 				return nil, err
-			}
-			if value == nil {
-				return nil, nil
 			}
 			if reflect.ValueOf(value).Len() <= idx {
 				return nil, errors.New("Index out of bounds for slice element")
 			}
 			value = reflect.ValueOf(value).Index(idx).Interface()
 		} else {
-			value, err = GetFieldOfStruct(value, key)
+			value, err = getFieldOfStruct(value, key)
 			if err != nil {
 				return nil, err
 			}
-			if value == nil {
-				return nil, nil
-			}
+		}
+
+		if value == nil {
+			return nil, nil
 		}
 
 	}
@@ -722,9 +735,9 @@ func getIndexOfString(slice []string, match string) (index int, err error) {
 	return index, fmt.Errorf("getIndexOfString: No match found")
 }
 
-func GetFieldOfStruct(obj interface{}, name string) (interface{}, error) {
+func getFieldOfStruct(obj interface{}, name string) (interface{}, error) {
 	if !hasValidType(obj, []reflect.Kind{reflect.Struct, reflect.Ptr}) {
-		return nil, errors.New("GetFieldOfStruct invoked with a non-struct interface")
+		return nil, errors.New("getFieldOfStruct invoked with a non-struct interface")
 	}
 
 	objValue := reflect.Indirect(reflect.ValueOf(obj))
