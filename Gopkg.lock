@@ -45,9 +45,15 @@
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
   version = "v1.2.2"
 
+[[projects]]
+  branch = "master"
+  name = "github.com/xsleonard/go-merkle"
+  packages = ["."]
+  revision = "fbb7cafc5ae411e13e718172f5af7917ad6c3ed7"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a20c79bae94267d5082be669f5e8096a45ece77a99f6ac787b086645f4196d50"
+  inputs-digest = "05e942bb891b0308d1fa622d77729d780b07008b0e3be0ba4f52daa651d1d736"
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -43,13 +43,13 @@ import (
 
 	"regexp"
 
-	"github.com/centrifuge/go-merkle"
 	"github.com/centrifuge/precise-proofs/proofs/proto"
 	"github.com/golang/protobuf/descriptor"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/iancoleman/strcase"
+	"github.com/xsleonard/go-merkle"
 )
 
 // DefaultSaltsLengthSuffix is the suffix used to store the length of slices (repeated) fields in the tree. It can be
@@ -87,7 +87,10 @@ func (doctree *DocumentTree) String() string {
 
 // NewDocumentTree returns an empty DocumentTree
 func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
-	opts := merkle.TreeOptions{}
+	opts := merkle.TreeOptions{
+		DisableHashLeaves: true,
+	}
+
 	if proofOpts.EnableHashSorting {
 		opts.EnableHashSorting = proofOpts.EnableHashSorting
 	}
@@ -109,7 +112,7 @@ func (doctree *DocumentTree) FillTree(document, salts proto.Message) (err error)
 		return fmt.Errorf("DocumentTree.hash is not set")
 	}
 
-	leaves, propertyList, err := FlattenMessage(document, salts, doctree.saltsLengthSuffix)
+	leaves, propertyList, err := FlattenMessage(document, salts, doctree.saltsLengthSuffix, doctree.hash)
 	if err != nil {
 		return err
 	}
@@ -261,6 +264,29 @@ type LeafNode struct {
 	Property string
 	Value    string
 	Salt     []byte
+	Hash     []byte
+}
+
+func (n *LeafNode) Hashed() bool {
+	return len(n.Hash) != 0
+}
+
+func (n *LeafNode) HashNode(h hash.Hash) error {
+	if n.Hashed() {
+		return errors.New("Hash not empty")
+	}
+
+	payload, err := ConcatValues(n.Property, n.Value, n.Salt)
+	if err != nil {
+		return err
+	}
+	defer h.Reset()
+	_, err = h.Write(payload)
+	if err != nil {
+		return err
+	}
+	n.Hash = h.Sum(nil)
+	return nil
 }
 
 // ConcatValues concatenates property, value & salt into one byte slice.
@@ -272,15 +298,6 @@ func ConcatValues(prop string, value string, salt []byte) (payload []byte, err e
 		return []byte{}, fmt.Errorf("%s: Salt has incorrect length: %d instead of 32", prop, len(salt))
 	}
 	payload = append(payload, salt[:32]...)
-	return
-}
-
-// ConcatNode concatenates a leaf node into a byte slice that is the input for the hash function.
-func ConcatNode(n *LeafNode) (payload []byte, err error) {
-	payload, err = ConcatValues(n.Property, n.Value, n.Salt)
-	if err != nil {
-		return []byte{}, err
-	}
 	return
 }
 
@@ -334,6 +351,7 @@ type messageFlattener struct {
 	nodes             [][]byte
 	propOrder         []string
 	saltsLengthSuffix string
+	hash              hash.Hash
 }
 
 func (f *messageFlattener) generateLeaves(propPrefix string, fcurrent *messageFlattener) (err error) {
@@ -430,7 +448,7 @@ func (f *messageFlattener) handleStruct(propPrefix string, prop string, valueFie
 	if valueType == reflect.TypeOf(timestamp.Timestamp{}) { //Specific case where we support serialization for a non primitive complex struct
 		err = f.handleAppendLeaf(propPrefix, prop, valueField.Interface(), salts.([]byte))
 	} else {
-		fchild := NewMessageFlattener(valueField.Interface().(proto.Message), salts.(proto.Message), f.saltsLengthSuffix)
+		fchild := NewMessageFlattener(valueField.Interface().(proto.Message), salts.(proto.Message), f.saltsLengthSuffix, f.hash)
 		err = f.generateLeaves(fmt.Sprintf("%s%s.", propPrefix, prop), fchild)
 	}
 	return
@@ -462,10 +480,14 @@ func (f *messageFlattener) sortLeaves() (err error) {
 	f.propOrder = make([]string, f.leaves.Len())
 
 	for i := 0; i < f.leaves.Len(); i++ {
-		f.nodes[i], err = ConcatNode(&f.leaves[i])
-		if err != nil {
-			return err
+		leaf := &f.leaves[i]
+		if !leaf.Hashed() {
+			err = leaf.HashNode(f.hash)
+			if err != nil {
+				return err
+			}
 		}
+		f.nodes[i] = leaf.Hash
 		f.propOrder[i] = f.leaves[i].Property
 	}
 	return nil
@@ -506,7 +528,7 @@ func (f *messageFlattener) parseExtensions() (err error) {
 }
 
 // NewMessageFlattener instantiates a flattener for the given document
-func NewMessageFlattener(message, messageSalts proto.Message, saltsLengthSuffix string) *messageFlattener {
+func NewMessageFlattener(message, messageSalts proto.Message, saltsLengthSuffix string, hashFn hash.Hash) *messageFlattener {
 	f := messageFlattener{message: message, salts: messageSalts}
 	f.leaves = LeafList{}
 	f.messageValue = reflect.Indirect(reflect.ValueOf(message))
@@ -514,6 +536,7 @@ func NewMessageFlattener(message, messageSalts proto.Message, saltsLengthSuffix 
 	f.saltsValue = reflect.Indirect(reflect.ValueOf(messageSalts))
 	f.excludedFields = make(map[string]struct{})
 	f.saltsLengthSuffix = saltsLengthSuffix
+	f.hash = hashFn
 	return &f
 }
 
@@ -521,8 +544,8 @@ func NewMessageFlattener(message, messageSalts proto.Message, saltsLengthSuffix 
 // of nodes.
 //
 // The fields are sorted lexicographically by their protobuf field names.
-func FlattenMessage(message, messageSalts proto.Message, saltsLengthSuffix string) (nodes [][]byte, propOrder []string, err error) {
-	f := NewMessageFlattener(message, messageSalts, saltsLengthSuffix)
+func FlattenMessage(message, messageSalts proto.Message, saltsLengthSuffix string, hashFn hash.Hash) (nodes [][]byte, propOrder []string, err error) {
+	f := NewMessageFlattener(message, messageSalts, saltsLengthSuffix, hashFn)
 
 	err = f.generateLeaves("", f)
 	if err != nil {
