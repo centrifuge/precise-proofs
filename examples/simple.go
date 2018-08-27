@@ -33,8 +33,8 @@ func main() {
 
 	doctree := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New()})
 
-	err := doctree.FillTree(&document, &salts)
-	printError(err)
+	doctree.AddLeavesFromDocument(&document, &salts)
+	doctree.Generate()
 	fmt.Printf("Generated tree: %s\n", doctree.String())
 
 	// Generate the actual proof for a field. In this case the field called "ValueA".

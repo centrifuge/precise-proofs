@@ -114,23 +114,53 @@ func (doctree *DocumentTree) AddLeaves(leaves []LeafNode) {
 	doctree.leaves = append(doctree.leaves, leaves...)
 }
 
-// FillTree fills a merkleTree with a provided document and salts
-func (doctree *DocumentTree) FillTree(document, salts proto.Message) (err error) {
+// AddLeavesFromDocument iterates over a protobuf message, flattens it and adds all leaves to the tree
+func (doctree *DocumentTree) AddLeavesFromDocument(document, salts proto.Message) (err error) {
 	if doctree.hash == nil {
-		return fmt.Errorf("DocumentTree.hash is not set")
+		return fmt.Errorf("hash is not set")
 	}
-
-	leaves, propertyList, err := FlattenMessage(document, salts, doctree.saltsLengthSuffix, doctree.hash)
+	leaves, err := FlattenMessage(document, salts, doctree.saltsLengthSuffix, doctree.hash)
 	if err != nil {
 		return err
 	}
-
-	doctree.merkleTree.Generate(leaves, doctree.hash)
-	doctree.rootHash = doctree.merkleTree.Root().Hash
-	doctree.propertyList = propertyList
-	doctree.document = document
-	doctree.salts = salts
+	doctree.AddLeaves(leaves)
 	return nil
+}
+
+// Generate calculated the merkle root with all supplied leaves
+func (doctree *DocumentTree) Generate() error {
+	if doctree.filled {
+		return errors.New("tree already filled")
+	}
+
+	hashes := make([][]byte, len(doctree.leaves))
+	for i, leaf := range doctree.leaves {
+		hashes[i] = leaf.Hash
+	}
+	doctree.merkleTree.Generate(hashes, doctree.hash)
+
+	doctree.rootHash = doctree.merkleTree.Root().Hash
+	doctree.filled = true
+	return nil
+}
+
+// GetLeafByProperty returns a leaf if it is found
+func (doctree *DocumentTree) GetLeafByProperty(prop string) (int, *LeafNode) {
+	for index, leaf := range doctree.leaves {
+		if leaf.Property == prop {
+			return index, &leaf
+		}
+	}
+	return 0, nil
+}
+
+// PropertyOrder returns an string slice with all property names
+func (doctree *DocumentTree) PropertyOrder() []string {
+	propOrder := []string{}
+	for _, leaf := range doctree.leaves {
+		propOrder = append(propOrder, leaf.Property)
+	}
+	return propOrder
 }
 
 // IsEmpty returns false if the tree contains no leaves
@@ -142,46 +172,37 @@ func (doctree *DocumentTree) RootHash() []byte {
 	return doctree.rootHash
 }
 
-func (doctree *DocumentTree) Document() proto.Message {
-	return doctree.document
-}
-
 // CreateProof takes a property in dot notation and returns a Proof object for the given field
 func (doctree *DocumentTree) CreateProof(prop string) (proof proofspb.Proof, err error) {
-	if doctree.IsEmpty() {
+	if doctree.IsEmpty() || !doctree.filled {
 		err = fmt.Errorf("Can't create proof for empty merkleTree")
 		return
 	}
 
-	value, err := getStringValueByProperty(prop, doctree.document)
-	if err != nil {
-		return
+	index, leaf := doctree.GetLeafByProperty(prop)
+	if leaf == nil {
+		return proofspb.Proof{}, fmt.Errorf("No such field: %s in obj", prop)
 	}
-	salt, err := getByteValueByProperty(prop, doctree.salts)
-	if err != nil {
-		return
-	}
-
-	leaf, err := getIndexOfString(doctree.propertyList, prop)
-	if err != nil {
-		return
+	proof = proofspb.Proof{
+		Property: prop,
+		Value:    leaf.Value,
+		Salt:     leaf.Salt,
 	}
 
 	if doctree.merkleTree.Options.EnableHashSorting {
-		sortedHashes, err := doctree.pickHashesFromMerkleTreeAsList(uint64(leaf))
+		sortedHashes, err := doctree.pickHashesFromMerkleTreeAsList(uint64(index))
 		if err != nil {
 			return proofspb.Proof{}, err
 		}
-		proof = proofspb.Proof{Property: prop, Value: value, Salt: salt, SortedHashes: sortedHashes}
+		proof.SortedHashes = sortedHashes
 	} else {
-		hashes, err := doctree.pickHashesFromMerkleTree(uint64(leaf))
+		hashes, err := doctree.pickHashesFromMerkleTree(uint64(index))
 		if err != nil {
 			return proofspb.Proof{}, err
 		}
-		proof = proofspb.Proof{Property: prop, Value: value, Salt: salt, Hashes: hashes}
+		proof.Hashes = hashes
 	}
-
-	return
+	return proof, nil
 }
 
 // pickHashesFromMerkleTree takes the required hashes needed to create a proof
@@ -552,7 +573,7 @@ func NewMessageFlattener(message, messageSalts proto.Message, saltsLengthSuffix 
 // of nodes.
 //
 // The fields are sorted lexicographically by their protobuf field names.
-func FlattenMessage(message, messageSalts proto.Message, saltsLengthSuffix string, hashFn hash.Hash) (nodes [][]byte, propOrder []string, err error) {
+func FlattenMessage(message, messageSalts proto.Message, saltsLengthSuffix string, hashFn hash.Hash) (leaves []LeafNode, err error) {
 	f := NewMessageFlattener(message, messageSalts, saltsLengthSuffix, hashFn)
 
 	err = f.generateLeaves("", f)
@@ -562,9 +583,9 @@ func FlattenMessage(message, messageSalts proto.Message, saltsLengthSuffix strin
 
 	err = f.sortLeaves()
 	if err != nil {
-		return [][]byte{}, []string{}, err
+		return []LeafNode{}, err
 	}
-	return f.nodes, f.propOrder, nil
+	return f.leaves, nil
 }
 
 // normalizeDottedProperty performs camel case conversion without removing slice characters ([])
