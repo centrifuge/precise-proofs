@@ -64,15 +64,18 @@ type TreeOptions struct {
 	// leaf that represents the length of the slice. The default suffix is `Length`, although it is customizable so it
 	// does not collide with potential field names of your own proto structs.
 	SaltsLengthSuffix string
+	Hash              hash.Hash
 }
 
 // DocumentTree is a helper object to create a merkleTree and proofs for fields in the document
 type DocumentTree struct {
-	propertyList      []string
 	merkleTree        merkle.Tree
+	leaves            []LeafNode
+	filled            bool
 	rootHash          []byte
 	salts             proto.Message
 	document          proto.Message
+	propertyList      []string
 	hash              hash.Hash
 	saltsLengthSuffix string
 }
@@ -90,7 +93,6 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 	opts := merkle.TreeOptions{
 		DisableHashLeaves: true,
 	}
-
 	if proofOpts.EnableHashSorting {
 		opts.EnableHashSorting = proofOpts.EnableHashSorting
 	}
@@ -98,12 +100,18 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 	if proofOpts.SaltsLengthSuffix != "" {
 		saltsLengthSuffix = proofOpts.SaltsLengthSuffix
 	}
-	return DocumentTree{[]string{}, merkle.NewTreeWithOpts(opts), []byte{}, nil, nil, nil, saltsLengthSuffix}
+	return DocumentTree{
+		propertyList:      []string{},
+		merkleTree:        merkle.NewTreeWithOpts(opts),
+		saltsLengthSuffix: saltsLengthSuffix,
+		leaves:            []LeafNode{},
+		hash:              proofOpts.Hash,
+	}
 }
 
-// SetHashFunc to an implementation of hash.Hash of your choice
-func (doctree *DocumentTree) SetHashFunc(h hash.Hash) {
-	doctree.hash = h
+// AddLeaves appends list of leaves to the tree's leaves.
+func (doctree *DocumentTree) AddLeaves(leaves []LeafNode) {
+	doctree.leaves = append(doctree.leaves, leaves...)
 }
 
 // FillTree fills a merkleTree with a provided document and salts

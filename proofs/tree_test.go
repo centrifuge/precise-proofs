@@ -441,12 +441,11 @@ func BenchmarkCalculateProofNodeList(b *testing.B) {
 	}
 }
 
-// TestTree_SetHashFunc tests calculating hashes both with sha256 and md5
-func TestTree_SetHashFunc(t *testing.T) {
+// TestTree_hash tests calculating hashes both with sha256 and md5
+func TestTree_hash(t *testing.T) {
 	// MD5
-	doctree := NewDocumentTree(TreeOptions{})
 	hashFuncMd5 := md5.New()
-	doctree.SetHashFunc(hashFuncMd5)
+	doctree := NewDocumentTree(TreeOptions{Hash: hashFuncMd5})
 	err := doctree.FillTree(&documentspb.LongDocumentExample, &documentspb.SaltedLongDocumentExample)
 	assert.Nil(t, err)
 
@@ -460,8 +459,7 @@ func TestTree_SetHashFunc(t *testing.T) {
 	assert.EqualError(t, err, "DocumentTree.hash is not set")
 
 	// SHA256
-	doctreeSha256 := NewDocumentTree(TreeOptions{})
-	doctreeSha256.SetHashFunc(sha256Hash)
+	doctreeSha256 := NewDocumentTree(TreeOptions{Hash: sha256Hash})
 	err = doctreeSha256.FillTree(&documentspb.LongDocumentExample, &documentspb.SaltedLongDocumentExample)
 	assert.Nil(t, err)
 
@@ -470,8 +468,7 @@ func TestTree_SetHashFunc(t *testing.T) {
 }
 
 func TestTree_GenerateStandardProof(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{})
-	doctree.SetHashFunc(sha256Hash)
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash})
 	err := doctree.FillTree(&documentspb.LongDocumentExample, &documentspb.SaltedLongDocumentExample)
 	assert.Nil(t, err)
 
@@ -489,8 +486,7 @@ func TestTree_GenerateStandardProof(t *testing.T) {
 }
 
 func TestTree_GenerateSortedProof(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true})
-	doctree.SetHashFunc(sha256Hash)
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash})
 	err := doctree.FillTree(&documentspb.LongDocumentExample, &documentspb.SaltedLongDocumentExample)
 	assert.Nil(t, err)
 
@@ -508,8 +504,7 @@ func TestTree_GenerateSortedProof(t *testing.T) {
 }
 
 func TestTree_GenerateWithRepeatedFields(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true})
-	doctree.SetHashFunc(sha256Hash)
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash})
 	err := doctree.FillTree(&documentspb.ExampleFilledRepeatedDocument, &documentspb.ExampleSaltedRepeatedDocument)
 	assert.Nil(t, err)
 	expectedRootHash := []byte{0xfa, 0x84, 0xf0, 0x2c, 0xed, 0xea, 0x3, 0x99, 0x80, 0xd6, 0x2f, 0xfb, 0x7, 0x19, 0xc6, 0xe2, 0x36, 0x71, 0x99, 0xb4, 0xe4, 0x56, 0xe9, 0xa4, 0xf4, 0x96, 0xde, 0xa, 0xef, 0xbc, 0xd1, 0xd}
@@ -526,8 +521,7 @@ func TestTree_GenerateWithRepeatedFields(t *testing.T) {
 }
 
 func TestTree_GenerateWithNestedAndRepeatedFields(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true})
-	doctree.SetHashFunc(sha256Hash)
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash})
 	err := doctree.FillTree(&documentspb.ExampleFilledNestedRepeatedDocument, &documentspb.ExampleSaltedNestedRepeatedDocument)
 	assert.Nil(t, err)
 	expectedRootHash := []byte{0x9a, 0x83, 0x33, 0xe7, 0x72, 0x54, 0x1b, 0x67, 0x5c, 0x3, 0x0, 0x9a, 0x1d, 0xa0, 0xa5, 0x15, 0xac, 0xeb, 0x0, 0x96, 0x6, 0x9c, 0xfb, 0x15, 0x90, 0x52, 0x6e, 0xa8, 0x74, 0x8, 0x7, 0x49}
@@ -557,8 +551,7 @@ func TestGetStringValueByProperty(t *testing.T) {
 }
 
 func TestCreateStandardProof(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{})
-	doctree.SetHashFunc(sha256Hash)
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash})
 	err := doctree.FillTree(&documentspb.FilledExampleDocument, &documentspb.ExampleDocumentSalts)
 	assert.Nil(t, err)
 
@@ -590,8 +583,7 @@ func TestCreateStandardProof(t *testing.T) {
 }
 
 func TestCreateSortedProof(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true})
-	doctree.SetHashFunc(sha256Hash)
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash})
 	err := doctree.FillTree(&documentspb.FilledExampleDocument, &documentspb.ExampleDocumentSalts)
 	assert.Nil(t, err)
 
@@ -622,8 +614,7 @@ func TestCreateSortedProof(t *testing.T) {
 }
 
 func TestCreateRepeatedSortedProof(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true})
-	doctree.SetHashFunc(sha256Hash)
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash})
 	err := doctree.FillTree(&documentspb.ExampleFilledRepeatedDocument, &documentspb.ExampleSaltedRepeatedDocument)
 	assert.Nil(t, err)
 
@@ -654,8 +645,7 @@ func TestCreateRepeatedSortedProof(t *testing.T) {
 }
 
 func TestCreateRepeatedSortedProofAutoSalts(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true})
-	doctree.SetHashFunc(sha256Hash)
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash})
 	docSalts := &documentspb.SaltedNestedRepeatedDocument{}
 	err := FillSalts(&documentspb.ExampleFilledNestedRepeatedDocument, docSalts)
 	assert.Nil(t, err)
@@ -688,8 +678,7 @@ func TestCreateRepeatedSortedProofAutoSalts(t *testing.T) {
 }
 
 func TestCreateProofFromRepeatedField(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true})
-	doctree.SetHashFunc(sha256Hash)
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash})
 	docSalts := &documentspb.SaltedNestedRepeatedDocument{}
 	err := FillSalts(&documentspb.ExampleFilledNestedRepeatedDocument, docSalts)
 	assert.Nil(t, err)
@@ -705,8 +694,7 @@ func TestCreateProofFromRepeatedField(t *testing.T) {
 }
 
 func TestCreateProofFromNestedField(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true})
-	doctree.SetHashFunc(sha256Hash)
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash})
 	docSalts := &documentspb.SaltedNestedRepeatedDocument{}
 	err := FillSalts(&documentspb.ExampleFilledNestedRepeatedDocument, docSalts)
 	assert.Nil(t, err)
@@ -736,7 +724,7 @@ func Example_complete() {
 	salts := documentspb.SaltedExampleDocument{}
 	FillSalts(&document, &salts)
 
-	doctree := NewDocumentTree(TreeOptions{})
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New()})
 	doctree.FillTree(&document, &salts)
 	fmt.Printf("Generated tree: %s\n", doctree.String())
 
