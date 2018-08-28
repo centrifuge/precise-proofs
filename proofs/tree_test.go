@@ -496,6 +496,31 @@ func TestTree_hash(t *testing.T) {
 	assert.Equal(t, expectedRootHash, doctreeSha256.rootHash)
 }
 
+func TestTree_AddLeavesFromDocument_twice(t *testing.T) {
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash})
+	err := doctree.AddLeavesFromDocument(&documentspb.LongDocumentExample, &documentspb.SaltedLongDocumentExample)
+	length := len(doctree.leaves)
+	assert.Nil(t, err)
+	err = doctree.AddLeavesFromDocument(&documentspb.LongDocumentExample, &documentspb.SaltedLongDocumentExample)
+	assert.Nil(t, err)
+	assert.Equal(t, length*2, len(doctree.leaves))
+	err = doctree.Generate()
+	assert.Nil(t, err)
+
+	assert.Equal(t, doctree.leaves[0].Property, doctree.leaves[length].Property)
+
+	expectedRootHash := []byte{0xad, 0x30, 0x25, 0x40, 0xa8, 0x59, 0xb2, 0x3f, 0x31, 0x7d, 0x5f, 0x6c, 0x44, 0xcb, 0xae, 0xab, 0x39, 0xc6, 0x39, 0xd5, 0xe0, 0x7a, 0x4d, 0xfb, 0x5e, 0x91, 0xc6, 0x1, 0x9a, 0xcd, 0x79, 0x10}
+	assert.Equal(t, expectedRootHash, doctree.RootHash())
+
+	hashes, err := doctree.pickHashesFromMerkleTree(0)
+	assert.Nil(t, err)
+	fieldHash := doctree.merkleTree.Nodes[0].Hash
+	valid, err := ValidateProofHashes(fieldHash, hashes, doctree.rootHash, doctree.hash)
+	assert.Nil(t, err)
+	assert.True(t, valid)
+
+}
+
 func TestTree_GenerateStandardProof(t *testing.T) {
 	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash})
 	err := doctree.AddLeavesFromDocument(&documentspb.LongDocumentExample, &documentspb.SaltedLongDocumentExample)
@@ -504,7 +529,6 @@ func TestTree_GenerateStandardProof(t *testing.T) {
 	assert.Nil(t, err)
 
 	expectedRootHash := []byte{0xcf, 0x1, 0x81, 0xa8, 0xdc, 0x9b, 0xa3, 0x16, 0x97, 0xe3, 0x39, 0x6b, 0xa8, 0xfd, 0x12, 0xaf, 0x50, 0x4b, 0x51, 0x60, 0x93, 0xa5, 0xa9, 0x44, 0xd7, 0x8a, 0x69, 0x60, 0xc9, 0xe0, 0x32, 0x5b}
-	assert.Equal(t, expectedRootHash, doctree.rootHash)
 	assert.Equal(t, expectedRootHash, doctree.RootHash())
 
 	hashes, err := doctree.pickHashesFromMerkleTree(0)
@@ -524,7 +548,6 @@ func TestTree_GenerateSortedProof(t *testing.T) {
 	assert.Nil(t, err)
 
 	expectedRootHash := []byte{0x68, 0x36, 0x1f, 0x62, 0x5f, 0x8b, 0x5, 0x75, 0xc, 0x5e, 0x32, 0x85, 0x64, 0xcb, 0x45, 0xd0, 0x17, 0x66, 0xc0, 0x58, 0x3e, 0x9c, 0x19, 0xda, 0x53, 0x52, 0x81, 0x52, 0x44, 0x74, 0x79, 0xb7}
-	assert.Equal(t, expectedRootHash, doctree.rootHash)
 	assert.Equal(t, expectedRootHash, doctree.RootHash())
 
 	hashes, err := doctree.pickHashesFromMerkleTreeAsList(0)
@@ -543,7 +566,7 @@ func TestTree_GenerateWithRepeatedFields(t *testing.T) {
 	err = doctree.Generate()
 	assert.Nil(t, err)
 	expectedRootHash := []byte{0xfa, 0x84, 0xf0, 0x2c, 0xed, 0xea, 0x3, 0x99, 0x80, 0xd6, 0x2f, 0xfb, 0x7, 0x19, 0xc6, 0xe2, 0x36, 0x71, 0x99, 0xb4, 0xe4, 0x56, 0xe9, 0xa4, 0xf4, 0x96, 0xde, 0xa, 0xef, 0xbc, 0xd1, 0xd}
-	assert.Equal(t, expectedRootHash, doctree.rootHash)
+	assert.Equal(t, expectedRootHash, doctree.RootHash())
 	assert.Equal(t, []string{"valueA", "valueB", "valueC.length", "valueC[0]", "valueC[1]"}, doctree.PropertyOrder())
 
 	hashes, err := doctree.pickHashesFromMerkleTreeAsList(0)
@@ -561,7 +584,7 @@ func TestTree_GenerateWithNestedAndRepeatedFields(t *testing.T) {
 	err = doctree.Generate()
 	assert.Nil(t, err)
 	expectedRootHash := []byte{0x9a, 0x83, 0x33, 0xe7, 0x72, 0x54, 0x1b, 0x67, 0x5c, 0x3, 0x0, 0x9a, 0x1d, 0xa0, 0xa5, 0x15, 0xac, 0xeb, 0x0, 0x96, 0x6, 0x9c, 0xfb, 0x15, 0x90, 0x52, 0x6e, 0xa8, 0x74, 0x8, 0x7, 0x49}
-	assert.Equal(t, expectedRootHash, doctree.rootHash)
+	assert.Equal(t, expectedRootHash, doctree.RootHash())
 
 	assert.Equal(t, []string{"valueA", "valueB", "valueC.length", "valueC[0].valueA", "valueC[1].valueA", "valueD.valueA.valueA", "valueD.valueB"}, doctree.PropertyOrder())
 
