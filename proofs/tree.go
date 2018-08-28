@@ -12,20 +12,117 @@ Supported types:
 * timestamp.Timestamp
 
 
-Note: this is a basic implementation that lacks support for serializing more complex structs. The interfaces and
-functions in this library will change significantly in the near future.
-
-Advanced options
+Available Protobuf Options
 
 Fields can be excluded from the flattener by setting the custom protobuf option
 `proofs.exclude_from_tree` found in `proofs/proto/proof.proto`.
+
+Fields can be treated as raw (already hashed values) by setting the option `proofs.hashed_field`.
 
 	message Document {
 		string value_a = 1;
 		string value_b = 2 [
 			(proofs.exclude_from_tree) = true
 		];
+		bytes value_c = 3[
+			(proofs.hashed_field) = true
+		];
 	}
+
+Nested and Repeated Structures
+
+Nested and repeated fields will be flattened following a dotted notation. Given the following example:
+
+	message NestedDocument {
+	  string fieldA = 1;
+	  repeated Document fieldB = 2;
+	  repeated string fieldC = 3;
+	}
+
+	message Document {
+	  string fieldA = 1;
+	}
+
+	NestedDocument{
+		fieldA: "foobar",
+		fieldB: []Document{Document{fieldA: "1"}, Document{fieldA: "2"}},
+		fieldC: []string{"a", "b", "c"}
+	}
+
+A tree will be created out of this document by flattening all the fields values
+as leaves. This would result in a tree with the following leaves:
+
+ fieldA, fieldB.length, fieldB[0], fieldB[1], fieldC.length, fieldC[0], fieldC[1], fieldC[2]
+
+Proof format
+
+This library defines a proof format that ensures both human readable, concise and secure Merkle proofs:
+
+ {
+    "property":"ValueA",
+    "value":"Example",
+    "salt":"1VWQFUGCXl1AYS0iAULHQow4XEjgJF/TpAuOO2Rnm+E=",
+    "hashes":[
+        { "right":"kYXAGhDdPiFMq1ZQMOZiKmSf1S1eHNgJ6BIPSIExOj8=" },
+        { "left":"GDgT7Km6NK6k4N/Id4CZXErL3p6clNX7sVnlNyegdG0=" },
+        { "right":"qOZzS+YM8t1OfC87zEKgkKz6q0f3wwk5+ed+PR/2cDA=" }
+    ]
+ }
+
+Sorted Hashes
+
+This implementation allows for more concise representation of proofs, saving
+some space that is valuable for on-chain verifications. The hash function to
+hash two leaves is modified in this case in the following way:
+
+  HashTwoNodes(A, B):
+    if A > B:
+	   return Hash(B, A)
+	else:
+	    return Hash(A, B)
+
+This makes it unncessary to give a left/right designation in the proof. The drawback
+of using this way of hashing a tree is that you can't make statements about the position
+of a leaf in the tree.
+
+The respective JSON for the proof would be:
+
+  {
+    "property":"ValueA",
+    "value":"Example",
+    "salt":"1VWQFUGCXl1AYS0iAULHQow4XEjgJF/TpAuOO2Rnm+E=",
+    "sortedHashes":[
+        "kYXAGhDdPiFMq1ZQMOZiKmSf1S1eHNgJ6BIPSIExOj8=",
+        "GDgT7Km6NK6k4N/Id4CZXErL3p6clNX7sVnlNyegdG0=",
+        "qOZzS+YM8t1OfC87zEKgkKz6q0f3wwk5+ed+PR/2cDA="
+    ]
+  }
+
+There are a few things to note:
+* When calculating the hash of the leaf, the dot notation of the property,
+  the value and salt should be concatenated to produce the hash.
+* The default proof expects values of documents to be salted to prevent rainbow table lookups.
+* The value is included in the file as a string value not a native type.
+
+Salt field for slice length
+
+We encode the length of a slice field in the tree as an additional leaf so a proof can
+be created about the length of a field. This value will be salted as well and the salts
+message needs to have an extra field with the suffix `Length`. The suffix can be changed
+with the SaltsLengthSuffix option.
+
+	message Document {
+	  repeated string fieldA = 1;
+	}
+
+	message DocumentSalt {
+	  repeated bytes fieldA = 1;
+	  bytes fieldALength = 2;
+	}
+
+
+
+
 */
 package proofs
 
