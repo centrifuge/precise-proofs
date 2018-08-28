@@ -38,7 +38,7 @@ to serialize data in a portable way. It's easy to generate JSON out of
 See below code sample (`examples/simple.go`) for a usage example. For detailed usage, check godocs.
 
 ```go,
-	// ExampleDocument is a protobuf message
+        // ExampleDocument is a protobuf message
 	document := documentspb.ExampleDocument{
 		Value1:      1,
 		ValueA:      "Foo",
@@ -51,22 +51,18 @@ See below code sample (`examples/simple.go`) for a usage example. For detailed u
 	// same structure as ExampleDocument but has all `bytes` field types.
 	salts := documentspb.SaltedExampleDocument{}
 	FillSalts(&document, &salts)
-  
-  doctree := proofs.NewDocumentTree(proofs.TreeOptions{})
-	doctree.FillTree(&document, &salts)
+
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New()})
+	doctree.AddLeavesFromDocument(&document, &salts)
+	doctree.Generate()
 	fmt.Printf("Generated tree: %s\n", doctree.String())
-	// Output:
-	// Generated tree: DocumentTree with Hash [k4E4F9xgvzDPtCGE0yM1QRguleSxQX6sZ14VTYAYVTk=] and [5] leaves
-	
+
 	proof, _ := doctree.CreateProof("ValueA")
 	proofJson, _ := json.Marshal(proof)
 	fmt.Println("Proof:\n", string(proofJson))
-        // Output:
-        // {"property":"ValueA","value":"Foo","salt":"YSJ0pFJ4fk0gYsCOU2zLC1xAcqSDcw7tdV4M5ydlCNw=","hashes":[{"right":"anfIr8Oa4PjWQsf2qFLIGgFBeBphTI+RGBaKp8F6Fw0="},{"left":"B+/DkYDB2vvYAuw9GTbVk7jpxM2vPddxsbhldM1wOus="},{"right":"hCkGp+gqakfRE1aLg4j4mA9eAvKn0LbulLOAKUVLSCg="}]}
-
 
 	valid, _ := doctree.ValidateProof(&proof)
-        // Output:
-        // Proof validated: true
+
+	fmt.Printf("Proof validated: %v\n", valid)
 ```
 
