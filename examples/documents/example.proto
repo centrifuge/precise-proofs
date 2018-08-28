@@ -23,6 +23,9 @@ message ExampleDocument {
   bytes value_ignored = 8 [
     (proofs.exclude_from_tree) = true
   ];
+  bytes value_not_hashed = 9 [
+    (proofs.hashed_field) = true
+  ];
 }
 
 message AllFieldTypes {

@@ -187,6 +187,7 @@ func (doctree *DocumentTree) CreateProof(prop string) (proof proofspb.Proof, err
 		Property: prop,
 		Value:    leaf.Value,
 		Salt:     leaf.Salt,
+		Hash:     leaf.Hash,
 	}
 
 	if doctree.merkleTree.Options.EnableHashSorting {
@@ -244,7 +245,12 @@ func (doctree *DocumentTree) pickHashesFromMerkleTreeAsList(leaf uint64) (hashes
 
 // ValidateProof by comparing it to the tree's rootHash
 func (doctree *DocumentTree) ValidateProof(proof *proofspb.Proof) (valid bool, err error) {
-	fieldHash, err := CalculateHashForProofField(proof, doctree.hash)
+	var fieldHash []byte
+	if len(proof.Hash) == 0 {
+		fieldHash, err = CalculateHashForProofField(proof, doctree.hash)
+	} else {
+		fieldHash = proof.Hash
+	}
 	if err != nil {
 		return false, err
 	}
@@ -294,15 +300,12 @@ type LeafNode struct {
 	Value    string
 	Salt     []byte
 	Hash     []byte
-}
-
-func (n *LeafNode) Hashed() bool {
-	return len(n.Hash) != 0
+	Hashed   bool
 }
 
 func (n *LeafNode) HashNode(h hash.Hash) error {
-	if n.Hashed() {
-		return errors.New("Hash not empty")
+	if n.Hashed {
+		return errors.New("Already hashed")
 	}
 
 	payload, err := ConcatValues(n.Property, n.Value, n.Salt)
@@ -314,6 +317,7 @@ func (n *LeafNode) HashNode(h hash.Hash) error {
 	if err != nil {
 		return err
 	}
+	n.Hashed = true
 	n.Hash = h.Sum(nil)
 	return nil
 }
@@ -374,6 +378,7 @@ type messageFlattener struct {
 	messageType       reflect.Type
 	messageValue      reflect.Value
 	excludedFields    map[string]struct{}
+	hashedFields      map[string]struct{}
 	salts             proto.Message
 	saltsValue        reflect.Value
 	leaves            LeafList
@@ -416,10 +421,19 @@ func (f *messageFlattener) generateLeaves(propPrefix string, fcurrent *messageFl
 		}
 
 		value := valueField.Interface()
+		value = dereferencePointer(value)
+
+		if _, ok := fcurrent.hashedFields[prop]; ok {
+			if valueType.Kind() != reflect.Slice && reflect.ValueOf(value).Type() != reflect.TypeOf([]uint8{}) {
+				return errors.New("The option hashed_field is only supported for type `bytes`")
+			}
+			f.handleAppendHashedLeaf(propPrefix, prop, value.([]byte))
+			continue
+		}
+
 		reflectSaltsValue := fcurrent.saltsValue.FieldByName(reflectValueFieldType.Name)
 		salts := reflectSaltsValue.Interface()
 
-		value = dereferencePointer(value)
 		salts = dereferencePointer(salts)
 
 		if valueType.Kind() == reflect.Slice {
@@ -456,7 +470,7 @@ func (f *messageFlattener) handleSlice(propPrefix string, prop string, fcurrent 
 	// Append length of slice as tree leaf
 	saltedFieldValue := fcurrent.saltsValue.FieldByName(fmt.Sprintf("%s%s", fcurrent.messageType.Field(i).Name, fcurrent.saltsLengthSuffix))
 	salt := saltedFieldValue.Interface().([]byte)
-	f.appendLeaf(fmt.Sprintf("%s%s.length", propPrefix, prop), strconv.Itoa(sliceValue.Len()), salt)
+	f.appendLeaf(fmt.Sprintf("%s%s.length", propPrefix, prop), strconv.Itoa(sliceValue.Len()), salt, []byte{}, false)
 
 	for j := 0; j < sliceValue.Len(); j++ {
 		sval := reflect.Indirect(sliceValue.Index(j))
@@ -488,15 +502,22 @@ func (f *messageFlattener) handleAppendLeaf(propPrefix string, prop string, valu
 	if err != nil {
 		return err
 	}
-	f.appendLeaf(fmt.Sprintf("%s%s", propPrefix, prop), valueString, salts.([]byte))
+	f.appendLeaf(fmt.Sprintf("%s%s", propPrefix, prop), valueString, salts.([]byte), []byte{}, false)
 	return
 }
 
-func (f *messageFlattener) appendLeaf(prop string, value string, salt []byte) {
+func (f *messageFlattener) handleAppendHashedLeaf(propPrefix string, prop string, hash []byte) (err error) {
+	f.appendLeaf(fmt.Sprintf("%s%s", propPrefix, prop), "", []byte{}, hash, true)
+	return
+}
+
+func (f *messageFlattener) appendLeaf(prop string, value string, salt []byte, hash []byte, hashed bool) {
 	leaf := LeafNode{
 		Property: prop,
 		Value:    value,
 		Salt:     salt,
+		Hash:     hash,
+		Hashed:   hashed,
 	}
 	f.leaves = append(f.leaves, leaf)
 }
@@ -510,7 +531,7 @@ func (f *messageFlattener) sortLeaves() (err error) {
 
 	for i := 0; i < f.leaves.Len(); i++ {
 		leaf := &f.leaves[i]
-		if !leaf.Hashed() {
+		if !leaf.Hashed {
 			err = leaf.HashNode(f.hash)
 			if err != nil {
 				return err
@@ -551,6 +572,16 @@ func (f *messageFlattener) parseExtensions() (err error) {
 					f.excludedFields[fieldName] = struct{}{}
 				}
 			}
+			if proto.HasExtension(field.Interface().(proto.Message), proofspb.E_HashedField) {
+				ext, err := proto.GetExtension(field.Interface().(proto.Message), proofspb.E_HashedField)
+				if err != nil {
+					continue
+				}
+				b, _ := ext.(*bool)
+				if *b {
+					f.hashedFields[fieldName] = struct{}{}
+				}
+			}
 		}
 	}
 	return nil
@@ -564,6 +595,7 @@ func NewMessageFlattener(message, messageSalts proto.Message, saltsLengthSuffix 
 	f.messageType = f.messageValue.Type()
 	f.saltsValue = reflect.Indirect(reflect.ValueOf(messageSalts))
 	f.excludedFields = make(map[string]struct{})
+	f.hashedFields = make(map[string]struct{})
 	f.saltsLengthSuffix = saltsLengthSuffix
 	f.hash = hashFn
 	return &f
