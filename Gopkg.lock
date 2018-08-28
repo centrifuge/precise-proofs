@@ -3,17 +3,22 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:dc3522d1617d78cefd549b8f41a249d82833747959bd34f26daff51c9f3ba03a"
   name = "github.com/centrifuge/go-merkle"
   packages = ["."]
+  pruneopts = "UT"
   revision = "eb4cce98822c0dcccc0594b45b8d8ab3fdb48ffa"
 
 [[projects]]
+  digest = "1:a2c1d0e43bd3baaa071d1b9ed72c27d78169b2b269f71c105ac4ba34b1be4a39"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
+  pruneopts = "UT"
   revision = "346938d642f2ec3594ed81d874461961cd0faa76"
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:b6192c4aa4f4d8764d1e00cf0bbf6ed04dee9a0318a3f367fb5fd82273eae4d9"
   name = "github.com/golang/protobuf"
   packages = [
     "descriptor",
@@ -22,38 +27,57 @@
     "ptypes",
     "ptypes/any",
     "ptypes/duration",
-    "ptypes/timestamp"
+    "ptypes/timestamp",
   ]
+  pruneopts = "UT"
   revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
   version = "v1.1.0"
 
 [[projects]]
   branch = "master"
+  digest = "1:32a62f9393d4b982aae329c535e81e77146924f96ef8b069e4d16c92e22db147"
   name = "github.com/iancoleman/strcase"
   packages = ["."]
+  pruneopts = "UT"
   revision = "90d371a664d668ca3e61d3ddddf1916662959f11"
 
 [[projects]]
+  digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
+  pruneopts = "UT"
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
   version = "v1.0.0"
 
 [[projects]]
+  digest = "1:18752d0b95816a1b777505a97f71c7467a8445b8ffb55631a7bf779f6ba4fa83"
   name = "github.com/stretchr/testify"
   packages = ["assert"]
+  pruneopts = "UT"
   revision = "f35b8ab0b5a2cef36673838d662e249dd9c94686"
   version = "v1.2.2"
 
 [[projects]]
   branch = "master"
+  digest = "1:778500e3634377cb6660543afa4646c12a3a33aefadd3e1d269e24e57d75a3d7"
   name = "github.com/xsleonard/go-merkle"
   packages = ["."]
+  pruneopts = "UT"
   revision = "fbb7cafc5ae411e13e718172f5af7917ad6c3ed7"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "05e942bb891b0308d1fa622d77729d780b07008b0e3be0ba4f52daa651d1d736"
+  input-imports = [
+    "github.com/centrifuge/go-merkle",
+    "github.com/golang/protobuf/descriptor",
+    "github.com/golang/protobuf/proto",
+    "github.com/golang/protobuf/protoc-gen-go/descriptor",
+    "github.com/golang/protobuf/ptypes",
+    "github.com/golang/protobuf/ptypes/timestamp",
+    "github.com/iancoleman/strcase",
+    "github.com/stretchr/testify/assert",
+    "github.com/xsleonard/go-merkle",
+  ]
   solver-name = "gps-cdcl"
   solver-version = 1

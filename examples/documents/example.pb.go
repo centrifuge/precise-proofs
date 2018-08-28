@@ -21,10 +21,10 @@ var _ = math.Inf
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
 type ExampleDocument struct {
-	ValueA               string   `protobuf:"bytes,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
-	ValueB               string   `protobuf:"bytes,2,opt,name=valueB,proto3" json:"valueB,omitempty"`
-	Value1               int64    `protobuf:"varint,3,opt,name=value1,proto3" json:"value1,omitempty"`
-	Value2               int64    `protobuf:"varint,4,opt,name=value2,proto3" json:"value2,omitempty"`
+	ValueA               string   `protobuf:"bytes,1,opt,name=valueA" json:"valueA,omitempty"`
+	ValueB               string   `protobuf:"bytes,2,opt,name=valueB" json:"valueB,omitempty"`
+	Value1               int64    `protobuf:"varint,3,opt,name=value1" json:"value1,omitempty"`
+	Value2               int64    `protobuf:"varint,4,opt,name=value2" json:"value2,omitempty"`
 	ValueBytes1          []byte   `protobuf:"bytes,5,opt,name=value_bytes1,json=valueBytes1,proto3" json:"value_bytes1,omitempty"`
 	ValueCamelCased      []byte   `protobuf:"bytes,6,opt,name=ValueCamelCased,proto3" json:"ValueCamelCased,omitempty"`
 	ValueNotIgnored      []byte   `protobuf:"bytes,7,opt,name=value_not_ignored,json=valueNotIgnored,proto3" json:"value_not_ignored,omitempty"`
@@ -38,7 +38,7 @@ func (m *ExampleDocument) Reset()         { *m = ExampleDocument{} }
 func (m *ExampleDocument) String() string { return proto.CompactTextString(m) }
 func (*ExampleDocument) ProtoMessage()    {}
 func (*ExampleDocument) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_1ba18708dd372302, []int{0}
+	return fileDescriptor_example_aba97929baef1dc5, []int{0}
 }
 func (m *ExampleDocument) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ExampleDocument.Unmarshal(m, b)
@@ -115,8 +115,8 @@ func (m *ExampleDocument) GetValueIgnored() []byte {
 }
 
 type AllFieldTypes struct {
-	StringValue          string               `protobuf:"bytes,1,opt,name=string_value,json=stringValue,proto3" json:"string_value,omitempty"`
-	TimeStampValue       *timestamp.Timestamp `protobuf:"bytes,2,opt,name=time_stamp_value,json=timeStampValue,proto3" json:"time_stamp_value,omitempty"`
+	StringValue          string               `protobuf:"bytes,1,opt,name=string_value,json=stringValue" json:"string_value,omitempty"`
+	TimeStampValue       *timestamp.Timestamp `protobuf:"bytes,2,opt,name=time_stamp_value,json=timeStampValue" json:"time_stamp_value,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
 	XXX_unrecognized     []byte               `json:"-"`
 	XXX_sizecache        int32                `json:"-"`
@@ -126,7 +126,7 @@ func (m *AllFieldTypes) Reset()         { *m = AllFieldTypes{} }
 func (m *AllFieldTypes) String() string { return proto.CompactTextString(m) }
 func (*AllFieldTypes) ProtoMessage()    {}
 func (*AllFieldTypes) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_1ba18708dd372302, []int{1}
+	return fileDescriptor_example_aba97929baef1dc5, []int{1}
 }
 func (m *AllFieldTypes) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AllFieldTypes.Unmarshal(m, b)
@@ -172,7 +172,7 @@ func (m *AllFieldTypesSalts) Reset()         { *m = AllFieldTypesSalts{} }
 func (m *AllFieldTypesSalts) String() string { return proto.CompactTextString(m) }
 func (*AllFieldTypesSalts) ProtoMessage()    {}
 func (*AllFieldTypesSalts) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_1ba18708dd372302, []int{2}
+	return fileDescriptor_example_aba97929baef1dc5, []int{2}
 }
 func (m *AllFieldTypesSalts) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AllFieldTypesSalts.Unmarshal(m, b)
@@ -206,9 +206,8 @@ func (m *AllFieldTypesSalts) GetTimeStampValue() []byte {
 	return nil
 }
 
-// Placeholder for Nested + Repeated Fields
 type SimpleItem struct {
-	ValueA               string   `protobuf:"bytes,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
+	ValueA               string   `protobuf:"bytes,1,opt,name=valueA" json:"valueA,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -218,7 +217,7 @@ func (m *SimpleItem) Reset()         { *m = SimpleItem{} }
 func (m *SimpleItem) String() string { return proto.CompactTextString(m) }
 func (*SimpleItem) ProtoMessage()    {}
 func (*SimpleItem) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_1ba18708dd372302, []int{3}
+	return fileDescriptor_example_aba97929baef1dc5, []int{3}
 }
 func (m *SimpleItem) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SimpleItem.Unmarshal(m, b)
@@ -256,7 +255,7 @@ func (m *SaltedSimpleItem) Reset()         { *m = SaltedSimpleItem{} }
 func (m *SaltedSimpleItem) String() string { return proto.CompactTextString(m) }
 func (*SaltedSimpleItem) ProtoMessage()    {}
 func (*SaltedSimpleItem) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_1ba18708dd372302, []int{4}
+	return fileDescriptor_example_aba97929baef1dc5, []int{4}
 }
 func (m *SaltedSimpleItem) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SaltedSimpleItem.Unmarshal(m, b)
@@ -284,8 +283,8 @@ func (m *SaltedSimpleItem) GetValueA() []byte {
 }
 
 type RepeatedItem struct {
-	ValueA               []*SimpleItem `protobuf:"bytes,1,rep,name=valueA,proto3" json:"valueA,omitempty"`
-	ValueB               string        `protobuf:"bytes,2,opt,name=valueB,proto3" json:"valueB,omitempty"`
+	ValueA               []*SimpleItem `protobuf:"bytes,1,rep,name=valueA" json:"valueA,omitempty"`
+	ValueB               string        `protobuf:"bytes,2,opt,name=valueB" json:"valueB,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
 	XXX_unrecognized     []byte        `json:"-"`
 	XXX_sizecache        int32         `json:"-"`
@@ -295,7 +294,7 @@ func (m *RepeatedItem) Reset()         { *m = RepeatedItem{} }
 func (m *RepeatedItem) String() string { return proto.CompactTextString(m) }
 func (*RepeatedItem) ProtoMessage()    {}
 func (*RepeatedItem) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_1ba18708dd372302, []int{5}
+	return fileDescriptor_example_aba97929baef1dc5, []int{5}
 }
 func (m *RepeatedItem) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_RepeatedItem.Unmarshal(m, b)
@@ -330,7 +329,7 @@ func (m *RepeatedItem) GetValueB() string {
 }
 
 type SaltedRepeatedItem struct {
-	ValueA               []*SaltedSimpleItem `protobuf:"bytes,1,rep,name=valueA,proto3" json:"valueA,omitempty"`
+	ValueA               []*SaltedSimpleItem `protobuf:"bytes,1,rep,name=valueA" json:"valueA,omitempty"`
 	ValueALength         []byte              `protobuf:"bytes,2,opt,name=valueALength,proto3" json:"valueALength,omitempty"`
 	ValueB               []byte              `protobuf:"bytes,3,opt,name=valueB,proto3" json:"valueB,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}            `json:"-"`
@@ -342,7 +341,7 @@ func (m *SaltedRepeatedItem) Reset()         { *m = SaltedRepeatedItem{} }
 func (m *SaltedRepeatedItem) String() string { return proto.CompactTextString(m) }
 func (*SaltedRepeatedItem) ProtoMessage()    {}
 func (*SaltedRepeatedItem) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_1ba18708dd372302, []int{6}
+	return fileDescriptor_example_aba97929baef1dc5, []int{6}
 }
 func (m *SaltedRepeatedItem) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SaltedRepeatedItem.Unmarshal(m, b)
@@ -384,8 +383,8 @@ func (m *SaltedRepeatedItem) GetValueB() []byte {
 }
 
 type TwoLevelRepeatedDocument struct {
-	ValueA               string          `protobuf:"bytes,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
-	ValueB               []*RepeatedItem `protobuf:"bytes,2,rep,name=valueB,proto3" json:"valueB,omitempty"`
+	ValueA               string          `protobuf:"bytes,1,opt,name=valueA" json:"valueA,omitempty"`
+	ValueB               []*RepeatedItem `protobuf:"bytes,2,rep,name=valueB" json:"valueB,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
 	XXX_unrecognized     []byte          `json:"-"`
 	XXX_sizecache        int32           `json:"-"`
@@ -395,7 +394,7 @@ func (m *TwoLevelRepeatedDocument) Reset()         { *m = TwoLevelRepeatedDocume
 func (m *TwoLevelRepeatedDocument) String() string { return proto.CompactTextString(m) }
 func (*TwoLevelRepeatedDocument) ProtoMessage()    {}
 func (*TwoLevelRepeatedDocument) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_1ba18708dd372302, []int{7}
+	return fileDescriptor_example_aba97929baef1dc5, []int{7}
 }
 func (m *TwoLevelRepeatedDocument) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TwoLevelRepeatedDocument.Unmarshal(m, b)
@@ -431,7 +430,7 @@ func (m *TwoLevelRepeatedDocument) GetValueB() []*RepeatedItem {
 
 type SaltedTwoLevelRepeatedDocument struct {
 	ValueA               []byte                `protobuf:"bytes,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
-	ValueB               []*SaltedRepeatedItem `protobuf:"bytes,2,rep,name=valueB,proto3" json:"valueB,omitempty"`
+	ValueB               []*SaltedRepeatedItem `protobuf:"bytes,2,rep,name=valueB" json:"valueB,omitempty"`
 	ValueBLength         []byte                `protobuf:"bytes,3,opt,name=valueBLength,proto3" json:"valueBLength,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}              `json:"-"`
 	XXX_unrecognized     []byte                `json:"-"`
@@ -442,7 +441,7 @@ func (m *SaltedTwoLevelRepeatedDocument) Reset()         { *m = SaltedTwoLevelRe
 func (m *SaltedTwoLevelRepeatedDocument) String() string { return proto.CompactTextString(m) }
 func (*SaltedTwoLevelRepeatedDocument) ProtoMessage()    {}
 func (*SaltedTwoLevelRepeatedDocument) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_1ba18708dd372302, []int{8}
+	return fileDescriptor_example_aba97929baef1dc5, []int{8}
 }
 func (m *SaltedTwoLevelRepeatedDocument) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SaltedTwoLevelRepeatedDocument.Unmarshal(m, b)
@@ -484,9 +483,9 @@ func (m *SaltedTwoLevelRepeatedDocument) GetValueBLength() []byte {
 }
 
 type SimpleRepeatedDocument struct {
-	ValueA               string   `protobuf:"bytes,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
-	ValueB               string   `protobuf:"bytes,2,opt,name=valueB,proto3" json:"valueB,omitempty"`
-	ValueC               []string `protobuf:"bytes,3,rep,name=valueC,proto3" json:"valueC,omitempty"`
+	ValueA               string   `protobuf:"bytes,1,opt,name=valueA" json:"valueA,omitempty"`
+	ValueB               string   `protobuf:"bytes,2,opt,name=valueB" json:"valueB,omitempty"`
+	ValueC               []string `protobuf:"bytes,3,rep,name=valueC" json:"valueC,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -496,7 +495,7 @@ func (m *SimpleRepeatedDocument) Reset()         { *m = SimpleRepeatedDocument{}
 func (m *SimpleRepeatedDocument) String() string { return proto.CompactTextString(m) }
 func (*SimpleRepeatedDocument) ProtoMessage()    {}
 func (*SimpleRepeatedDocument) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_1ba18708dd372302, []int{9}
+	return fileDescriptor_example_aba97929baef1dc5, []int{9}
 }
 func (m *SimpleRepeatedDocument) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SimpleRepeatedDocument.Unmarshal(m, b)
@@ -551,7 +550,7 @@ func (m *SaltedSimpleRepeatedDocument) Reset()         { *m = SaltedSimpleRepeat
 func (m *SaltedSimpleRepeatedDocument) String() string { return proto.CompactTextString(m) }
 func (*SaltedSimpleRepeatedDocument) ProtoMessage()    {}
 func (*SaltedSimpleRepeatedDocument) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_1ba18708dd372302, []int{10}
+	return fileDescriptor_example_aba97929baef1dc5, []int{10}
 }
 func (m *SaltedSimpleRepeatedDocument) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SaltedSimpleRepeatedDocument.Unmarshal(m, b)
@@ -600,8 +599,8 @@ func (m *SaltedSimpleRepeatedDocument) GetValueCLength() []byte {
 }
 
 type TwoLevelItem struct {
-	ValueA               *SimpleItem `protobuf:"bytes,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
-	ValueB               string      `protobuf:"bytes,2,opt,name=valueB,proto3" json:"valueB,omitempty"`
+	ValueA               *SimpleItem `protobuf:"bytes,1,opt,name=valueA" json:"valueA,omitempty"`
+	ValueB               string      `protobuf:"bytes,2,opt,name=valueB" json:"valueB,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
 	XXX_unrecognized     []byte      `json:"-"`
 	XXX_sizecache        int32       `json:"-"`
@@ -611,7 +610,7 @@ func (m *TwoLevelItem) Reset()         { *m = TwoLevelItem{} }
 func (m *TwoLevelItem) String() string { return proto.CompactTextString(m) }
 func (*TwoLevelItem) ProtoMessage()    {}
 func (*TwoLevelItem) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_1ba18708dd372302, []int{11}
+	return fileDescriptor_example_aba97929baef1dc5, []int{11}
 }
 func (m *TwoLevelItem) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TwoLevelItem.Unmarshal(m, b)
@@ -646,7 +645,7 @@ func (m *TwoLevelItem) GetValueB() string {
 }
 
 type SaltedTwoLevelItem struct {
-	ValueA               *SaltedSimpleItem `protobuf:"bytes,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
+	ValueA               *SaltedSimpleItem `protobuf:"bytes,1,opt,name=valueA" json:"valueA,omitempty"`
 	ValueB               []byte            `protobuf:"bytes,2,opt,name=valueB,proto3" json:"valueB,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
 	XXX_unrecognized     []byte            `json:"-"`
@@ -657,7 +656,7 @@ func (m *SaltedTwoLevelItem) Reset()         { *m = SaltedTwoLevelItem{} }
 func (m *SaltedTwoLevelItem) String() string { return proto.CompactTextString(m) }
 func (*SaltedTwoLevelItem) ProtoMessage()    {}
 func (*SaltedTwoLevelItem) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_1ba18708dd372302, []int{12}
+	return fileDescriptor_example_aba97929baef1dc5, []int{12}
 }
 func (m *SaltedTwoLevelItem) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SaltedTwoLevelItem.Unmarshal(m, b)
@@ -692,10 +691,10 @@ func (m *SaltedTwoLevelItem) GetValueB() []byte {
 }
 
 type NestedRepeatedDocument struct {
-	ValueA               string        `protobuf:"bytes,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
-	ValueB               string        `protobuf:"bytes,2,opt,name=valueB,proto3" json:"valueB,omitempty"`
-	ValueC               []*SimpleItem `protobuf:"bytes,3,rep,name=valueC,proto3" json:"valueC,omitempty"`
-	ValueD               *TwoLevelItem `protobuf:"bytes,4,opt,name=valueD,proto3" json:"valueD,omitempty"`
+	ValueA               string        `protobuf:"bytes,1,opt,name=valueA" json:"valueA,omitempty"`
+	ValueB               string        `protobuf:"bytes,2,opt,name=valueB" json:"valueB,omitempty"`
+	ValueC               []*SimpleItem `protobuf:"bytes,3,rep,name=valueC" json:"valueC,omitempty"`
+	ValueD               *TwoLevelItem `protobuf:"bytes,4,opt,name=valueD" json:"valueD,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
 	XXX_unrecognized     []byte        `json:"-"`
 	XXX_sizecache        int32         `json:"-"`
@@ -705,7 +704,7 @@ func (m *NestedRepeatedDocument) Reset()         { *m = NestedRepeatedDocument{}
 func (m *NestedRepeatedDocument) String() string { return proto.CompactTextString(m) }
 func (*NestedRepeatedDocument) ProtoMessage()    {}
 func (*NestedRepeatedDocument) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_1ba18708dd372302, []int{13}
+	return fileDescriptor_example_aba97929baef1dc5, []int{13}
 }
 func (m *NestedRepeatedDocument) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_NestedRepeatedDocument.Unmarshal(m, b)
@@ -756,9 +755,9 @@ func (m *NestedRepeatedDocument) GetValueD() *TwoLevelItem {
 type SaltedNestedRepeatedDocument struct {
 	ValueA               []byte              `protobuf:"bytes,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
 	ValueB               []byte              `protobuf:"bytes,2,opt,name=valueB,proto3" json:"valueB,omitempty"`
-	ValueC               []*SaltedSimpleItem `protobuf:"bytes,3,rep,name=valueC,proto3" json:"valueC,omitempty"`
+	ValueC               []*SaltedSimpleItem `protobuf:"bytes,3,rep,name=valueC" json:"valueC,omitempty"`
 	ValueCLength         []byte              `protobuf:"bytes,4,opt,name=valueCLength,proto3" json:"valueCLength,omitempty"`
-	ValueD               *SaltedTwoLevelItem `protobuf:"bytes,5,opt,name=valueD,proto3" json:"valueD,omitempty"`
+	ValueD               *SaltedTwoLevelItem `protobuf:"bytes,5,opt,name=valueD" json:"valueD,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}            `json:"-"`
 	XXX_unrecognized     []byte              `json:"-"`
 	XXX_sizecache        int32               `json:"-"`
@@ -768,7 +767,7 @@ func (m *SaltedNestedRepeatedDocument) Reset()         { *m = SaltedNestedRepeat
 func (m *SaltedNestedRepeatedDocument) String() string { return proto.CompactTextString(m) }
 func (*SaltedNestedRepeatedDocument) ProtoMessage()    {}
 func (*SaltedNestedRepeatedDocument) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_1ba18708dd372302, []int{14}
+	return fileDescriptor_example_aba97929baef1dc5, []int{14}
 }
 func (m *SaltedNestedRepeatedDocument) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SaltedNestedRepeatedDocument.Unmarshal(m, b)
@@ -824,21 +823,21 @@ func (m *SaltedNestedRepeatedDocument) GetValueD() *SaltedTwoLevelItem {
 }
 
 type LongDocument struct {
-	Value0               int64    `protobuf:"varint,16,opt,name=value0,proto3" json:"value0,omitempty"`
-	Value1               int64    `protobuf:"varint,1,opt,name=value1,proto3" json:"value1,omitempty"`
-	Value2               int64    `protobuf:"varint,2,opt,name=value2,proto3" json:"value2,omitempty"`
-	Value3               int64    `protobuf:"varint,3,opt,name=value3,proto3" json:"value3,omitempty"`
-	Value4               int64    `protobuf:"varint,4,opt,name=value4,proto3" json:"value4,omitempty"`
-	Value5               int64    `protobuf:"varint,5,opt,name=value5,proto3" json:"value5,omitempty"`
-	Value6               int64    `protobuf:"varint,6,opt,name=value6,proto3" json:"value6,omitempty"`
-	Value7               int64    `protobuf:"varint,7,opt,name=value7,proto3" json:"value7,omitempty"`
-	Value8               int64    `protobuf:"varint,8,opt,name=value8,proto3" json:"value8,omitempty"`
-	Value9               int64    `protobuf:"varint,9,opt,name=value9,proto3" json:"value9,omitempty"`
-	ValueA               int64    `protobuf:"varint,10,opt,name=valueA,proto3" json:"valueA,omitempty"`
-	ValueB               int64    `protobuf:"varint,11,opt,name=valueB,proto3" json:"valueB,omitempty"`
-	ValueC               int64    `protobuf:"varint,12,opt,name=valueC,proto3" json:"valueC,omitempty"`
-	ValueD               int64    `protobuf:"varint,13,opt,name=valueD,proto3" json:"valueD,omitempty"`
-	ValueE               int64    `protobuf:"varint,14,opt,name=valueE,proto3" json:"valueE,omitempty"`
+	Value0               int64    `protobuf:"varint,16,opt,name=value0" json:"value0,omitempty"`
+	Value1               int64    `protobuf:"varint,1,opt,name=value1" json:"value1,omitempty"`
+	Value2               int64    `protobuf:"varint,2,opt,name=value2" json:"value2,omitempty"`
+	Value3               int64    `protobuf:"varint,3,opt,name=value3" json:"value3,omitempty"`
+	Value4               int64    `protobuf:"varint,4,opt,name=value4" json:"value4,omitempty"`
+	Value5               int64    `protobuf:"varint,5,opt,name=value5" json:"value5,omitempty"`
+	Value6               int64    `protobuf:"varint,6,opt,name=value6" json:"value6,omitempty"`
+	Value7               int64    `protobuf:"varint,7,opt,name=value7" json:"value7,omitempty"`
+	Value8               int64    `protobuf:"varint,8,opt,name=value8" json:"value8,omitempty"`
+	Value9               int64    `protobuf:"varint,9,opt,name=value9" json:"value9,omitempty"`
+	ValueA               int64    `protobuf:"varint,10,opt,name=valueA" json:"valueA,omitempty"`
+	ValueB               int64    `protobuf:"varint,11,opt,name=valueB" json:"valueB,omitempty"`
+	ValueC               int64    `protobuf:"varint,12,opt,name=valueC" json:"valueC,omitempty"`
+	ValueD               int64    `protobuf:"varint,13,opt,name=valueD" json:"valueD,omitempty"`
+	ValueE               int64    `protobuf:"varint,14,opt,name=valueE" json:"valueE,omitempty"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
@@ -848,7 +847,7 @@ func (m *LongDocument) Reset()         { *m = LongDocument{} }
 func (m *LongDocument) String() string { return proto.CompactTextString(m) }
 func (*LongDocument) ProtoMessage()    {}
 func (*LongDocument) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_1ba18708dd372302, []int{15}
+	return fileDescriptor_example_aba97929baef1dc5, []int{15}
 }
 func (m *LongDocument) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_LongDocument.Unmarshal(m, b)
@@ -998,7 +997,7 @@ func (m *SaltedLongDocument) Reset()         { *m = SaltedLongDocument{} }
 func (m *SaltedLongDocument) String() string { return proto.CompactTextString(m) }
 func (*SaltedLongDocument) ProtoMessage()    {}
 func (*SaltedLongDocument) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_1ba18708dd372302, []int{16}
+	return fileDescriptor_example_aba97929baef1dc5, []int{16}
 }
 func (m *SaltedLongDocument) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SaltedLongDocument.Unmarshal(m, b)
@@ -1140,7 +1139,7 @@ func (m *SaltedExampleDocument) Reset()         { *m = SaltedExampleDocument{} }
 func (m *SaltedExampleDocument) String() string { return proto.CompactTextString(m) }
 func (*SaltedExampleDocument) ProtoMessage()    {}
 func (*SaltedExampleDocument) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_1ba18708dd372302, []int{17}
+	return fileDescriptor_example_aba97929baef1dc5, []int{17}
 }
 func (m *SaltedExampleDocument) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SaltedExampleDocument.Unmarshal(m, b)
@@ -1231,10 +1230,10 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("examples/documents/example.proto", fileDescriptor_example_1ba18708dd372302)
+	proto.RegisterFile("examples/documents/example.proto", fileDescriptor_example_aba97929baef1dc5)
 }
 
-var fileDescriptor_example_1ba18708dd372302 = []byte{
+var fileDescriptor_example_aba97929baef1dc5 = []byte{
 	// 834 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x96, 0xcb, 0x6e, 0xd3, 0x40,
 	0x14, 0x86, 0x71, 0xdc, 0x16, 0x3a, 0x99, 0xb4, 0xc5, 0x52, 0xcb, 0xa8, 0xdc, 0x82, 0xc5, 0x22,

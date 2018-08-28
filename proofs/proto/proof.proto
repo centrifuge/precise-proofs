@@ -11,6 +11,7 @@ import "google/protobuf/descriptor.proto";
 
 extend google.protobuf.FieldOptions {
   bool exclude_from_tree = 2862100;
+  bool hashed_field = 2862101;
 }
 
 message MerkleHash {
@@ -22,6 +23,8 @@ message Proof {
   string property = 1;
   string value = 2;
   bytes salt = 3;
+  // hash is filled if value & salt are not available
+  bytes hash = 6;
   // Fills either 'hashes' for standard Merkle trees or 'sortedHashes' for a lexicograhical ordered of a node hash
   // not both
   repeated MerkleHash hashes = 4;
