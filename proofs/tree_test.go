@@ -90,7 +90,7 @@ func TestLeafNode_HashNode(t *testing.T) {
 
 	// Hashing again should fail because intLeaf.Hash is filled
 	err = intLeaf.HashNode(h)
-	assert.Error(t, err)
+	assert.EqualError(t, err, "Hash already set")
 
 	invalidSaltLeaf := LeafNode{
 		Property: "fieldName",
@@ -129,7 +129,7 @@ func TestGetDottedValueByProperty(t *testing.T) {
 	wrongDoc := "wrong!"
 	value, err = getDottedValueByProperty("valueC[1]", wrongDoc)
 	assert.NotNil(t, err)
-	assert.Error(t, err, "non-struct interface not supported")
+	assert.EqualError(t, err, "non-struct interface not supported")
 }
 
 func TestGetFieldOfStruct(t *testing.T) {
@@ -140,12 +140,12 @@ func TestGetFieldOfStruct(t *testing.T) {
 
 	value, err = getFieldOfStruct(doc, "WrongField")
 	assert.NotNil(t, err)
-	assert.Error(t, err, "No such field: WrongField in obj")
+	assert.EqualError(t, err, "No such field: WrongField in obj")
 
 	wrongDoc := "wrong!"
 	value, err = getFieldOfStruct(wrongDoc, "ValueA")
 	assert.NotNil(t, err)
-	assert.Error(t, err, "getFieldOfStruct invoked with a non-struct interface")
+	assert.EqualError(t, err, "getFieldOfStruct invoked with a non-struct interface")
 }
 
 func TestFlattenMessage(t *testing.T) {
@@ -216,6 +216,13 @@ func TestFlattenMessage_HashedField(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, leaves[6].Hash, foobarHash[:])
 	assert.Equal(t, leaves[6].Value, "")
+
+	invalidMessage := &documentspb.InvalidHashedFieldDocument{
+		Value: "foobar",
+	}
+
+	leaves, err = FlattenMessage(invalidMessage, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash)
+	assert.EqualError(t, err, "The option hashed_field is only supported for type `bytes`")
 }
 
 func TestFlattenMessageFromAutoFillSalts(t *testing.T) {
@@ -498,7 +505,7 @@ func TestDocumentTree_Generate_twice(t *testing.T) {
 	err = doctree.Generate()
 	assert.Nil(t, err)
 	err = doctree.Generate()
-	assert.Error(t, err)
+	assert.EqualError(t, err, "tree already filled")
 }
 
 // TestTree_hash tests calculating hashes both with sha256 and md5
@@ -544,7 +551,7 @@ func TestTree_AddLeaves_hashed(t *testing.T) {
 	assert.Equal(t, expectedRootHash[:], doctree.RootHash())
 
 	err = doctree.AddLeaves([]LeafNode{LeafNode{Hash: foobarHash[:], Property: "Foobar1", Hashed: true}})
-	assert.Error(t, err)
+	assert.EqualError(t, err, "tree already filled")
 }
 
 func TestTree_AddLeavesFromDocument_twice(t *testing.T) {
@@ -701,17 +708,21 @@ func TestGetStringValueByProperty(t *testing.T) {
 	assert.Equal(t, "Ag==", value)
 }
 
-func TestCreateStandardProof(t *testing.T) {
+func TestCreateProof_standard(t *testing.T) {
 	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash})
 	err := doctree.AddLeavesFromDocument(&documentspb.FilledExampleDocument, &documentspb.ExampleDocumentSalts)
 	assert.Nil(t, err)
+
+	proof, err := doctree.CreateProof("valueA")
+	assert.EqualError(t, err, "Can't create proof for empty merkleTree")
+
 	err = doctree.Generate()
 	assert.Nil(t, err)
 
 	_, err = doctree.CreateProof("InexistentField")
 	assert.EqualError(t, err, "No such field: InexistentField in obj")
 
-	proof, err := doctree.CreateProof("valueA")
+	proof, err = doctree.CreateProof("valueA")
 	assert.Nil(t, err)
 	assert.Equal(t, "valueA", proof.Property)
 	assert.Equal(t, documentspb.FilledExampleDocument.ValueA, proof.Value)
@@ -732,10 +743,9 @@ func TestCreateStandardProof(t *testing.T) {
 	valid, err = doctree.ValidateProof(&falseProof)
 	assert.False(t, valid)
 	assert.EqualError(t, err, "Hash does not match")
-
 }
 
-func TestCreateSortedProof(t *testing.T) {
+func TestCreateProof_sorted(t *testing.T) {
 	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash})
 	err := doctree.AddLeavesFromDocument(&documentspb.FilledExampleDocument, &documentspb.ExampleDocumentSalts)
 	assert.Nil(t, err)

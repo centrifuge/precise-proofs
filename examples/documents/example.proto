@@ -106,6 +106,12 @@ message SaltedNestedRepeatedDocument {
   SaltedTwoLevelItem valueD = 5;
 }
 
+message InvalidHashedFieldDocument {
+  string value = 1 [
+    (proofs.hashed_field) = true
+  ];
+}
+
 message LongDocument {
   int64 value0 = 16;
   int64 value1 = 1;
