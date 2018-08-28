@@ -529,18 +529,22 @@ func TestTree_hash(t *testing.T) {
 	assert.Equal(t, expectedRootHash, doctreeSha256.rootHash)
 }
 
-func TestTree_AddLeave_hashed(t *testing.T) {
+func TestTree_AddLeaves_hashed(t *testing.T) {
 	foobarHash := sha256.Sum256([]byte("foobar"))
 	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash})
-	doctree.AddLeaves([]LeafNode{
+	err := doctree.AddLeaves([]LeafNode{
 		LeafNode{Hash: foobarHash[:], Property: "Foobar1", Hashed: true},
 		LeafNode{Hash: foobarHash[:], Property: "Foobar2", Hashed: true},
 	})
-	err := doctree.Generate()
+	assert.Nil(t, err)
+	err = doctree.Generate()
 	assert.Nil(t, err)
 
 	expectedRootHash := sha256.Sum256(append(foobarHash[:], foobarHash[:]...))
 	assert.Equal(t, expectedRootHash[:], doctree.RootHash())
+
+	err = doctree.AddLeaves([]LeafNode{LeafNode{Hash: foobarHash[:], Property: "Foobar1", Hashed: true}})
+	assert.Error(t, err)
 }
 
 func TestTree_AddLeavesFromDocument_twice(t *testing.T) {

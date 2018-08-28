@@ -110,8 +110,15 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 }
 
 // AddLeaves appends list of leaves to the tree's leaves.
-func (doctree *DocumentTree) AddLeaves(leaves []LeafNode) {
+// This function can be called multiple times and leaves will be added from left to right. Note that the lexicographic
+// sorting doesn't get applied in this method but in the protobuf flattening. The order in which leaves are added in
+// in this method determine layout of the tree.
+func (doctree *DocumentTree) AddLeaves(leaves []LeafNode) error {
+	if doctree.filled {
+		return errors.New("tree already filled")
+	}
 	doctree.leaves = append(doctree.leaves, leaves...)
+	return nil
 }
 
 // AddLeavesFromDocument iterates over a protobuf message, flattens it and adds all leaves to the tree
@@ -123,11 +130,12 @@ func (doctree *DocumentTree) AddLeavesFromDocument(document, salts proto.Message
 	if err != nil {
 		return err
 	}
-	doctree.AddLeaves(leaves)
-	return nil
+	err = doctree.AddLeaves(leaves)
+	return err
 }
 
-// Generate calculated the merkle root with all supplied leaves
+// Generate calculated the merkle root with all supplied leaves. This method can only be called once and makes
+// the tree immutable.
 func (doctree *DocumentTree) Generate() error {
 	if doctree.filled {
 		return errors.New("tree already filled")
@@ -187,7 +195,10 @@ func (doctree *DocumentTree) CreateProof(prop string) (proof proofspb.Proof, err
 		Property: prop,
 		Value:    leaf.Value,
 		Salt:     leaf.Salt,
-		Hash:     leaf.Hash,
+	}
+
+	if leaf.Hashed {
+		proof.Hash = leaf.Hash
 	}
 
 	if doctree.merkleTree.Options.EnableHashSorting {
@@ -299,13 +310,17 @@ type LeafNode struct {
 	Property string
 	Value    string
 	Salt     []byte
-	Hash     []byte
-	Hashed   bool
+	// Hash contains either the hash that is calculated from Value, Salt & Property or a user defined hash
+	Hash []byte
+	// If set to true, the the value added to the tree is LeafNode.Hash instead of the hash calculated from Value, Salt
+	// & Property
+	Hashed bool
 }
 
+// HashNode calculates the hash of a node provided it isn't already calculated.
 func (n *LeafNode) HashNode(h hash.Hash) error {
-	if n.Hashed {
-		return errors.New("Already hashed")
+	if len(n.Hash) > 0 || n.Hashed {
+		return errors.New("Hash already set")
 	}
 
 	payload, err := ConcatValues(n.Property, n.Value, n.Salt)
@@ -317,7 +332,6 @@ func (n *LeafNode) HashNode(h hash.Hash) error {
 	if err != nil {
 		return err
 	}
-	n.Hashed = true
 	n.Hash = h.Sum(nil)
 	return nil
 }
@@ -415,7 +429,7 @@ func (f *messageFlattener) generateLeaves(propPrefix string, fcurrent *messageFl
 			return err1
 		}
 
-		// Check if the field has an exclude_from_tree option
+		// Check if the field has an exclude_from_tree option and skip it
 		if _, ok := fcurrent.excludedFields[prop]; ok {
 			continue
 		}
@@ -424,6 +438,8 @@ func (f *messageFlattener) generateLeaves(propPrefix string, fcurrent *messageFl
 		value = dereferencePointer(value)
 
 		if _, ok := fcurrent.hashedFields[prop]; ok {
+			// Fields that have the hashed_field tag on the protobuf message will be treated as hashes without prepending
+			// the property & salt.
 			if valueType.Kind() != reflect.Slice && reflect.ValueOf(value).Type() != reflect.TypeOf([]uint8{}) {
 				return errors.New("The option hashed_field is only supported for type `bytes`")
 			}
@@ -438,7 +454,9 @@ func (f *messageFlattener) generateLeaves(propPrefix string, fcurrent *messageFl
 
 		if valueType.Kind() == reflect.Slice {
 			sliceValue := reflect.ValueOf(value)
-			if sliceValue.Type() == reflect.TypeOf([]uint8{}) { //Specific case where byte is internally represented as []uint8, but we want to treat it as a whole
+
+			// The bytes type is internally represented as []uint8, this needs to be treated as one leaf
+			if sliceValue.Type() == reflect.TypeOf([]uint8{}) {
 				salt := reflect.Indirect(fcurrent.saltsValue).FieldByName(reflectValueFieldType.Name).Interface().([]byte)
 				err = f.handleAppendLeaf(propPrefix, prop, value.([]byte), salt)
 			} else {
@@ -531,7 +549,7 @@ func (f *messageFlattener) sortLeaves() (err error) {
 
 	for i := 0; i < f.leaves.Len(); i++ {
 		leaf := &f.leaves[i]
-		if !leaf.Hashed {
+		if len(leaf.Hash) == 0 && !leaf.Hashed {
 			err = leaf.HashNode(f.hash)
 			if err != nil {
 				return err
