@@ -731,7 +731,7 @@ func TestCreateProof_standard(t *testing.T) {
 	assert.Nil(t, err)
 
 	proof, err := doctree.CreateProof("valueA")
-	assert.EqualError(t, err, "Can't create proof for empty merkleTree")
+	assert.EqualError(t, err, "Can't create proof before generating merkle root")
 
 	err = doctree.Generate()
 	assert.Nil(t, err)
