@@ -23,6 +23,9 @@ message ExampleDocument {
   bytes value_ignored = 8 [
     (proofs.exclude_from_tree) = true
   ];
+  bytes value_not_hashed = 9 [
+    (proofs.hashed_field) = true
+  ];
 }
 
 message AllFieldTypes {
@@ -101,6 +104,12 @@ message SaltedNestedRepeatedDocument {
   repeated SaltedSimpleItem valueC = 3;
   bytes valueCLength = 4;
   SaltedTwoLevelItem valueD = 5;
+}
+
+message InvalidHashedFieldDocument {
+  string value = 1 [
+    (proofs.hashed_field) = true
+  ];
 }
 
 message LongDocument {

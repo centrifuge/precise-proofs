@@ -40,7 +40,7 @@ func FillSalts(dataMessage, saltsMessage proto.Message) (err error) {
 		} else if saltsType.Kind() == reflect.Struct {
 			err = handleFillSaltsStruct(saltsField, saltsType, valueField)
 		} else {
-			return fmt.Errorf("Invalid type (%s) for field", reflect.TypeOf(saltsField.Interface()).String())
+			return fmt.Errorf("Invalid type (%s) for field (%s)", reflect.TypeOf(saltsField.Interface()).String(), saltsMessageValue.Type().Field(i).Name)
 		}
 
 		if err != nil {

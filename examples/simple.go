@@ -3,20 +3,20 @@
 package main
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"github.com/centrifuge/precise-proofs/examples/documents"
 	"github.com/centrifuge/precise-proofs/proofs"
-	"crypto/sha256"
 )
 
-func printError(err error){
-	if err != nil{
+func printError(err error) {
+	if err != nil {
 		fmt.Printf("There was an error: [%v]\n", err)
 	}
 }
 
-func main () {
+func main() {
 	// ExampleDocument is a protobuf message
 	document := documentspb.ExampleDocument{
 		Value1:      1,
@@ -31,14 +31,10 @@ func main () {
 	salts := documentspb.SaltedExampleDocument{}
 	proofs.FillSalts(&document, &salts)
 
-	doctree := proofs.NewDocumentTree(proofs.TreeOptions{})
+	doctree := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New()})
 
-	//Setting the desired hash function that is used to generate the tree
-	sha256Hash := sha256.New()
-	doctree.SetHashFunc(sha256Hash)
-
-	err := doctree.FillTree(&document, &salts)
-	printError(err)
+	doctree.AddLeavesFromDocument(&document, &salts)
+	doctree.Generate()
 	fmt.Printf("Generated tree: %s\n", doctree.String())
 
 	// Generate the actual proof for a field. In this case the field called "ValueA".
