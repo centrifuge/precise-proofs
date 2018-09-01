@@ -2,14 +2,6 @@
 
 
 [[projects]]
-  branch = "master"
-  digest = "1:dc3522d1617d78cefd549b8f41a249d82833747959bd34f26daff51c9f3ba03a"
-  name = "github.com/centrifuge/go-merkle"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "eb4cce98822c0dcccc0594b45b8d8ab3fdb48ffa"
-
-[[projects]]
   digest = "1:a2c1d0e43bd3baaa071d1b9ed72c27d78169b2b269f71c105ac4ba34b1be4a39"
   name = "github.com/davecgh/go-spew"
   packages = ["spew"]
@@ -69,7 +61,6 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/centrifuge/go-merkle",
     "github.com/golang/protobuf/descriptor",
     "github.com/golang/protobuf/proto",
     "github.com/golang/protobuf/protoc-gen-go/descriptor",
