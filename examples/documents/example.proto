@@ -156,6 +156,5 @@ message SaltedExampleDocument {
   bytes value_bytes1 = 5;
   bytes ValueCamelCased = 6;
   bytes value_not_ignored = 7;
-  bytes value_ignored = 8;
-  bytes value_not_hashed = 9;
+  bytes value_not_hashed = 8;
 }
