@@ -2,9 +2,10 @@ package proofs
 
 import (
 	"fmt"
-	"github.com/golang/protobuf/proto"
 	"reflect"
 	"strings"
+
+	"github.com/golang/protobuf/proto"
 )
 
 // FillSalts is a helper message that iterates over all fields in a proto.Message struct and fills them with 32 byte

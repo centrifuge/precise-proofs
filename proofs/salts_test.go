@@ -1,9 +1,10 @@
 package proofs
 
 import (
+	"testing"
+
 	"github.com/centrifuge/precise-proofs/examples/documents"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestFillSalts(t *testing.T) {

@@ -624,7 +624,7 @@ func TestTree_GenerateNestedTreeCombinedStandardProof(t *testing.T) {
 
 	doctreeB := NewDocumentTree(TreeOptions{Hash: sha256Hash})
 	docB := &documentspb.ExampleDocument{
-		ValueA: "Example",
+		ValueA:         "Example",
 		ValueNotHashed: doctreeA.rootHash,
 	}
 	err = doctreeB.AddLeavesFromDocument(docB, &documentspb.ExampleDocumentSalts)
@@ -673,7 +673,7 @@ func TestTree_GenerateNestedTreeCombinedSortedHashesProof(t *testing.T) {
 
 	doctreeB := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash})
 	docB := &documentspb.ExampleDocument{
-		ValueA: "Example",
+		ValueA:         "Example",
 		ValueNotHashed: doctreeA.rootHash,
 	}
 	err = doctreeB.AddLeavesFromDocument(docB, &documentspb.ExampleDocumentSalts)
