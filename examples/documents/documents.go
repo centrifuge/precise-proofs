@@ -25,7 +25,6 @@ var ExampleDocumentSalts SaltedExampleDocument = SaltedExampleDocument{
 	ValueBytes1:     salt,
 	ValueCamelCased: salt,
 	ValueNotIgnored: salt,
-	ValueNotHashed:  salt,
 }
 
 var ExampleTimeString string = "2018-04-10T01:23:12.697116Z"
