@@ -66,14 +66,14 @@ func (m *MerkleHash) GetRight() []byte {
 }
 
 type Proof struct {
-	Property string `protobuf:"bytes,1,opt,name=property" json:"property,omitempty"`
-	Value    string `protobuf:"bytes,2,opt,name=value" json:"value,omitempty"`
+	Property string `protobuf:"bytes,1,opt,name=property,proto3" json:"property,omitempty"`
+	Value    string `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
 	Salt     []byte `protobuf:"bytes,3,opt,name=salt,proto3" json:"salt,omitempty"`
 	// hash is filled if value & salt are not available
 	Hash []byte `protobuf:"bytes,6,opt,name=hash,proto3" json:"hash,omitempty"`
 	// Fills either 'hashes' for standard Merkle trees or 'sortedHashes' for a lexicograhical ordered of a node hash
 	// not both
-	Hashes               []*MerkleHash `protobuf:"bytes,4,rep,name=hashes" json:"hashes,omitempty"`
+	Hashes               []*MerkleHash `protobuf:"bytes,4,rep,name=hashes,proto3" json:"hashes,omitempty"`
 	SortedHashes         [][]byte      `protobuf:"bytes,5,rep,name=sortedHashes,proto3" json:"sortedHashes,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
 	XXX_unrecognized     []byte        `json:"-"`

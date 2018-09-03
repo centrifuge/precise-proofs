@@ -614,6 +614,104 @@ func TestTree_GenerateStandardProof(t *testing.T) {
 	assert.True(t, valid)
 }
 
+func TestTree_GenerateNestedTreeCombinedStandardProof(t *testing.T) {
+	doctreeA := NewDocumentTree(TreeOptions{Hash: sha256Hash})
+	err := doctreeA.AddLeavesFromDocument(&documentspb.ExampleFilledRepeatedDocument, &documentspb.ExampleSaltedRepeatedDocument)
+	assert.Nil(t, err)
+
+	err = doctreeA.Generate()
+	assert.Nil(t, err)
+
+	doctreeB := NewDocumentTree(TreeOptions{Hash: sha256Hash})
+	docB := &documentspb.ExampleDocument{
+		ValueA:         "Example",
+		ValueNotHashed: doctreeA.rootHash,
+	}
+	err = doctreeB.AddLeavesFromDocument(docB, &documentspb.ExampleDocumentSalts)
+	assert.Nil(t, err)
+
+	err = doctreeB.Generate()
+	assert.Nil(t, err)
+
+	expectedRootHashA := []byte{0xe9, 0x7a, 0x71, 0x75, 0xeb, 0xbf, 0xd9, 0x7a, 0x60, 0x8d, 0x7a, 0x52, 0xf2, 0x7b, 0x4f, 0x84, 0x71, 0xdc, 0xc0, 0x8d, 0x65, 0x64, 0xc7, 0xab, 0x8b, 0xf1, 0x1a, 0x9d, 0x6c, 0xa9, 0x85, 0x55}
+	assert.Equal(t, expectedRootHashA, doctreeA.RootHash())
+
+	expectedRootHashB := []byte{0xdd, 0x14, 0x6d, 0x29, 0x2a, 0x36, 0xbd, 0x6b, 0xd3, 0x6b, 0x64, 0x13, 0xf3, 0xcc, 0x94, 0x76, 0xc9, 0xf, 0x14, 0xc8, 0x8d, 0xd, 0x8d, 0x8f, 0x28, 0xd1, 0xc5, 0xc3, 0xf, 0x89, 0x7f, 0xa}
+	assert.Equal(t, expectedRootHashB, doctreeB.RootHash())
+
+	fieldProofA, err := doctreeA.CreateProof("valueA")
+	assert.Nil(t, err)
+
+	fieldHash := doctreeA.merkleTree.Nodes[0].Hash
+	valid, err := ValidateProofHashes(fieldHash, fieldProofA.Hashes, doctreeA.rootHash, doctreeA.hash)
+	assert.Nil(t, err)
+	assert.True(t, valid)
+
+	fieldProofB, err := doctreeB.CreateProof("value_not_hashed")
+	assert.Nil(t, err)
+
+	valid, err = ValidateProofHashes(docB.ValueNotHashed, fieldProofB.Hashes, doctreeB.rootHash, doctreeB.hash)
+	assert.Nil(t, err)
+	assert.True(t, valid)
+
+	combinedProof := fieldProofA
+	combinedProof.Hashes = append(combinedProof.Hashes, fieldProofB.Hashes...)
+
+	fieldHash = doctreeA.merkleTree.Nodes[0].Hash
+	valid, err = ValidateProofHashes(fieldHash, combinedProof.Hashes, doctreeB.rootHash, doctreeB.hash)
+	assert.Nil(t, err)
+	assert.True(t, valid)
+}
+
+func TestTree_GenerateNestedTreeCombinedSortedHashesProof(t *testing.T) {
+	doctreeA := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash})
+	err := doctreeA.AddLeavesFromDocument(&documentspb.ExampleFilledRepeatedDocument, &documentspb.ExampleSaltedRepeatedDocument)
+	assert.Nil(t, err)
+
+	err = doctreeA.Generate()
+	assert.Nil(t, err)
+
+	doctreeB := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash})
+	docB := &documentspb.ExampleDocument{
+		ValueA:         "Example",
+		ValueNotHashed: doctreeA.rootHash,
+	}
+	err = doctreeB.AddLeavesFromDocument(docB, &documentspb.ExampleDocumentSalts)
+	assert.Nil(t, err)
+
+	err = doctreeB.Generate()
+	assert.Nil(t, err)
+
+	expectedRootHashA := []byte{0xfa, 0x84, 0xf0, 0x2c, 0xed, 0xea, 0x3, 0x99, 0x80, 0xd6, 0x2f, 0xfb, 0x7, 0x19, 0xc6, 0xe2, 0x36, 0x71, 0x99, 0xb4, 0xe4, 0x56, 0xe9, 0xa4, 0xf4, 0x96, 0xde, 0xa, 0xef, 0xbc, 0xd1, 0xd}
+	assert.Equal(t, expectedRootHashA, doctreeA.RootHash())
+
+	expectedRootHashB := []byte{0x50, 0xe0, 0x2d, 0xd6, 0xc6, 0xd7, 0xf4, 0xbb, 0x26, 0xf8, 0x9d, 0x38, 0xb3, 0x51, 0xf3, 0x97, 0xff, 0x85, 0xf3, 0xee, 0x3e, 0xb9, 0x9e, 0x61, 0x60, 0x76, 0xbb, 0xd2, 0x6e, 0x7, 0x9e, 0x78}
+	assert.Equal(t, expectedRootHashB, doctreeB.RootHash())
+
+	fieldProofA, err := doctreeA.CreateProof("valueA")
+	assert.Nil(t, err)
+
+	fieldHash := doctreeA.merkleTree.Nodes[0].Hash
+	valid, err := ValidateProofSortedHashes(fieldHash, fieldProofA.SortedHashes, doctreeA.rootHash, doctreeA.hash)
+	assert.Nil(t, err)
+	assert.True(t, valid)
+
+	fieldProofB, err := doctreeB.CreateProof("value_not_hashed")
+	assert.Nil(t, err)
+
+	valid, err = ValidateProofSortedHashes(docB.ValueNotHashed, fieldProofB.SortedHashes, doctreeB.rootHash, doctreeB.hash)
+	assert.Nil(t, err)
+	assert.True(t, valid)
+
+	combinedProof := fieldProofA
+	combinedProof.SortedHashes = append(combinedProof.SortedHashes, fieldProofB.SortedHashes...)
+
+	fieldHash = doctreeA.merkleTree.Nodes[0].Hash
+	valid, err = ValidateProofSortedHashes(fieldHash, combinedProof.SortedHashes, doctreeB.rootHash, doctreeB.hash)
+	assert.Nil(t, err)
+	assert.True(t, valid)
+}
+
 func TestTree_GenerateProofHashed(t *testing.T) {
 	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash})
 	hashA := sha256.Sum256([]byte("A"))
@@ -780,7 +878,7 @@ func TestCreateProof_sorted(t *testing.T) {
 
 	fieldHash, err := CalculateHashForProofField(&proof, sha256Hash)
 	rootHash := []byte{0xff, 0x2d, 0xea, 0x50, 0x5c, 0x54, 0xe0, 0xec, 0x31, 0xba, 0xac, 0xce, 0xcb, 0xd5, 0x51, 0x3e, 0x53, 0x33, 0xdf, 0x11, 0x8d, 0xdd, 0xb9, 0xa1, 0xde, 0xd3, 0xad, 0x10, 0x74, 0xe2, 0xb3, 0xdc}
-	assert.Equal(t, doctree.rootHash, rootHash)
+	assert.Equal(t, rootHash, doctree.rootHash)
 	valid, err := ValidateProofSortedHashes(fieldHash, proof.SortedHashes, rootHash, doctree.hash)
 	assert.True(t, valid)
 
