@@ -3,7 +3,7 @@ package proofs
 import (
 	"crypto/md5"
 	"crypto/sha256"
-	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -42,7 +42,7 @@ func TestValueToString(t *testing.T) {
 	assert.Nil(t, err)
 
 	v, err = ValueToString([]byte("42"))
-	expected := base64.StdEncoding.EncodeToString([]byte("42"))
+	expected := hex.EncodeToString([]byte("42"))
 	assert.Equal(t, expected, v, "[]byte(\"42\") to string failed")
 	assert.Nil(t, err)
 
@@ -284,7 +284,7 @@ func TestTree_Generate(t *testing.T) {
 	tree.Generate(hashes, sha256Hash)
 	h := tree.Root().Hash
 	expectedHash := []byte{0x65, 0xe, 0x12, 0x55, 0xba, 0x91, 0x61, 0xc4, 0x77, 0x18, 0x4a, 0x26, 0xe8, 0xb6, 0x8, 0x7d, 0x50, 0x8e, 0x7f, 0xc6, 0xb2, 0xc9, 0x37, 0x4d, 0xb3, 0x24, 0xe2, 0xfe, 0xc2, 0xe0, 0xd3, 0xfe}
-	assert.Equal(t, h, expectedHash, "Hash should match")
+	assert.Equal(t, expectedHash, h, "Hash should match")
 }
 
 func TestSortedHashTree_Generate(t *testing.T) {
@@ -811,21 +811,25 @@ func TestTree_GenerateWithNestedAndRepeatedFields(t *testing.T) {
 }
 
 func TestGetStringValueByProperty(t *testing.T) {
+	bValue := []byte{2}
+	hexValue := hex.EncodeToString(bValue)
 	value, err := getStringValueByProperty("valueA", &documentspb.FilledExampleDocument)
 	assert.Nil(t, err)
 	assert.Equal(t, documentspb.FilledExampleDocument.ValueA, value)
-	doc := &documentspb.ExampleDocument{ValueCamelCased: []byte{2}, ValueBytes1: []byte{2}}
+	doc := &documentspb.ExampleDocument{ValueCamelCased: bValue, ValueBytes1: bValue}
 	value, err = getStringValueByProperty("ValueCamelCased", doc)
 	assert.Nil(t, err)
-	assert.Equal(t, "Ag==", value)
+	assert.Equal(t, hexValue, value)
 	value, err = getStringValueByProperty("value_bytes1", doc)
 	assert.Nil(t, err)
-	assert.Equal(t, "Ag==", value)
+	assert.Equal(t, hexValue, value)
 }
 
 func TestCreateProof_standard(t *testing.T) {
 	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash})
-	err := doctree.AddLeavesFromDocument(&documentspb.FilledExampleDocument, &documentspb.ExampleDocumentSalts)
+	doc := documentspb.FilledExampleDocument
+	doc.ValueBytes1 = []byte("ValueBytes1")
+	err := doctree.AddLeavesFromDocument(&doc, &documentspb.ExampleDocumentSalts)
 	assert.Nil(t, err)
 
 	proof, err := doctree.CreateProof("valueA")
@@ -843,13 +847,23 @@ func TestCreateProof_standard(t *testing.T) {
 	assert.Equal(t, documentspb.FilledExampleDocument.ValueA, proof.Value)
 	assert.Equal(t, documentspb.ExampleDocumentSalts.ValueA, proof.Salt)
 
+	proofB, err := doctree.CreateProof("value_bytes1")
+	assert.Nil(t, err)
+	assert.Equal(t, "value_bytes1", proofB.Property)
+	assert.Equal(t, hex.EncodeToString(doc.ValueBytes1), proofB.Value)
+	assert.Equal(t, documentspb.ExampleDocumentSalts.ValueA, proofB.Salt)
+
 	fieldHash, err := CalculateHashForProofField(&proof, sha256Hash)
-	rootHash := []byte{0x93, 0x2b, 0x95, 0xba, 0x94, 0xf1, 0xea, 0xa2, 0x6b, 0x2e, 0xb8, 0xe0, 0xc8, 0xf7, 0x7f, 0x43, 0x42, 0x2f, 0x47, 0x75, 0xad, 0x2c, 0xfb, 0x70, 0xd2, 0x5, 0xff, 0x7c, 0x87, 0x11, 0x3b, 0xd7}
+	rootHash := []byte{0x14, 0xde, 0x5f, 0x1a, 0xb6, 0x4c, 0x27, 0x55, 0x77, 0x43, 0xe0, 0xfb, 0x82, 0xb0, 0x20, 0x93, 0x8, 0x8b, 0x8, 0x48, 0x32, 0x51, 0xe2, 0xe9, 0xed, 0x86, 0x94, 0x46, 0x5b, 0xe7, 0x82, 0x4f}
 	assert.Equal(t, rootHash, doctree.rootHash)
 	valid, err := ValidateProofHashes(fieldHash, proof.Hashes, rootHash, doctree.hash)
 	assert.True(t, valid)
 
 	valid, err = doctree.ValidateProof(&proof)
+	assert.True(t, valid)
+	assert.Nil(t, err)
+
+	valid, err = doctree.ValidateProof(&proofB)
 	assert.True(t, valid)
 	assert.Nil(t, err)
 

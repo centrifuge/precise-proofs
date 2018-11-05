@@ -129,7 +129,7 @@ package proofs
 import (
 	"bytes"
 	"crypto/rand"
-	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"hash"
@@ -182,7 +182,7 @@ type DocumentTree struct {
 func (doctree *DocumentTree) String() string {
 	return fmt.Sprintf(
 		"DocumentTree with Hash [%s] and [%d] leaves",
-		base64.StdEncoding.EncodeToString(doctree.RootHash()),
+		hex.EncodeToString(doctree.RootHash()),
 		len(doctree.merkleTree.Leaves()),
 	)
 }
@@ -407,7 +407,7 @@ func ValueToString(value interface{}) (s string, err error) {
 	case reflect.TypeOf(int64(0)):
 		return strconv.FormatInt(value.(int64), 10), nil
 	case reflect.TypeOf([]uint8{}):
-		return base64.StdEncoding.EncodeToString(value.([]uint8)), nil
+		return hex.EncodeToString(value.([]uint8)), nil
 	case reflect.TypeOf(timestamp.Timestamp{}):
 		v := value.(timestamp.Timestamp)
 		return ptypes.TimestampString(&v), nil
@@ -829,25 +829,6 @@ func getStringValueByProperty(prop string, message proto.Message) (value string,
 	}
 	value, err = ValueToString(valueInterface)
 	return
-}
-
-func getByteValueByProperty(prop string, message proto.Message) (value []byte, err error) {
-	val, err := getStringValueByProperty(prop, message)
-	if err != nil {
-		return value, err
-	}
-
-	value, err = base64.StdEncoding.DecodeString(val)
-	return value, err
-}
-
-func getIndexOfString(slice []string, match string) (index int, err error) {
-	for i, el := range slice {
-		if el == match {
-			return i, nil
-		}
-	}
-	return index, fmt.Errorf("getIndexOfString: No match found")
 }
 
 func getFieldOfStruct(obj interface{}, name string) (interface{}, error) {
