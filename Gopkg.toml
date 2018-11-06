@@ -41,6 +41,10 @@
   branch = "master"
   name = "github.com/xsleonard/go-merkle"
 
+[[constraint]]
+  name = "github.com/ethereum/go-ethereum"
+  version = "1.8.15"
+
 [prune]
   go-tests = true
   unused-packages = true
