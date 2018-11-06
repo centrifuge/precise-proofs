@@ -152,12 +152,12 @@ const DefaultSaltsLengthSuffix = "Length"
 
 type defaultValueEncoder struct{}
 
-func (valueEncoder *defaultValueEncoder) encodeToString(value []byte) string {
+func (valueEncoder *defaultValueEncoder) EncodeToString(value []byte) string {
 	return hexutil.Encode(value)
 }
 
 type ValueEncoder interface {
-	encodeToString([]byte) string
+	EncodeToString([]byte) string
 }
 
 // TreeOptions allows customizing the generation of the tree
@@ -189,11 +189,10 @@ type DocumentTree struct {
 }
 
 func (doctree *DocumentTree) String() string {
-	return fmt.Sprintf(
-		"DocumentTree with Hash [%s] and [%d] leaves",
-		doctree.valueEncoder.encodeToString(doctree.RootHash()),
-		len(doctree.merkleTree.Leaves()),
-	)
+	if doctree.valueEncoder == nil {
+		return fmt.Sprintf("DocumentTree with Hash [%x] and [%d] leaves", doctree.RootHash(), len(doctree.merkleTree.Leaves()))
+	}
+	return fmt.Sprintf("DocumentTree with Hash [%s] and [%d] leaves", doctree.valueEncoder.EncodeToString(doctree.RootHash()), len(doctree.merkleTree.Leaves()))
 }
 
 // NewDocumentTree returns an empty DocumentTree
@@ -519,7 +518,7 @@ func (f *messageFlattener) valueToString(value interface{}) (s string, err error
 	case reflect.TypeOf(int64(0)):
 		return strconv.FormatInt(value.(int64), 10), nil
 	case reflect.TypeOf([]uint8{}):
-		return f.valueEncoder.encodeToString(value.([]uint8)), nil
+		return f.valueEncoder.EncodeToString(value.([]uint8)), nil
 	case reflect.TypeOf(timestamp.Timestamp{}):
 		v := value.(timestamp.Timestamp)
 		return ptypes.TimestampString(&v), nil

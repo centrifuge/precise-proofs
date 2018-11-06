@@ -27,7 +27,7 @@ type UnsupportedType struct {
 
 type customEncoder struct{}
 
-func (valueEncoder *customEncoder) encodeToString(value []byte) string {
+func (valueEncoder *customEncoder) EncodeToString(value []byte) string {
 	return hex.EncodeToString(value)
 }
 
@@ -461,6 +461,16 @@ func BenchmarkCalculateProofNodeList(b *testing.B) {
 	}
 }
 
+func TestDocumentTree_ToStringNilEncoder(t *testing.T) {
+	doctree := &DocumentTree{}
+	assert.Equal(t,"DocumentTree with Hash [] and [0] leaves", doctree.String())
+}
+
+func TestDocumentTree_ToStringDefaultEncoder(t *testing.T) {
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash})
+	assert.Equal(t,"DocumentTree with Hash [0x] and [0] leaves", doctree.String())
+}
+
 func TestDocumentTree_Generate_twice(t *testing.T) {
 	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash})
 	err := doctree.AddLeavesFromDocument(&documentspb.LongDocumentExample, &documentspb.SaltedLongDocumentExample)
@@ -848,7 +858,7 @@ func TestCreateProof_standard_customEncoder(t *testing.T) {
 	proofB, err := doctree.CreateProof("value_bytes1")
 	assert.Nil(t, err)
 	assert.Equal(t, "value_bytes1", proofB.Property)
-	assert.Equal(t, encoder.encodeToString(doc.ValueBytes1), proofB.Value)
+	assert.Equal(t, encoder.EncodeToString(doc.ValueBytes1), proofB.Value)
 	assert.Equal(t, documentspb.ExampleDocumentSalts.ValueA, proofB.Salt)
 
 	fieldHash, err := CalculateHashForProofField(&proof, sha256Hash)
