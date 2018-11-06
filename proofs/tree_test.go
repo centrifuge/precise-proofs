@@ -26,6 +26,7 @@ type UnsupportedType struct {
 }
 
 type customEncoder struct{}
+
 func (valueEncoder *customEncoder) encodeToString(value []byte) string {
 	return hex.EncodeToString(value)
 }

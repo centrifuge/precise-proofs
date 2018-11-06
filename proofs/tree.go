@@ -138,6 +138,7 @@ import (
 	"strings"
 
 	"regexp"
+
 	"github.com/centrifuge/precise-proofs/proofs/proto"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/descriptor"
@@ -152,7 +153,8 @@ import (
 // customized with the SaltsLenghtSuffix TreeOption
 const DefaultSaltsLengthSuffix = "Length"
 
-type defaultValueEncoder struct {}
+type defaultValueEncoder struct{}
+
 func (valueEncoder *defaultValueEncoder) encodeToString(value []byte) string {
 	return hexutil.Encode(value)
 }
@@ -170,7 +172,7 @@ type TreeOptions struct {
 	// does not collide with potential field names of your own proto structs.
 	SaltsLengthSuffix string
 	Hash              hash.Hash
-	ValueEncoder			ValueEncoder
+	ValueEncoder      ValueEncoder
 }
 
 // DocumentTree is a helper object to create a merkleTree and proofs for fields in the document
@@ -186,7 +188,7 @@ type DocumentTree struct {
 	propertyList      []string
 	hash              hash.Hash
 	saltsLengthSuffix string
-	valueEncoder			ValueEncoder
+	valueEncoder      ValueEncoder
 }
 
 func (doctree *DocumentTree) String() string {
@@ -219,7 +221,7 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 		saltsLengthSuffix: saltsLengthSuffix,
 		leaves:            []LeafNode{},
 		hash:              proofOpts.Hash,
-		valueEncoder:			 valueEncoder,
+		valueEncoder:      valueEncoder,
 	}
 }
 
@@ -503,7 +505,7 @@ type messageFlattener struct {
 	propOrder         []string
 	saltsLengthSuffix string
 	hash              hash.Hash
-	valueEncoder			ValueEncoder
+	valueEncoder      ValueEncoder
 }
 
 // ValueToString takes any supported interface and returns a string representation of the value. This is used calculate
