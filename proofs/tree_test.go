@@ -111,32 +111,6 @@ func TestLeafNode_HashNode(t *testing.T) {
 
 }
 
-func TestNormalizeDottedProperty(t *testing.T) {
-	value := "valueA.valueB[0].valueC"
-	expected := "ValueA.ValueB[0].ValueC"
-	assert.Equal(t, expected, normalizeDottedProperty(value))
-
-	value = "value_a.value_b.valueC[4].value"
-	expected = "ValueA.ValueB.ValueC[4].Value"
-	assert.Equal(t, expected, normalizeDottedProperty(value))
-}
-
-func TestGetFieldOfStruct(t *testing.T) {
-	doc := &documentspb.FilledExampleDocument
-	value, err := getFieldOfStruct(doc, "ValueA")
-	assert.Nil(t, err)
-	assert.Equal(t, "Example", value.(string))
-
-	value, err = getFieldOfStruct(doc, "WrongField")
-	assert.NotNil(t, err)
-	assert.EqualError(t, err, "No such field: WrongField in obj")
-
-	wrongDoc := "wrong!"
-	value, err = getFieldOfStruct(wrongDoc, "ValueA")
-	assert.NotNil(t, err)
-	assert.EqualError(t, err, "getFieldOfStruct invoked with a non-struct interface")
-}
-
 func TestFlattenMessage(t *testing.T) {
 	message := documentspb.ExampleDocument{
 		ValueA: "Foo",

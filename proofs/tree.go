@@ -137,15 +137,12 @@ import (
 	"strconv"
 	"strings"
 
-	"regexp"
-
 	"github.com/centrifuge/precise-proofs/proofs/proto"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/descriptor"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/iancoleman/strcase"
 	"github.com/xsleonard/go-merkle"
 )
 
@@ -768,53 +765,6 @@ func FlattenMessage(message, messageSalts proto.Message, saltsLengthSuffix strin
 	return f.leaves, nil
 }
 
-// normalizeDottedProperty performs camel case conversion without removing slice characters ([])
-func normalizeDottedProperty(prop string) string {
-	arr := strings.Split(prop, ".")
-	for idx, key := range arr {
-		var propAux string
-		re := regexp.MustCompile(`(.*)(\[(.*)])`)
-		if re.MatchString(key) {
-			prefix := re.ReplaceAllString(key, "$1")
-			strIdx := re.ReplaceAllString(key, "$3")
-			propAux = fmt.Sprintf("%s[%s]", strcase.ToCamel(prefix), strIdx)
-		} else {
-			propAux = strcase.ToCamel(key)
-		}
-
-		if idx == 0 {
-			prop = fmt.Sprintf("%s", propAux)
-		} else {
-			prop = fmt.Sprintf("%s.%s", prop, propAux)
-		}
-	}
-	return prop
-}
-
-func getFieldOfStruct(obj interface{}, name string) (interface{}, error) {
-	if !hasValidType(obj, []reflect.Kind{reflect.Struct, reflect.Ptr}) {
-		return nil, errors.New("getFieldOfStruct invoked with a non-struct interface")
-	}
-
-	objValue := reflect.Indirect(reflect.ValueOf(obj))
-	field := objValue.FieldByName(name)
-	if !field.IsValid() {
-		return nil, fmt.Errorf("No such field: %s in obj", name)
-	}
-
-	return field.Interface(), nil
-}
-
-func hasValidType(obj interface{}, types []reflect.Kind) bool {
-	for _, t := range types {
-		if reflect.TypeOf(obj).Kind() == t {
-			return true
-		}
-	}
-
-	return false
-}
-
 // HashTwoValues concatenate two hashes to calculate hash out of the result. This is used in the merkleTree calculation code
 // as well as the validation code.
 func HashTwoValues(a []byte, b []byte, hashFunc hash.Hash) (hash []byte) {
@@ -832,15 +782,6 @@ func hashBytes(hashFunc hash.Hash, input []byte) []byte {
 		return []byte{}
 	}
 	return hashFunc.Sum(nil)
-}
-
-// po2 calculates 2 to the power of i
-func po2(i uint64) (r uint64) {
-	r = uint64(1)
-	for l := i; l > 0; l-- {
-		r = r * 2
-	}
-	return
 }
 
 type HashNode struct {
