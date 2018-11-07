@@ -152,10 +152,12 @@ const DefaultSaltsLengthSuffix = "Length"
 
 type defaultValueEncoder struct{}
 
+// EncodeToString encodes the bytes to string with 0x prefix
 func (valueEncoder *defaultValueEncoder) EncodeToString(value []byte) string {
 	return hexutil.Encode(value)
 }
 
+// ValueEncoder can be implemented by a type that can encode bytes to string
 type ValueEncoder interface {
 	EncodeToString([]byte) string
 }
@@ -207,7 +209,7 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 	if proofOpts.SaltsLengthSuffix != "" {
 		saltsLengthSuffix = proofOpts.SaltsLengthSuffix
 	}
-	var valueEncoder ValueEncoder = &defaultValueEncoder{}
+	var valueEncoder ValueEncoder = new(defaultValueEncoder)
 	if proofOpts.ValueEncoder != nil {
 		valueEncoder = proofOpts.ValueEncoder
 	}
