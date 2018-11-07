@@ -33,6 +33,20 @@ Above example would result in the following tree:
 Google's [protobuf](https://developers.google.com/protocol-buffers/docs/gotutorial) is a space efficient and fast format
 to serialize data in a portable way. It's easy to generate JSON out of
 
+## Binary fields encoding
+For `[]byte` fields the default encoding used for tree and proof generation is Hexadecimal using https://godoc.org/github.com/ethereum/go-ethereum/common/hexutil
+
+#### Customize value encoder:
+You can customize the encoder to use for field values:
+```
+type customEncoder struct{}
+func (valueEncoder *customEncoder) encodeToString(value []byte) string {
+	return hex.EncodeToString(value)
+}
+
+doctree := NewDocumentTree(TreeOptions{ValueEncoder: &customEncoder{}})
+```
+
 ## Usage:
 
 See below code sample (`examples/simple.go`) for a usage example. For detailed usage, check godocs.

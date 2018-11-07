@@ -129,7 +129,6 @@ package proofs
 import (
 	"bytes"
 	"crypto/rand"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"hash"
@@ -138,20 +137,30 @@ import (
 	"strconv"
 	"strings"
 
-	"regexp"
-
 	"github.com/centrifuge/precise-proofs/proofs/proto"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/descriptor"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
-	"github.com/iancoleman/strcase"
 	"github.com/xsleonard/go-merkle"
 )
 
 // DefaultSaltsLengthSuffix is the suffix used to store the length of slices (repeated) fields in the tree. It can be
 // customized with the SaltsLenghtSuffix TreeOption
 const DefaultSaltsLengthSuffix = "Length"
+
+type defaultValueEncoder struct{}
+
+// EncodeToString encodes the bytes to string with 0x prefix
+func (valueEncoder *defaultValueEncoder) EncodeToString(value []byte) string {
+	return hexutil.Encode(value)
+}
+
+// ValueEncoder can be implemented by a type that can encode bytes to string
+type ValueEncoder interface {
+	EncodeToString([]byte) string
+}
 
 // TreeOptions allows customizing the generation of the tree
 type TreeOptions struct {
@@ -162,6 +171,7 @@ type TreeOptions struct {
 	// does not collide with potential field names of your own proto structs.
 	SaltsLengthSuffix string
 	Hash              hash.Hash
+	ValueEncoder      ValueEncoder
 }
 
 // DocumentTree is a helper object to create a merkleTree and proofs for fields in the document
@@ -177,14 +187,14 @@ type DocumentTree struct {
 	propertyList      []string
 	hash              hash.Hash
 	saltsLengthSuffix string
+	valueEncoder      ValueEncoder
 }
 
 func (doctree *DocumentTree) String() string {
-	return fmt.Sprintf(
-		"DocumentTree with Hash [%s] and [%d] leaves",
-		hex.EncodeToString(doctree.RootHash()),
-		len(doctree.merkleTree.Leaves()),
-	)
+	if doctree.valueEncoder == nil {
+		return fmt.Sprintf("DocumentTree with Hash [%x] and [%d] leaves", doctree.RootHash(), len(doctree.merkleTree.Leaves()))
+	}
+	return fmt.Sprintf("DocumentTree with Hash [%s] and [%d] leaves", doctree.valueEncoder.EncodeToString(doctree.RootHash()), len(doctree.merkleTree.Leaves()))
 }
 
 // NewDocumentTree returns an empty DocumentTree
@@ -199,12 +209,17 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 	if proofOpts.SaltsLengthSuffix != "" {
 		saltsLengthSuffix = proofOpts.SaltsLengthSuffix
 	}
+	var valueEncoder ValueEncoder = new(defaultValueEncoder)
+	if proofOpts.ValueEncoder != nil {
+		valueEncoder = proofOpts.ValueEncoder
+	}
 	return DocumentTree{
 		propertyList:      []string{},
 		merkleTree:        merkle.NewTreeWithOpts(opts),
 		saltsLengthSuffix: saltsLengthSuffix,
 		leaves:            []LeafNode{},
 		hash:              proofOpts.Hash,
+		valueEncoder:      valueEncoder,
 	}
 }
 
@@ -237,7 +252,7 @@ func (doctree *DocumentTree) AddLeavesFromDocument(document, salts proto.Message
 	if doctree.hash == nil {
 		return fmt.Errorf("hash is not set")
 	}
-	leaves, err := FlattenMessage(document, salts, doctree.saltsLengthSuffix, doctree.hash)
+	leaves, err := FlattenMessage(document, salts, doctree.saltsLengthSuffix, doctree.hash, doctree.valueEncoder)
 	if err != nil {
 		return err
 	}
@@ -393,29 +408,6 @@ func dereferencePointer(value interface{}) interface{} {
 	return reflectValue.Interface()
 }
 
-// ValueToString takes any supported interface and returns a string representation of the value. This is used calculate
-// the hash and to create the proof object.
-func ValueToString(value interface{}) (s string, err error) {
-	value = dereferencePointer(value)
-	if value == nil {
-		return "", nil
-	}
-
-	switch t := reflect.TypeOf(value); t {
-	case reflect.TypeOf(""):
-		return value.(string), nil
-	case reflect.TypeOf(int64(0)):
-		return strconv.FormatInt(value.(int64), 10), nil
-	case reflect.TypeOf([]uint8{}):
-		return hex.EncodeToString(value.([]uint8)), nil
-	case reflect.TypeOf(timestamp.Timestamp{}):
-		v := value.(timestamp.Timestamp)
-		return ptypes.TimestampString(&v), nil
-	default:
-		return "", errors.New(fmt.Sprintf("Got unsupported value: %t", t))
-	}
-}
-
 // LeafNode represents a field that can be hashed to create a merkle tree
 type LeafNode struct {
 	Property string
@@ -511,6 +503,30 @@ type messageFlattener struct {
 	propOrder         []string
 	saltsLengthSuffix string
 	hash              hash.Hash
+	valueEncoder      ValueEncoder
+}
+
+// ValueToString takes any supported interface and returns a string representation of the value. This is used calculate
+// the hash and to create the proof object.
+func (f *messageFlattener) valueToString(value interface{}) (s string, err error) {
+	value = dereferencePointer(value)
+	if value == nil {
+		return "", nil
+	}
+
+	switch t := reflect.TypeOf(value); t {
+	case reflect.TypeOf(""):
+		return value.(string), nil
+	case reflect.TypeOf(int64(0)):
+		return strconv.FormatInt(value.(int64), 10), nil
+	case reflect.TypeOf([]uint8{}):
+		return f.valueEncoder.EncodeToString(value.([]uint8)), nil
+	case reflect.TypeOf(timestamp.Timestamp{}):
+		v := value.(timestamp.Timestamp)
+		return ptypes.TimestampString(&v), nil
+	default:
+		return "", errors.New(fmt.Sprintf("Got unsupported value: %t", t))
+	}
 }
 
 func (f *messageFlattener) generateLeaves(propPrefix string, fcurrent *messageFlattener) (err error) {
@@ -620,14 +636,14 @@ func (f *messageFlattener) handleStruct(propPrefix string, prop string, valueFie
 	if valueType == reflect.TypeOf(timestamp.Timestamp{}) { //Specific case where we support serialization for a non primitive complex struct
 		err = f.handleAppendLeaf(propPrefix, prop, valueField.Interface(), salts.([]byte))
 	} else {
-		fchild := NewMessageFlattener(valueField.Interface().(proto.Message), salts.(proto.Message), f.saltsLengthSuffix, f.hash)
+		fchild := newMessageFlattener(valueField.Interface().(proto.Message), salts.(proto.Message), f.saltsLengthSuffix, f.hash, f.valueEncoder)
 		err = f.generateLeaves(fmt.Sprintf("%s%s.", propPrefix, prop), fchild)
 	}
 	return
 }
 
 func (f *messageFlattener) handleAppendLeaf(propPrefix string, prop string, value interface{}, salts interface{}) (err error) {
-	valueString, err := ValueToString(value)
+	valueString, err := f.valueToString(value)
 	if err != nil {
 		return err
 	}
@@ -717,7 +733,7 @@ func (f *messageFlattener) parseExtensions() (err error) {
 }
 
 // NewMessageFlattener instantiates a flattener for the given document
-func NewMessageFlattener(message, messageSalts proto.Message, saltsLengthSuffix string, hashFn hash.Hash) *messageFlattener {
+func newMessageFlattener(message, messageSalts proto.Message, saltsLengthSuffix string, hashFn hash.Hash, valueEncoder ValueEncoder) *messageFlattener {
 	f := messageFlattener{message: message, salts: messageSalts}
 	f.leaves = LeafList{}
 	f.messageValue = reflect.Indirect(reflect.ValueOf(message))
@@ -727,6 +743,7 @@ func NewMessageFlattener(message, messageSalts proto.Message, saltsLengthSuffix 
 	f.hashedFields = make(map[string]struct{})
 	f.saltsLengthSuffix = saltsLengthSuffix
 	f.hash = hashFn
+	f.valueEncoder = valueEncoder
 	return &f
 }
 
@@ -734,8 +751,8 @@ func NewMessageFlattener(message, messageSalts proto.Message, saltsLengthSuffix 
 // of nodes.
 //
 // The fields are sorted lexicographically by their protobuf field names.
-func FlattenMessage(message, messageSalts proto.Message, saltsLengthSuffix string, hashFn hash.Hash) (leaves []LeafNode, err error) {
-	f := NewMessageFlattener(message, messageSalts, saltsLengthSuffix, hashFn)
+func FlattenMessage(message, messageSalts proto.Message, saltsLengthSuffix string, hashFn hash.Hash, valueEncoder ValueEncoder) (leaves []LeafNode, err error) {
+	f := newMessageFlattener(message, messageSalts, saltsLengthSuffix, hashFn, valueEncoder)
 
 	err = f.generateLeaves("", f)
 	if err != nil {
@@ -747,112 +764,6 @@ func FlattenMessage(message, messageSalts proto.Message, saltsLengthSuffix strin
 		return []LeafNode{}, err
 	}
 	return f.leaves, nil
-}
-
-// normalizeDottedProperty performs camel case conversion without removing slice characters ([])
-func normalizeDottedProperty(prop string) string {
-	arr := strings.Split(prop, ".")
-	for idx, key := range arr {
-		var propAux string
-		re := regexp.MustCompile(`(.*)(\[(.*)])`)
-		if re.MatchString(key) {
-			prefix := re.ReplaceAllString(key, "$1")
-			strIdx := re.ReplaceAllString(key, "$3")
-			propAux = fmt.Sprintf("%s[%s]", strcase.ToCamel(prefix), strIdx)
-		} else {
-			propAux = strcase.ToCamel(key)
-		}
-
-		if idx == 0 {
-			prop = fmt.Sprintf("%s", propAux)
-		} else {
-			prop = fmt.Sprintf("%s.%s", prop, propAux)
-		}
-	}
-	return prop
-}
-
-// getDottedValueByProperty takes a dotted property and retrieves the interface value of an object
-//
-// If field along the path does not exists, it returns error
-//
-// If value is not set, returns a nil value
-//
-// It supports nested fields and slices
-func getDottedValueByProperty(prop string, value interface{}) (interface{}, error) {
-	prop = normalizeDottedProperty(prop)
-	if reflect.TypeOf(value).Kind() != reflect.Struct && reflect.TypeOf(value).Kind() != reflect.Ptr {
-		return nil, errors.New("non-struct interface not supported")
-	}
-	arr := strings.Split(prop, ".")
-	value = dereferencePointer(value)
-	var err error
-	for _, key := range arr {
-		re := regexp.MustCompile(`(.*)(\[(.*)])`)
-		if re.MatchString(key) {
-			prefix := re.ReplaceAllString(key, "$1")
-			strIdx := re.ReplaceAllString(key, "$3")
-			idx, err := strconv.Atoi(strIdx)
-			if err != nil {
-				return nil, err
-			}
-			value, err = getFieldOfStruct(value, prefix)
-			if err != nil {
-				return nil, err
-			}
-			if reflect.ValueOf(value).Len() <= idx {
-				return nil, errors.New("Index out of bounds for slice element")
-			}
-			value = reflect.ValueOf(value).Index(idx).Interface()
-		} else {
-			value, err = getFieldOfStruct(value, key)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		if value == nil {
-			return nil, nil
-		}
-
-	}
-
-	return value, nil
-}
-
-// getStringValueByProperty returns the value of a struct. It converts the value to a string representation.
-func getStringValueByProperty(prop string, message proto.Message) (value string, err error) {
-	var valueInterface interface{}
-	valueInterface, err = getDottedValueByProperty(prop, message)
-	if err != nil {
-		return
-	}
-	value, err = ValueToString(valueInterface)
-	return
-}
-
-func getFieldOfStruct(obj interface{}, name string) (interface{}, error) {
-	if !hasValidType(obj, []reflect.Kind{reflect.Struct, reflect.Ptr}) {
-		return nil, errors.New("getFieldOfStruct invoked with a non-struct interface")
-	}
-
-	objValue := reflect.Indirect(reflect.ValueOf(obj))
-	field := objValue.FieldByName(name)
-	if !field.IsValid() {
-		return nil, fmt.Errorf("No such field: %s in obj", name)
-	}
-
-	return field.Interface(), nil
-}
-
-func hasValidType(obj interface{}, types []reflect.Kind) bool {
-	for _, t := range types {
-		if reflect.TypeOf(obj).Kind() == t {
-			return true
-		}
-	}
-
-	return false
 }
 
 // HashTwoValues concatenate two hashes to calculate hash out of the result. This is used in the merkleTree calculation code
@@ -872,15 +783,6 @@ func hashBytes(hashFunc hash.Hash, input []byte) []byte {
 		return []byte{}
 	}
 	return hashFunc.Sum(nil)
-}
-
-// po2 calculates 2 to the power of i
-func po2(i uint64) (r uint64) {
-	r = uint64(1)
-	for l := i; l > 0; l-- {
-		r = r * 2
-	}
-	return
 }
 
 type HashNode struct {
