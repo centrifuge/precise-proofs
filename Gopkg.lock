@@ -14,8 +14,8 @@
   name = "github.com/ethereum/go-ethereum"
   packages = ["common/hexutil"]
   pruneopts = "UT"
-  revision = "8bbe72075e4e16442c4e28d999edee12e294329e"
-  version = "v1.8.17"
+  revision = "e024c16f34c6028060b645efae1d6258e442442a"
+  source = "github.com/centrifuge/go-ethereum"
 
 [[projects]]
   digest = "1:b6192c4aa4f4d8764d1e00cf0bbf6ed04dee9a0318a3f367fb5fd82273eae4d9"
@@ -32,14 +32,6 @@
   pruneopts = "UT"
   revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
   version = "v1.1.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:32a62f9393d4b982aae329c535e81e77146924f96ef8b069e4d16c92e22db147"
-  name = "github.com/iancoleman/strcase"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "90d371a664d668ca3e61d3ddddf1916662959f11"
 
 [[projects]]
   digest = "1:0028cb19b2e4c3112225cd871870f2d9cf49b9b4276531f03438a88e94be86fe"
@@ -75,7 +67,6 @@
     "github.com/golang/protobuf/protoc-gen-go/descriptor",
     "github.com/golang/protobuf/ptypes",
     "github.com/golang/protobuf/ptypes/timestamp",
-    "github.com/iancoleman/strcase",
     "github.com/stretchr/testify/assert",
     "github.com/xsleonard/go-merkle",
   ]
