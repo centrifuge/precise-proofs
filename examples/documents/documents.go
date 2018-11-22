@@ -3,8 +3,9 @@ package documentspb
 //go:generate protoc -I $PROTOBUF/src/ -I. -I $GOPATH/src --go_out=$GOPATH/src/ examples.proto
 
 import (
-	"github.com/golang/protobuf/ptypes"
 	"time"
+
+	"github.com/golang/protobuf/ptypes"
 )
 
 var salt []byte = []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225}
@@ -39,27 +40,27 @@ func NewAllFieldTypes() *AllFieldTypes {
 	return &m
 }
 
-var ExampleFilledRepeatedDocument = SimpleRepeatedDocument {
+var ExampleFilledRepeatedDocument = SimpleRepeatedDocument{
 	ValueA: "ValueAA",
 	ValueB: "ValueBB",
 	ValueC: []string{"ValueCA", "ValueCB"},
 }
 
-var ExampleSaltedRepeatedDocument = SaltedSimpleRepeatedDocument {
-	ValueA: salt,
-	ValueB: salt,
-	ValueC: [][]byte{salt, salt},
+var ExampleSaltedRepeatedDocument = SaltedSimpleRepeatedDocument{
+	ValueA:       salt,
+	ValueB:       salt,
+	ValueC:       [][]byte{salt, salt},
 	ValueCLength: salt,
 }
 
 var ExampleFilledTwoLevelRepeatedDocument = TwoLevelRepeatedDocument{
 	ValueA: "ValueAA",
-	ValueB: []*RepeatedItem{{ValueA: []*SimpleItem{{ValueA:"ValueBAAA"},{ValueA: "ValueBAAB"}}, ValueB: "ValueBBA"}},
+	ValueB: []*RepeatedItem{{ValueA: []*SimpleItem{{ValueA: "ValueBAAA"}, {ValueA: "ValueBAAB"}}, ValueB: "ValueBBA"}},
 }
 
 var ExampleSaltedTwoLevelRepeatedDocument = SaltedTwoLevelRepeatedDocument{
-	ValueA: salt,
-	ValueB: []*SaltedRepeatedItem{{ValueA: []*SaltedSimpleItem{{ValueA: salt},{ValueA: salt}}, ValueALength: salt,ValueB: salt}},
+	ValueA:       salt,
+	ValueB:       []*SaltedRepeatedItem{{ValueA: []*SaltedSimpleItem{{ValueA: salt}, {ValueA: salt}}, ValueALength: salt, ValueB: salt}},
 	ValueBLength: salt,
 }
 
@@ -71,9 +72,9 @@ var ExampleFilledNestedRepeatedDocument = NestedRepeatedDocument{
 }
 
 var ExampleSaltedNestedRepeatedDocument = SaltedNestedRepeatedDocument{
-	ValueA: salt,
-	ValueB: salt,
-	ValueC: []*SaltedSimpleItem{{ValueA:salt}, {ValueA:salt}},
+	ValueA:       salt,
+	ValueB:       salt,
+	ValueC:       []*SaltedSimpleItem{{ValueA: salt}, {ValueA: salt}},
 	ValueCLength: salt,
-	ValueD: &SaltedTwoLevelItem{ValueA:&SaltedSimpleItem{ValueA:salt}, ValueB: salt},
+	ValueD:       &SaltedTwoLevelItem{ValueA: &SaltedSimpleItem{ValueA: salt}, ValueB: salt},
 }

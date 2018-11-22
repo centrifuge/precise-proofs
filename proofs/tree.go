@@ -120,7 +120,9 @@ with the SaltsLengthSuffix option.
 	  bytes fieldALength = 2;
 	}
 
+Custom Document Prefix
 
+Library supports adding a prefix to the document path by setting up TreeOption.ParentPrefix to the desired value.
 
 
 */
@@ -172,6 +174,8 @@ type TreeOptions struct {
 	SaltsLengthSuffix string
 	Hash              hash.Hash
 	ValueEncoder      ValueEncoder
+	// ParentPrefix defines an arbitrary prefix to prepend to the parent, so all fields are prepended with it
+	ParentPrefix string
 }
 
 // DocumentTree is a helper object to create a merkleTree and proofs for fields in the document
@@ -188,6 +192,7 @@ type DocumentTree struct {
 	hash              hash.Hash
 	saltsLengthSuffix string
 	valueEncoder      ValueEncoder
+	parentPrefix      string
 }
 
 func (doctree *DocumentTree) String() string {
@@ -220,6 +225,7 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 		leaves:            []LeafNode{},
 		hash:              proofOpts.Hash,
 		valueEncoder:      valueEncoder,
+		parentPrefix:      proofOpts.ParentPrefix,
 	}
 }
 
@@ -252,7 +258,7 @@ func (doctree *DocumentTree) AddLeavesFromDocument(document, salts proto.Message
 	if doctree.hash == nil {
 		return fmt.Errorf("hash is not set")
 	}
-	leaves, err := FlattenMessage(document, salts, doctree.saltsLengthSuffix, doctree.hash, doctree.valueEncoder)
+	leaves, err := FlattenMessage(document, salts, doctree.saltsLengthSuffix, doctree.hash, doctree.valueEncoder, doctree.parentPrefix)
 	if err != nil {
 		return err
 	}
@@ -747,14 +753,24 @@ func newMessageFlattener(message, messageSalts proto.Message, saltsLengthSuffix 
 	return &f
 }
 
+func ensurePrefixTrailingDot(prefix string) string {
+	out := prefix
+	if out != "" {
+		if isDot := out[len(out)-1]; isDot != '.' {
+			out = out + "."
+		}
+	}
+	return out
+}
+
 // FlattenMessage takes a protobuf message struct and flattens it into an array
 // of nodes.
 //
 // The fields are sorted lexicographically by their protobuf field names.
-func FlattenMessage(message, messageSalts proto.Message, saltsLengthSuffix string, hashFn hash.Hash, valueEncoder ValueEncoder) (leaves []LeafNode, err error) {
+func FlattenMessage(message, messageSalts proto.Message, saltsLengthSuffix string, hashFn hash.Hash, valueEncoder ValueEncoder, parentPrefix string) (leaves []LeafNode, err error) {
 	f := newMessageFlattener(message, messageSalts, saltsLengthSuffix, hashFn, valueEncoder)
 
-	err = f.generateLeaves("", f)
+	err = f.generateLeaves(ensurePrefixTrailingDot(parentPrefix), f)
 	if err != nil {
 		return
 	}
