@@ -754,13 +754,10 @@ func newMessageFlattener(message, messageSalts proto.Message, saltsLengthSuffix 
 }
 
 func ensurePrefixTrailingDot(prefix string) string {
-	out := prefix
-	if out != "" {
-		if isDot := out[len(out)-1]; isDot != '.' {
-			out = out + "."
-		}
+	if prefix != "" && !strings.HasSuffix(prefix, ".") {
+		prefix = prefix + "."
 	}
-	return out
+	return prefix
 }
 
 // FlattenMessage takes a protobuf message struct and flattens it into an array
