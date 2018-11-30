@@ -20,7 +20,7 @@ message MerkleHash {
 }
 
 message Proof {
-  string property = 1;
+  bytes property = 1;
   string value = 2;
   bytes salt = 3;
   // hash is filled if value & salt are not available
