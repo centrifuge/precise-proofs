@@ -36,6 +36,7 @@ func (pn FieldNamePath) AsBytes() []byte {
 // LiteralPropName is a literal encoding of a PropertyName. This is useful if you have a []byte used for a hash, but don't know how it was generated
 type LiteralPropName []byte
 
+// AsBytes simply returns the bytes used to construct the LiteralPropName
 func (pn LiteralPropName) AsBytes() []byte {
 	return pn
 }

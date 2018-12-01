@@ -93,7 +93,7 @@ func (n Property) LengthProp() Property {
 	}
 }
 
-// ExtractTags takes the protobuf tag string of a struct field and returns the field name and number
+// ExtractFieldTags takes the protobuf tag string of a struct field and returns the field name and number
 func ExtractFieldTags(protobufTag string) (string, FieldNum, error) {
 	var err error
 
