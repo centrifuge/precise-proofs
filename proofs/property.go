@@ -12,15 +12,15 @@ import (
 type Property struct {
 	Parent     *Property
 	Text       string
-	Num        *FieldNum
+	Nums       []FieldNum
 	NameFormat string
 }
 
 // NewProperty return a new root property
-func NewProperty(name string, num FieldNum) Property {
+func NewProperty(name string, nums ...FieldNum) Property {
     return Property {
         Text: name,
-        Num: &num,
+        Nums: nums,
     }
 }
 
@@ -54,10 +54,7 @@ func (n Property) CompactName() (pn FieldNumPath) {
 	if n.Parent != nil {
 		pn = append(pn, n.Parent.CompactName()...)
 	}
-	if n.Num != nil {
-        pn = append(pn, *n.Num)
-	}
-    return pn
+    return append(pn, n.Nums...)
 }
 
 // FieldProp returns a child Property representing a field of a struct
@@ -82,7 +79,7 @@ func (n Property) ElemProp(i FieldNum) Property {
 	return Property{
 		Parent:     &n,
 		Text:       fmt.Sprintf("%d", i),
-		Num:        &i,
+		Nums:       []FieldNum{i},
 		NameFormat: SliceElemFormat,
 	}
 }
