@@ -548,11 +548,17 @@ func (f *messageFlattener) generateLeaves(parentProp *Property, fcurrent *messag
 			continue
 		}
 
-		tag := reflectValueFieldType.Tag.Get("protobuf")
-		prop, err1 := parentProp.FieldPropFromTag(tag)
+		name, num, err1 := ExtractFieldTags(reflectValueFieldType.Tag.Get("protobuf"))
 		if err1 != nil {
 			return err1
 		}
+
+        var prop Property
+        if parentProp == nil {
+            prop = NewProperty(name, num)
+        } else {
+            prop = parentProp.FieldProp(name, num)
+        }
 
 		// Check if the field has an exclude_from_tree option and skip it
 		if _, ok := fcurrent.excludedFields[prop.Text]; ok {

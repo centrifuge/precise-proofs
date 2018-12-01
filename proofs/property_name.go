@@ -16,10 +16,10 @@ type FieldNumPath []FieldNum
 
 // AsBytes encodes a FieldNumPath using big endian encoding
 func (pn FieldNumPath) AsBytes() []byte {
-    bs := make([]byte, binary.Size(pn))
-    buf := bytes.NewBuffer(bs)
+    buf := new(bytes.Buffer)
     binary.Write(buf, binary.BigEndian, pn)
-    return bs
+    fmt.Println(pn, "as bytes is", buf.Bytes())
+    return buf.Bytes()
 }
 
 func (pn FieldNumPath) String() string {

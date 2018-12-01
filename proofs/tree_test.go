@@ -102,7 +102,7 @@ func TestLeafNode_HashNode(t *testing.T) {
     intLeaf.Hash = nil
     err = intLeaf.HashNode(h, true)
 	assert.Nil(t, err)
-	expectedHash = []byte{0xdb, 0x6e, 0xdf, 0x16, 0x3a, 0x58, 0x44, 0x44, 0x9e, 0x1d, 0x2b, 0x6b, 0xc7, 0x61, 0xb, 0x57, 0x2b, 0x90, 0x82, 0x64, 0x96, 0xc3, 0x45, 0x6e, 0x2c, 0xc7, 0x18, 0xe1, 0x90, 0xc9, 0xed, 0xe4}
+	expectedHash = []byte{0xbd, 0x93, 0xa8, 0x6, 0x36, 0x12, 0x37, 0xc1, 0xf1, 0xc9, 0xb4, 0xbc, 0xb5, 0x82, 0x4, 0x87, 0xb8, 0x5b, 0x8b, 0xeb, 0xa0, 0x77, 0x38, 0x66, 0xbc, 0xdf, 0x12, 0xd2, 0x4b, 0x1, 0xc0, 0x39}
 	assert.Equal(t, expectedHash, intLeaf.Hash)
 
 	// Hashing again should fail because intLeaf.Hash is filled
@@ -319,7 +319,15 @@ func TestFlattenMessageFromAlreadyFilledSalts(t *testing.T) {
 	for _, leaf := range leaves {
 		propOrder = append(propOrder, leaf.Property)
 	}
-	assert.Equal(t, []string{"valueA", "valueB", "valueC.length", "valueC[0].valueA", "valueC[1].valueA", "valueD.valueA.valueA", "valueD.valueB"}, propOrder)
+	assert.Equal(t, []Property{
+        NewProperty("valueA", 1),
+        NewProperty("valueB", 2),
+        NewProperty("valueC", 3).LengthProp(),
+        NewProperty("valueC", 3).ElemProp(0).FieldProp("valueA", 1),
+        NewProperty("valueC", 3).ElemProp(1).FieldProp("valueA", 1),
+        NewProperty("valueD", 4).FieldProp("valueA", 1).FieldProp("valueA", 1),
+        NewProperty("valueD", 4).FieldProp("valueB", 2),
+    }, propOrder)
 }
 
 func TestTree_Generate(t *testing.T) {
