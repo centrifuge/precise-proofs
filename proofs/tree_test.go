@@ -85,9 +85,9 @@ func TestConcatValues(t *testing.T) {
 }
 
 func TestLeafNode_HashNode(t *testing.T) {
-    prop := NewProperty("fieldName", 42)
+	prop := NewProperty("fieldName", 42)
 	intLeaf := LeafNode{
-        Property: prop,
+		Property: prop,
 		Value:    strconv.FormatInt(int64(42), 10),
 		Salt:     testSalt,
 	}
@@ -98,9 +98,9 @@ func TestLeafNode_HashNode(t *testing.T) {
 	expectedHash := []byte{0x3f, 0xdc, 0x3e, 0xc3, 0x52, 0xc7, 0xa3, 0xc5, 0xe4, 0x6e, 0x2c, 0x4b, 0xa6, 0x16, 0x34, 0x6, 0x18, 0x25, 0x9a, 0x5a, 0x50, 0x9e, 0x94, 0x25, 0xf8, 0x9a, 0x45, 0x25, 0x89, 0x6b, 0x1b, 0xb8}
 	assert.Equal(t, expectedHash, intLeaf.Hash)
 
-    h.Reset()
-    intLeaf.Hash = nil
-    err = intLeaf.HashNode(h, true)
+	h.Reset()
+	intLeaf.Hash = nil
+	err = intLeaf.HashNode(h, true)
 	assert.Nil(t, err)
 	expectedHash = []byte{0xbd, 0x93, 0xa8, 0x6, 0x36, 0x12, 0x37, 0xc1, 0xf1, 0xc9, 0xb4, 0xbc, 0xb5, 0x82, 0x4, 0x87, 0xb8, 0x5b, 0x8b, 0xeb, 0xa0, 0x77, 0x38, 0x66, 0xbc, 0xdf, 0x12, 0xd2, 0x4b, 0x1, 0xc0, 0x39}
 	assert.Equal(t, expectedHash, intLeaf.Hash)
@@ -144,15 +144,15 @@ func TestFlattenMessage(t *testing.T) {
 		propOrder = append(propOrder, leaf.Property)
 	}
 	assert.Equal(t, []Property{
-        NewProperty("ValueCamelCased", 6),
-        NewProperty("value1", 3),
-        NewProperty("value2", 4),
-        NewProperty("valueA", 1),
-        NewProperty("valueB", 2),
-        NewProperty("value_bytes1", 5),
-        NewProperty("value_not_hashed", 9),
-        NewProperty("value_not_ignored", 7),
-    }, propOrder)
+		NewProperty("ValueCamelCased", 6),
+		NewProperty("value1", 3),
+		NewProperty("value2", 4),
+		NewProperty("valueA", 1),
+		NewProperty("valueB", 2),
+		NewProperty("value_bytes1", 5),
+		NewProperty("value_not_hashed", 9),
+		NewProperty("value_not_ignored", 7),
+	}, propOrder)
 	f := &messageFlattener{valueEncoder: &defaultValueEncoder{}}
 	v, _ := f.valueToString("Foo")
 
@@ -162,10 +162,10 @@ func TestFlattenMessage(t *testing.T) {
 	leaves[3].HashNode(sha256Hash, true)
 	assert.Equal(t, expectedHash[:], leaves[3].Hash)
 
-    sha256Hash.Reset()
-    leaves[3].Hash = nil
+	sha256Hash.Reset()
+	leaves[3].Hash = nil
 
-	expectedPayload = append([]byte{0,0,0,0,0,0,0,1}, v...)
+	expectedPayload = append([]byte{0, 0, 0, 0, 0, 0, 0, 1}, v...)
 	expectedPayload = append(expectedPayload, messageSalts.ValueA[:]...)
 	leaves[3].HashNode(sha256Hash, false)
 	assert.Equal(t, expectedHash[:], leaves[3].Hash)
@@ -185,7 +185,7 @@ func TestFlattenMessageWithPrefix(t *testing.T) {
 		ValueCamelCased: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		ValueNotIgnored: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 	}
-    parentProp := NewProperty("doc", 42)
+	parentProp := NewProperty("doc", 42)
 	leaves, err := FlattenMessage(&message, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, &parentProp)
 	assert.Nil(t, err)
 	assert.Equal(t, 8, len(leaves))
@@ -195,15 +195,15 @@ func TestFlattenMessageWithPrefix(t *testing.T) {
 		propOrder = append(propOrder, leaf.Property)
 	}
 	assert.Equal(t, []Property{
-        parentProp.FieldProp("ValueCamelCased", 6),
-        parentProp.FieldProp("value1", 3),
-        parentProp.FieldProp("value2", 4),
-        parentProp.FieldProp("valueA", 1),
-        parentProp.FieldProp("valueB", 2),
-        parentProp.FieldProp("value_bytes1", 5),
-        parentProp.FieldProp("value_not_hashed", 9),
-        parentProp.FieldProp("value_not_ignored", 7),
-    }, propOrder)
+		parentProp.FieldProp("ValueCamelCased", 6),
+		parentProp.FieldProp("value1", 3),
+		parentProp.FieldProp("value2", 4),
+		parentProp.FieldProp("valueA", 1),
+		parentProp.FieldProp("valueB", 2),
+		parentProp.FieldProp("value_bytes1", 5),
+		parentProp.FieldProp("value_not_hashed", 9),
+		parentProp.FieldProp("value_not_ignored", 7),
+	}, propOrder)
 	f := &messageFlattener{valueEncoder: &defaultValueEncoder{}}
 	v, _ := f.valueToString("Foo")
 
@@ -214,10 +214,10 @@ func TestFlattenMessageWithPrefix(t *testing.T) {
 	leaves[3].HashNode(sha256Hash, false)
 	assert.Equal(t, expectedHash[:], leaves[3].Hash)
 
-    sha256Hash.Reset()
-    leaves[3].Hash = nil
+	sha256Hash.Reset()
+	leaves[3].Hash = nil
 
-	expectedPayload = append([]byte{0,0,0,0,0,0,0,42,0,0,0,0,0,0,0,1}, v...)
+	expectedPayload = append([]byte{0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0, 1}, v...)
 	expectedPayload = append(expectedPayload, messageSalts.ValueA[:]...)
 	expectedHash = sha256.Sum256(expectedPayload)
 
@@ -237,9 +237,9 @@ func TestFlattenMessage_AllFieldTypes(t *testing.T) {
 		propOrder = append(propOrder, leaf.Property)
 	}
 	assert.Equal(t, []Property{
-        NewProperty("string_value", 1),
-        NewProperty("time_stamp_value", 2),
-    }, propOrder)
+		NewProperty("string_value", 1),
+		NewProperty("time_stamp_value", 2),
+	}, propOrder)
 	assert.Nil(t, err)
 
 }
@@ -261,15 +261,15 @@ func TestFlattenMessage_HashedField(t *testing.T) {
 		propOrder = append(propOrder, leaf.Property)
 	}
 	assert.Equal(t, []Property{
-	    NewProperty("ValueCamelCased", 6),
-        NewProperty("value1", 3),
-        NewProperty("value2", 4),
-        NewProperty("valueA", 1),
-        NewProperty("valueB", 2),
-        NewProperty("value_bytes1", 5),
-        NewProperty("value_not_hashed", 9),
-        NewProperty("value_not_ignored", 7),
-    }, propOrder)
+		NewProperty("ValueCamelCased", 6),
+		NewProperty("value1", 3),
+		NewProperty("value2", 4),
+		NewProperty("valueA", 1),
+		NewProperty("valueB", 2),
+		NewProperty("value_bytes1", 5),
+		NewProperty("value_not_hashed", 9),
+		NewProperty("value_not_ignored", 7),
+	}, propOrder)
 	assert.Nil(t, err)
 	assert.Equal(t, leaves[6].Hash, foobarHash[:])
 	assert.Equal(t, leaves[6].Value, "")
@@ -292,7 +292,7 @@ func TestFlattenMessageFromAutoFillSalts(t *testing.T) {
 	assert.NotNil(t, exampleFNSalts.ValueC[0].ValueA)
 	assert.NotNil(t, exampleFNSalts.ValueD.ValueA.ValueA)
 
-    rootProp := NewProperty("doc", 42)
+	rootProp := NewProperty("doc", 42)
 	leaves, err := FlattenMessage(exampleFNDoc, exampleFNSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, &rootProp)
 	assert.Nil(t, err)
 	propOrder := []Property{}
@@ -300,14 +300,14 @@ func TestFlattenMessageFromAutoFillSalts(t *testing.T) {
 		propOrder = append(propOrder, leaf.Property)
 	}
 	assert.Equal(t, []Property{
-        rootProp.FieldProp("valueA", 1),
-        rootProp.FieldProp("valueB", 2),
-        rootProp.FieldProp("valueC", 3).LengthProp(),
-        rootProp.FieldProp("valueC", 3).ElemProp(0).FieldProp("valueA", 1),
-        rootProp.FieldProp("valueC", 3).ElemProp(1).FieldProp("valueA", 1),
-        rootProp.FieldProp("valueD", 4) .FieldProp("valueA", 1) .FieldProp("valueA", 1),
-        rootProp.FieldProp("valueD", 4) .FieldProp("valueB", 2),
-    }, propOrder)
+		rootProp.FieldProp("valueA", 1),
+		rootProp.FieldProp("valueB", 2),
+		rootProp.FieldProp("valueC", 3).LengthProp(),
+		rootProp.FieldProp("valueC", 3).ElemProp(0).FieldProp("valueA", 1),
+		rootProp.FieldProp("valueC", 3).ElemProp(1).FieldProp("valueA", 1),
+		rootProp.FieldProp("valueD", 4).FieldProp("valueA", 1).FieldProp("valueA", 1),
+		rootProp.FieldProp("valueD", 4).FieldProp("valueB", 2),
+	}, propOrder)
 }
 
 func TestFlattenMessageFromAlreadyFilledSalts(t *testing.T) {
@@ -320,14 +320,14 @@ func TestFlattenMessageFromAlreadyFilledSalts(t *testing.T) {
 		propOrder = append(propOrder, leaf.Property)
 	}
 	assert.Equal(t, []Property{
-        NewProperty("valueA", 1),
-        NewProperty("valueB", 2),
-        NewProperty("valueC", 3).LengthProp(),
-        NewProperty("valueC", 3).ElemProp(0).FieldProp("valueA", 1),
-        NewProperty("valueC", 3).ElemProp(1).FieldProp("valueA", 1),
-        NewProperty("valueD", 4).FieldProp("valueA", 1).FieldProp("valueA", 1),
-        NewProperty("valueD", 4).FieldProp("valueB", 2),
-    }, propOrder)
+		NewProperty("valueA", 1),
+		NewProperty("valueB", 2),
+		NewProperty("valueC", 3).LengthProp(),
+		NewProperty("valueC", 3).ElemProp(0).FieldProp("valueA", 1),
+		NewProperty("valueC", 3).ElemProp(1).FieldProp("valueA", 1),
+		NewProperty("valueD", 4).FieldProp("valueA", 1).FieldProp("valueA", 1),
+		NewProperty("valueD", 4).FieldProp("valueB", 2),
+	}, propOrder)
 }
 
 func TestTree_Generate(t *testing.T) {
@@ -659,12 +659,12 @@ func TestTree_AddLeaves_hashed(t *testing.T) {
 	foobarHash := sha256.Sum256([]byte("foobar"))
 	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash})
 	err := doctree.AddLeaves([]LeafNode{
-		LeafNode{
+		{
 			Hash:     foobarHash[:],
 			Property: Property{Text: "Foobar1"},
 			Hashed:   true,
 		},
-		LeafNode{
+		{
 			Hash:     foobarHash[:],
 			Property: Property{Text: "Foobar2"},
 			Hashed:   true,
@@ -678,7 +678,7 @@ func TestTree_AddLeaves_hashed(t *testing.T) {
 	assert.Equal(t, expectedRootHash[:], doctree.RootHash())
 
 	err = doctree.AddLeaves([]LeafNode{
-		LeafNode{
+		{
 			Hash:     foobarHash[:],
 			Property: Property{Text: "Foobar1"},
 			Hashed:   true,
@@ -836,22 +836,22 @@ func TestTree_GenerateProofHashed(t *testing.T) {
 	hashD := sha256.Sum256([]byte("D"))
 
 	doctree.AddLeaves([]LeafNode{
-		LeafNode{
+		{
 			Property: Property{Text: "A"},
 			Hash:     hashA[:],
 			Hashed:   true,
 		},
-		LeafNode{
+		{
 			Property: Property{Text: "B"},
 			Hash:     hashB[:],
 			Hashed:   true,
 		},
-		LeafNode{
+		{
 			Property: Property{Text: "C"},
 			Hash:     hashC[:],
 			Hashed:   true,
 		},
-		LeafNode{
+		{
 			Property: Property{Text: "D"},
 			Hash:     hashD[:],
 			Hashed:   true,
@@ -915,12 +915,12 @@ func TestTree_GenerateWithRepeatedFields(t *testing.T) {
 	assert.Equal(t, expectedRootHash, doctree.RootHash())
 	propOrder := doctree.PropertyOrder()
 	assert.Equal(t, []Property{
-        NewProperty("valueA", 1),
-        NewProperty("valueB", 2),
-        NewProperty("valueC", 3).LengthProp(),
-        NewProperty("valueC", 3).ElemProp(0),
-        NewProperty("valueC", 3).ElemProp(1),
-    }, propOrder)
+		NewProperty("valueA", 1),
+		NewProperty("valueB", 2),
+		NewProperty("valueC", 3).LengthProp(),
+		NewProperty("valueC", 3).ElemProp(0),
+		NewProperty("valueC", 3).ElemProp(1),
+	}, propOrder)
 
 	hashes, err := doctree.pickHashesFromMerkleTreeAsList(0)
 	assert.Nil(t, err)
@@ -942,14 +942,14 @@ func TestTree_GenerateWithNestedAndRepeatedFields(t *testing.T) {
 	propOrder := doctree.PropertyOrder()
 
 	assert.Equal(t, []Property{
-        NewProperty("valueA", 1),
-        NewProperty("valueB", 2),
-        NewProperty("valueC", 3).LengthProp(),
-        NewProperty("valueC", 3).ElemProp(0).FieldProp("valueA", 1),
-        NewProperty("valueC", 3).ElemProp(1).FieldProp("valueA", 1),
-        NewProperty("valueD", 4).FieldProp("valueA", 1).FieldProp("valueA", 1),
-        NewProperty("valueD", 4).FieldProp("valueB", 2),
-    }, propOrder)
+		NewProperty("valueA", 1),
+		NewProperty("valueB", 2),
+		NewProperty("valueC", 3).LengthProp(),
+		NewProperty("valueC", 3).ElemProp(0).FieldProp("valueA", 1),
+		NewProperty("valueC", 3).ElemProp(1).FieldProp("valueA", 1),
+		NewProperty("valueD", 4).FieldProp("valueA", 1).FieldProp("valueA", 1),
+		NewProperty("valueD", 4).FieldProp("valueB", 2),
+	}, propOrder)
 
 	hashes, err := doctree.pickHashesFromMerkleTreeAsList(0)
 	assert.Nil(t, err)

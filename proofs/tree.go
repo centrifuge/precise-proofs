@@ -228,7 +228,7 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 		hash:              proofOpts.Hash,
 		valueEncoder:      valueEncoder,
 		parentPrefix:      proofOpts.ParentPrefix,
-        compactProperties: proofOpts.CompactProperties,
+		compactProperties: proofOpts.CompactProperties,
 	}
 }
 
@@ -326,7 +326,7 @@ func (doctree *DocumentTree) CreateProof(prop string) (proof proofspb.Proof, err
 	if leaf == nil {
 		return proofspb.Proof{}, fmt.Errorf("No such field: %s in obj", prop)
 	}
-    propName := leaf.Property.Name(doctree.compactProperties)
+	propName := leaf.Property.Name(doctree.compactProperties)
 	proof = proofspb.Proof{
 		Property: propName.AsBytes(),
 		Value:    leaf.Value,
@@ -420,9 +420,9 @@ func dereferencePointer(value interface{}) interface{} {
 
 // LeafNode represents a field that can be hashed to create a merkle tree
 type LeafNode struct {
-	Property        Property
-	Value           string
-	Salt            []byte
+	Property Property
+	Value    string
+	Salt     []byte
 	// Hash contains either the hash that is calculated from Value, Salt & Property or a user defined hash
 	Hash []byte
 	// If set to true, the the value added to the tree is LeafNode.Hash instead of the hash calculated from Value, Salt
@@ -501,7 +501,7 @@ type messageFlattener struct {
 	saltsLengthSuffix string
 	hash              hash.Hash
 	valueEncoder      ValueEncoder
-    compactProperties bool
+	compactProperties bool
 }
 
 // ValueToString takes any supported interface and returns a string representation of the value. This is used calculate
@@ -553,12 +553,12 @@ func (f *messageFlattener) generateLeaves(parentProp *Property, fcurrent *messag
 			return err1
 		}
 
-        var prop Property
-        if parentProp == nil {
-            prop = NewProperty(name, num)
-        } else {
-            prop = parentProp.FieldProp(name, num)
-        }
+		var prop Property
+		if parentProp == nil {
+			prop = NewProperty(name, num)
+		} else {
+			prop = parentProp.FieldProp(name, num)
+		}
 
 		// Check if the field has an exclude_from_tree option and skip it
 		if _, ok := fcurrent.excludedFields[prop.Text]; ok {
