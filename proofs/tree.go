@@ -189,7 +189,7 @@ type DocumentTree struct {
 	rootHash          []byte
 	salts             proto.Message
 	document          proto.Message
-	propertyList      []string
+	propertyList      []Property
 	hash              hash.Hash
 	saltsLengthSuffix string
 	valueEncoder      ValueEncoder
@@ -221,13 +221,14 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 		valueEncoder = proofOpts.ValueEncoder
 	}
 	return DocumentTree{
-		propertyList:      []string{},
+		propertyList:      []Property{},
 		merkleTree:        merkle.NewTreeWithOpts(opts),
 		saltsLengthSuffix: saltsLengthSuffix,
 		leaves:            []LeafNode{},
 		hash:              proofOpts.Hash,
 		valueEncoder:      valueEncoder,
 		parentPrefix:      proofOpts.ParentPrefix,
+        compactProperties: proofOpts.CompactProperties,
 	}
 }
 
@@ -289,7 +290,7 @@ func (doctree *DocumentTree) Generate() error {
 // GetLeafByProperty returns a leaf if it is found
 func (doctree *DocumentTree) GetLeafByProperty(prop string) (int, *LeafNode) {
 	for index, leaf := range doctree.leaves {
-		if leaf.Property.Name() == prop {
+		if leaf.Property.ReadableName() == FieldNamePath(prop) {
 			return index, &leaf
 		}
 	}
@@ -297,14 +298,12 @@ func (doctree *DocumentTree) GetLeafByProperty(prop string) (int, *LeafNode) {
 }
 
 // PropertyOrder returns an string slice with all property names
-func (doctree *DocumentTree) PropertyOrder() ([]string, [][]byte) {
-	propOrder := []string{}
-	compactPropOrder := [][]byte{}
+func (doctree *DocumentTree) PropertyOrder() []Property {
+	propOrder := []Property{}
 	for _, leaf := range doctree.leaves {
-		propOrder = append(propOrder, leaf.Property.Name())
-		compactPropOrder = append(compactPropOrder, leaf.Property.CompactName())
+		propOrder = append(propOrder, leaf.Property)
 	}
-	return propOrder, compactPropOrder
+	return propOrder
 }
 
 // IsEmpty returns false if the tree contains no leaves
@@ -327,14 +326,9 @@ func (doctree *DocumentTree) CreateProof(prop string) (proof proofspb.Proof, err
 	if leaf == nil {
 		return proofspb.Proof{}, fmt.Errorf("No such field: %s in obj", prop)
 	}
-	var propBytes []byte
-	if doctree.compactProperties {
-		propBytes = leaf.Property.CompactName()
-	} else {
-		propBytes = []byte(leaf.Property.Name())
-	}
+    propName := leaf.Property.Name(doctree.compactProperties)
 	proof = proofspb.Proof{
-		Property: propBytes,
+		Property: propName.AsBytes(),
 		Value:    leaf.Value,
 		Salt:     leaf.Salt,
 	}
@@ -426,7 +420,6 @@ func dereferencePointer(value interface{}) interface{} {
 
 // LeafNode represents a field that can be hashed to create a merkle tree
 type LeafNode struct {
-	CompactProperty bool
 	Property        Property
 	Value           string
 	Salt            []byte
@@ -438,18 +431,12 @@ type LeafNode struct {
 }
 
 // HashNode calculates the hash of a node provided it isn't already calculated.
-func (n *LeafNode) HashNode(h hash.Hash) error {
+func (n *LeafNode) HashNode(h hash.Hash, compact bool) error {
 	if len(n.Hash) > 0 || n.Hashed {
 		return errors.New("Hash already set")
 	}
 
-	var propBytes []byte
-	if n.CompactProperty {
-		propBytes = n.Property.CompactName()
-	} else {
-		propBytes = []byte(n.Property.Name())
-	}
-	payload, err := ConcatValues(propBytes, n.Value, n.Salt)
+	payload, err := ConcatValues(n.Property.Name(compact), n.Value, n.Salt)
 	if err != nil {
 		return err
 	}
@@ -463,11 +450,11 @@ func (n *LeafNode) HashNode(h hash.Hash) error {
 }
 
 // ConcatValues concatenates property, value & salt into one byte slice.
-func ConcatValues(propBytes []byte, value string, salt []byte) (payload []byte, err error) {
-	payload = append(payload, propBytes...)
+func ConcatValues(propName PropertyName, value string, salt []byte) (payload []byte, err error) {
+	payload = append(payload, propName.AsBytes()...)
 	payload = append(payload, []byte(value)...)
 	if len(salt) != 32 {
-		return []byte{}, fmt.Errorf("%s: Salt has incorrect length: %d instead of 32", propBytes, len(salt))
+		return []byte{}, fmt.Errorf("%s: Salt has incorrect length: %d instead of 32", propName, len(salt))
 	}
 	payload = append(payload, salt[:32]...)
 	return
@@ -496,7 +483,7 @@ func (s LeafList) Swap(i, j int) {
 
 // Less compares two strings lexicographically
 func (s LeafList) Less(i, j int) bool {
-	return strings.Compare(s[i].Property.Name(), s[j].Property.Name()) == -1
+	return strings.Compare(string(s[i].Property.ReadableName()), string(s[j].Property.ReadableName())) == -1
 }
 
 // messageFlattener takes a proto.Message and flattens it to a list of ordered nodes.
@@ -510,10 +497,11 @@ type messageFlattener struct {
 	saltsValue        reflect.Value
 	leaves            LeafList
 	nodes             [][]byte
-	propOrder         []string
+	propOrder         []Property
 	saltsLengthSuffix string
 	hash              hash.Hash
 	valueEncoder      ValueEncoder
+    compactProperties bool
 }
 
 // ValueToString takes any supported interface and returns a string representation of the value. This is used calculate
@@ -561,7 +549,7 @@ func (f *messageFlattener) generateLeaves(parentProp *Property, fcurrent *messag
 		}
 
 		tag := reflectValueFieldType.Tag.Get("protobuf")
-		prop, err1 := parentProp.FieldProp(tag)
+		prop, err1 := parentProp.FieldPropFromTag(tag)
 		if err1 != nil {
 			return err1
 		}
@@ -629,7 +617,7 @@ func (f *messageFlattener) handleSlice(prop Property, fcurrent *messageFlattener
 
 	for j := 0; j < sliceValue.Len(); j++ {
 		sval := reflect.Indirect(sliceValue.Index(j))
-		elemProp := prop.ElemProp(OrdNum(j))
+		elemProp := prop.ElemProp(FieldNum(j))
 		if reflect.TypeOf(sval.Interface()).Kind() == reflect.Struct {
 			err = f.handleStruct(elemProp, sliceValue.Index(j),
 				reflect.TypeOf(sliceValue.Index(j).Interface()), ss.Index(j).Interface())
@@ -682,18 +670,18 @@ func (f *messageFlattener) appendLeaf(prop Property, value string, salt []byte, 
 func (f *messageFlattener) sortLeaves() (err error) {
 	sort.Sort(f.leaves)
 	f.nodes = make([][]byte, f.leaves.Len())
-	f.propOrder = make([]string, f.leaves.Len())
+	f.propOrder = make([]Property, f.leaves.Len())
 
 	for i := 0; i < f.leaves.Len(); i++ {
 		leaf := &f.leaves[i]
 		if len(leaf.Hash) == 0 && !leaf.Hashed {
-			err = leaf.HashNode(f.hash)
+			err = leaf.HashNode(f.hash, f.compactProperties)
 			if err != nil {
 				return err
 			}
 		}
 		f.nodes[i] = leaf.Hash
-		f.propOrder[i] = f.leaves[i].Property.Name()
+		f.propOrder[i] = f.leaves[i].Property
 	}
 	return nil
 }
@@ -833,7 +821,7 @@ func CalculateProofNodeList(node, leafCount uint64) (nodes []*HashNode, err erro
 // CalculateHashForProofField takes a Proof struct and returns a hash of the concatenated property name, value & salt.
 // Uses ConcatValues internally.
 func CalculateHashForProofField(proof *proofspb.Proof, hashFunc hash.Hash) (hash []byte, err error) {
-	input, err := ConcatValues(proof.Property, proof.Value, proof.Salt)
+	input, err := ConcatValues(LiteralPropName(proof.Property), proof.Value, proof.Salt)
 	if err != nil {
 		return []byte{}, err
 	}
