@@ -1008,6 +1008,59 @@ func TestCreateProof_standard(t *testing.T) {
 	assert.EqualError(t, err, "Hash does not match")
 }
 
+func TestCreateProof_standard_compactProperties(t *testing.T) {
+    doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, CompactProperties: true})
+	doc := documentspb.FilledExampleDocument
+	doc.ValueBytes1 = []byte("ValueBytes1")
+	err := doctree.AddLeavesFromDocument(&doc, &documentspb.ExampleDocumentSalts)
+	assert.Nil(t, err)
+
+	proof, err := doctree.CreateProof("valueA")
+	assert.EqualError(t, err, "Can't create proof before generating merkle root")
+
+	err = doctree.Generate()
+	assert.Nil(t, err)
+
+	_, err = doctree.CreateProof("InexistentField")
+	assert.EqualError(t, err, "No such field: InexistentField in obj")
+
+	proof, err = doctree.CreateProof("valueA")
+	assert.Nil(t, err)
+	assert.Equal(t, []byte{
+        0, 0, 0, 0, 0, 0, 0, 1,
+    }, proof.Property)
+	assert.Equal(t, documentspb.FilledExampleDocument.ValueA, proof.Value)
+	assert.Equal(t, documentspb.ExampleDocumentSalts.ValueA, proof.Salt)
+
+	proofB, err := doctree.CreateProof("value_bytes1")
+	assert.Nil(t, err)
+	assert.Equal(t, []byte{
+        0, 0, 0, 0, 0, 0, 0, 5,
+    }, proofB.Property)
+	assert.Equal(t, hexutil.Encode(doc.ValueBytes1), proofB.Value)
+	assert.Equal(t, documentspb.ExampleDocumentSalts.ValueA, proofB.Salt)
+
+	fieldHash, err := CalculateHashForProofField(&proof, sha256Hash)
+	rootHash := []byte{0x3d, 0xc0, 0xbc, 0xd7, 0xdc, 0xd7, 0x99, 0x10, 0x4e, 0x3d, 0xe8, 0xa7, 0x67, 0xcf, 0x9c, 0xf6, 0xab, 0x65, 0x42, 0xdb, 0x2a, 0x9f, 0xd5, 0x93, 0xd1, 0x33, 0x39, 0x4e, 0x93, 0x99, 0x17, 0x96}
+	assert.Equal(t, rootHash, doctree.rootHash)
+	valid, err := ValidateProofHashes(fieldHash, proof.Hashes, rootHash, doctree.hash)
+	assert.True(t, valid)
+
+	valid, err = doctree.ValidateProof(&proof)
+	assert.True(t, valid)
+	assert.Nil(t, err)
+
+	valid, err = doctree.ValidateProof(&proofB)
+	assert.True(t, valid)
+	assert.Nil(t, err)
+
+	falseProof, err := doctree.CreateProof("valueA")
+	falseProof.Value = "Invalid"
+	valid, err = doctree.ValidateProof(&falseProof)
+	assert.False(t, valid)
+	assert.EqualError(t, err, "Hash does not match")
+}
+
 func TestCreateProof_standard_customEncoder(t *testing.T) {
 	encoder := &customEncoder{}
 	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, ValueEncoder: encoder})
