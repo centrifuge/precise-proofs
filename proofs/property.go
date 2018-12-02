@@ -114,10 +114,10 @@ func ExtractFieldTags(protobufTag string) (string, FieldNum, error) {
 	// third element describes optionality of the field
 	// fourth element has protobuf field name: e.g. 'name=ThisField'
 	name := strings.TrimPrefix(tagList[3], "name=")
-    if name == tagList[3] {
-        err = errors.Errorf("error parsing protobuf field name: %q does not begin with %q", tagList[3], "name=")
-        return "", 0, err
-    }
+	if name == tagList[3] {
+		err = errors.Errorf("error parsing protobuf field name: %q does not begin with %q", tagList[3], "name=")
+		return "", 0, err
+	}
 
 	// other fields exist, but aren't needed
 
