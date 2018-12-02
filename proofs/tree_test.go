@@ -135,7 +135,7 @@ func TestFlattenMessage(t *testing.T) {
 		ValueCamelCased: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		ValueNotIgnored: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 	}
-	leaves, err := FlattenMessage(&message, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, nil)
+	leaves, err := FlattenMessage(&message, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, 8, len(leaves))
 
@@ -159,15 +159,47 @@ func TestFlattenMessage(t *testing.T) {
 	expectedPayload := append([]byte("valueA"), v...)
 	expectedPayload = append(expectedPayload, messageSalts.ValueA[:]...)
 	expectedHash := sha256.Sum256(expectedPayload)
-	leaves[3].HashNode(sha256Hash, true)
 	assert.Equal(t, expectedHash[:], leaves[3].Hash)
+}
 
-	sha256Hash.Reset()
-	leaves[3].Hash = nil
+func TestFlattenMessage_compact(t *testing.T) {
+	message := documentspb.ExampleDocument{
+		ValueA: "Foo",
+	}
 
-	expectedPayload = append([]byte{0, 0, 0, 0, 0, 0, 0, 1}, v...)
+	messageSalts := documentspb.SaltedExampleDocument{
+		ValueA:          []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
+		ValueB:          []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
+		Value1:          []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
+		Value2:          []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
+		ValueBytes1:     []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
+		ValueCamelCased: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
+		ValueNotIgnored: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
+	}
+	leaves, err := FlattenMessage(&message, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, true, nil)
+	assert.Nil(t, err)
+	assert.Equal(t, 8, len(leaves))
+
+	propOrder := []Property{}
+	for _, leaf := range leaves {
+		propOrder = append(propOrder, leaf.Property)
+	}
+	assert.Equal(t, []Property{
+		NewProperty("ValueCamelCased", 6),
+		NewProperty("value1", 3),
+		NewProperty("value2", 4),
+		NewProperty("valueA", 1),
+		NewProperty("valueB", 2),
+		NewProperty("value_bytes1", 5),
+		NewProperty("value_not_hashed", 9),
+		NewProperty("value_not_ignored", 7),
+	}, propOrder)
+	f := &messageFlattener{valueEncoder: &defaultValueEncoder{}}
+	v, _ := f.valueToString("Foo")
+
+    expectedPayload := append([]byte{0, 0, 0, 0, 0, 0, 0, 1}, v...)
 	expectedPayload = append(expectedPayload, messageSalts.ValueA[:]...)
-	leaves[3].HashNode(sha256Hash, false)
+	expectedHash := sha256.Sum256(expectedPayload)
 	assert.Equal(t, expectedHash[:], leaves[3].Hash)
 }
 
@@ -186,7 +218,7 @@ func TestFlattenMessageWithPrefix(t *testing.T) {
 		ValueNotIgnored: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 	}
 	parentProp := NewProperty("doc", 42)
-	leaves, err := FlattenMessage(&message, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, &parentProp)
+	leaves, err := FlattenMessage(&message, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, &parentProp)
 	assert.Nil(t, err)
 	assert.Equal(t, 8, len(leaves))
 
@@ -210,18 +242,6 @@ func TestFlattenMessageWithPrefix(t *testing.T) {
 	expectedPayload := append([]byte("doc.valueA"), v...)
 	expectedPayload = append(expectedPayload, messageSalts.ValueA[:]...)
 	expectedHash := sha256.Sum256(expectedPayload)
-
-	leaves[3].HashNode(sha256Hash, false)
-	assert.Equal(t, expectedHash[:], leaves[3].Hash)
-
-	sha256Hash.Reset()
-	leaves[3].Hash = nil
-
-	expectedPayload = append([]byte{0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 0, 0, 0, 0, 1}, v...)
-	expectedPayload = append(expectedPayload, messageSalts.ValueA[:]...)
-	expectedHash = sha256.Sum256(expectedPayload)
-
-	leaves[3].HashNode(sha256Hash, true)
 	assert.Equal(t, expectedHash[:], leaves[3].Hash)
 }
 
@@ -231,7 +251,7 @@ func TestFlattenMessage_AllFieldTypes(t *testing.T) {
 	err := FillSalts(message, &messageSalts)
 	assert.Nil(t, err)
 
-	leaves, err := FlattenMessage(message, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, nil)
+	leaves, err := FlattenMessage(message, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, nil)
 	propOrder := []Property{}
 	for _, leaf := range leaves {
 		propOrder = append(propOrder, leaf.Property)
@@ -255,7 +275,7 @@ func TestFlattenMessage_HashedField(t *testing.T) {
 	err := FillSalts(message, &messageSalts)
 	assert.Nil(t, err)
 
-	leaves, err := FlattenMessage(message, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, nil)
+	leaves, err := FlattenMessage(message, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, nil)
 	propOrder := []Property{}
 	for _, leaf := range leaves {
 		propOrder = append(propOrder, leaf.Property)
@@ -278,7 +298,7 @@ func TestFlattenMessage_HashedField(t *testing.T) {
 		Value: "foobar",
 	}
 
-	leaves, err = FlattenMessage(invalidMessage, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, nil)
+	leaves, err = FlattenMessage(invalidMessage, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, nil)
 	assert.EqualError(t, err, "The option hashed_field is only supported for type `bytes`")
 }
 
@@ -293,7 +313,7 @@ func TestFlattenMessageFromAutoFillSalts(t *testing.T) {
 	assert.NotNil(t, exampleFNSalts.ValueD.ValueA.ValueA)
 
 	rootProp := NewProperty("doc", 42)
-	leaves, err := FlattenMessage(exampleFNDoc, exampleFNSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, &rootProp)
+	leaves, err := FlattenMessage(exampleFNDoc, exampleFNSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, &rootProp)
 	assert.Nil(t, err)
 	propOrder := []Property{}
 	for _, leaf := range leaves {
@@ -313,7 +333,7 @@ func TestFlattenMessageFromAutoFillSalts(t *testing.T) {
 func TestFlattenMessageFromAlreadyFilledSalts(t *testing.T) {
 	exampleDoc := &documentspb.ExampleFilledNestedRepeatedDocument
 	exampleSaltedDoc := &documentspb.ExampleSaltedNestedRepeatedDocument
-	leaves, err := FlattenMessage(exampleDoc, exampleSaltedDoc, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, nil)
+	leaves, err := FlattenMessage(exampleDoc, exampleSaltedDoc, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, nil)
 	assert.Nil(t, err)
 	propOrder := []Property{}
 	for _, leaf := range leaves {
@@ -346,7 +366,7 @@ func TestTree_Generate(t *testing.T) {
 		ValueCamelCased: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 	}
 
-	leaves, err := FlattenMessage(&protoMessage, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, nil)
+	leaves, err := FlattenMessage(&protoMessage, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, nil)
 	assert.Nil(t, err)
 	tree := merkle.NewTreeWithOpts(merkle.TreeOptions{DisableHashLeaves: true})
 	hashes := [][]byte{}
@@ -377,7 +397,7 @@ func TestSortedHashTree_Generate(t *testing.T) {
 		ValueCamelCased: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 	}
 
-	leaves, err := FlattenMessage(&protoMessage, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, nil)
+	leaves, err := FlattenMessage(&protoMessage, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, nil)
 	assert.Nil(t, err)
 	tree := merkle.NewTreeWithOpts(merkle.TreeOptions{DisableHashLeaves: true, EnableHashSorting: true})
 	hashes := [][]byte{}
@@ -985,7 +1005,7 @@ func TestCreateProof_standard(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, "value_bytes1", string(proofB.Property))
 	assert.Equal(t, hexutil.Encode(doc.ValueBytes1), proofB.Value)
-	assert.Equal(t, documentspb.ExampleDocumentSalts.ValueA, proofB.Salt)
+	assert.Equal(t, documentspb.ExampleDocumentSalts.ValueBytes1, proofB.Salt)
 
 	fieldHash, err := CalculateHashForProofField(&proof, sha256Hash)
 	rootHash := []byte{0x3d, 0xc0, 0xbc, 0xd7, 0xdc, 0xd7, 0x99, 0x10, 0x4e, 0x3d, 0xe8, 0xa7, 0x67, 0xcf, 0x9c, 0xf6, 0xab, 0x65, 0x42, 0xdb, 0x2a, 0x9f, 0xd5, 0x93, 0xd1, 0x33, 0x39, 0x4e, 0x93, 0x99, 0x17, 0x96}
@@ -1038,10 +1058,10 @@ func TestCreateProof_standard_compactProperties(t *testing.T) {
         0, 0, 0, 0, 0, 0, 0, 5,
     }, proofB.Property)
 	assert.Equal(t, hexutil.Encode(doc.ValueBytes1), proofB.Value)
-	assert.Equal(t, documentspb.ExampleDocumentSalts.ValueA, proofB.Salt)
+	assert.Equal(t, documentspb.ExampleDocumentSalts.ValueBytes1, proofB.Salt)
 
 	fieldHash, err := CalculateHashForProofField(&proof, sha256Hash)
-	rootHash := []byte{0x3d, 0xc0, 0xbc, 0xd7, 0xdc, 0xd7, 0x99, 0x10, 0x4e, 0x3d, 0xe8, 0xa7, 0x67, 0xcf, 0x9c, 0xf6, 0xab, 0x65, 0x42, 0xdb, 0x2a, 0x9f, 0xd5, 0x93, 0xd1, 0x33, 0x39, 0x4e, 0x93, 0x99, 0x17, 0x96}
+	rootHash := []byte{0xf7, 0x34, 0x4d, 0xc5, 0xdb, 0x26, 0x13, 0xdb, 0x34, 0x81, 0xf6, 0x9f, 0x31, 0xf6, 0xb6, 0x43, 0x93, 0xbb, 0x86, 0x79, 0x85, 0x44, 0xea, 0x16, 0xb, 0x13, 0xd1, 0x54, 0x71, 0x7f, 0xa6, 0xe3}
 	assert.Equal(t, rootHash, doctree.rootHash)
 	valid, err := ValidateProofHashes(fieldHash, proof.Hashes, rootHash, doctree.hash)
 	assert.True(t, valid)

@@ -261,7 +261,7 @@ func (doctree *DocumentTree) AddLeavesFromDocument(document, salts proto.Message
 	if doctree.hash == nil {
 		return fmt.Errorf("hash is not set")
 	}
-	leaves, err := FlattenMessage(document, salts, doctree.saltsLengthSuffix, doctree.hash, doctree.valueEncoder, doctree.parentPrefix)
+	leaves, err := FlattenMessage(document, salts, doctree.saltsLengthSuffix, doctree.hash, doctree.valueEncoder, doctree.compactProperties, doctree.parentPrefix)
 	if err != nil {
 		return err
 	}
@@ -650,7 +650,7 @@ func (f *messageFlattener) handleStruct(prop Property, valueField reflect.Value,
 	if valueType == reflect.TypeOf(timestamp.Timestamp{}) { //Specific case where we support serialization for a non primitive complex struct
 		err = f.handleAppendLeaf(prop, valueField.Interface(), salts.([]byte))
 	} else {
-		fchild := newMessageFlattener(valueField.Interface().(proto.Message), salts.(proto.Message), f.saltsLengthSuffix, f.hash, f.valueEncoder)
+		fchild := newMessageFlattener(valueField.Interface().(proto.Message), salts.(proto.Message), f.saltsLengthSuffix, f.hash, f.valueEncoder, f.compactProperties)
 		err = f.generateLeaves(&prop, fchild)
 	}
 	return
@@ -747,7 +747,7 @@ func (f *messageFlattener) parseExtensions() (err error) {
 }
 
 // NewMessageFlattener instantiates a flattener for the given document
-func newMessageFlattener(message, messageSalts proto.Message, saltsLengthSuffix string, hashFn hash.Hash, valueEncoder ValueEncoder) *messageFlattener {
+func newMessageFlattener(message, messageSalts proto.Message, saltsLengthSuffix string, hashFn hash.Hash, valueEncoder ValueEncoder, compact bool) *messageFlattener {
 	f := messageFlattener{message: message, salts: messageSalts}
 	f.leaves = LeafList{}
 	f.messageValue = reflect.Indirect(reflect.ValueOf(message))
@@ -758,6 +758,7 @@ func newMessageFlattener(message, messageSalts proto.Message, saltsLengthSuffix 
 	f.saltsLengthSuffix = saltsLengthSuffix
 	f.hash = hashFn
 	f.valueEncoder = valueEncoder
+	f.compactProperties = compact
 	return &f
 }
 
@@ -765,8 +766,8 @@ func newMessageFlattener(message, messageSalts proto.Message, saltsLengthSuffix 
 // of nodes.
 //
 // The fields are sorted lexicographically by their protobuf field names.
-func FlattenMessage(message, messageSalts proto.Message, saltsLengthSuffix string, hashFn hash.Hash, valueEncoder ValueEncoder, parentProp *Property) (leaves []LeafNode, err error) {
-	f := newMessageFlattener(message, messageSalts, saltsLengthSuffix, hashFn, valueEncoder)
+func FlattenMessage(message, messageSalts proto.Message, saltsLengthSuffix string, hashFn hash.Hash, valueEncoder ValueEncoder, compact bool, parentProp *Property) (leaves []LeafNode, err error) {
+	f := newMessageFlattener(message, messageSalts, saltsLengthSuffix, hashFn, valueEncoder, compact)
 
 	err = f.generateLeaves(parentProp, f)
 	if err != nil {
