@@ -288,9 +288,19 @@ func (doctree *DocumentTree) Generate() error {
 }
 
 // GetLeafByProperty returns a leaf if it is found
-func (doctree *DocumentTree) GetLeafByProperty(prop string) (int, *LeafNode) {
+func (doctree *DocumentTree) GetLeafByProperty(prop FieldNamePath) (int, *LeafNode) {
 	for index, leaf := range doctree.leaves {
-		if leaf.Property.ReadableName() == FieldNamePath(prop) {
+		if leaf.Property.ReadableName() == prop {
+			return index, &leaf
+		}
+	}
+	return 0, nil
+}
+
+// GetLeafByCompactProperty returns a leaf if it is found
+func (doctree *DocumentTree) GetLeafByCompactProperty(prop FieldNumPath) (int, *LeafNode) {
+	for index, leaf := range doctree.leaves {
+		if reflect.DeepEqual(leaf.Property.CompactName(), []FieldNum(prop)) {
 			return index, &leaf
 		}
 	}
@@ -322,7 +332,7 @@ func (doctree *DocumentTree) CreateProof(prop string) (proof proofspb.Proof, err
 		return
 	}
 
-	index, leaf := doctree.GetLeafByProperty(prop)
+	index, leaf := doctree.GetLeafByProperty(FieldNamePath(prop))
 	if leaf == nil {
 		return proofspb.Proof{}, fmt.Errorf("No such field: %s in obj", prop)
 	}
