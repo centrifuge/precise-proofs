@@ -21,6 +21,7 @@ message MerkleHash {
 
 message Proof {
   bytes property = 1;
+  bool compact = 7;
   string value = 2;
   bytes salt = 3;
   // hash is filled if value & salt are not available

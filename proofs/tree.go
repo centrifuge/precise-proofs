@@ -341,6 +341,7 @@ func (doctree *DocumentTree) CreateProof(prop string) (proof proofspb.Proof, err
 		Property: propName.AsBytes(),
 		Value:    leaf.Value,
 		Salt:     leaf.Salt,
+        Compact:  doctree.compactProperties,
 	}
 
 	if leaf.Hashed {
