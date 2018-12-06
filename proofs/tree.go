@@ -329,7 +329,7 @@ func (doctree *DocumentTree) GetLeafByCompactProperty(prop []FieldNum) (int, *Le
 	return 0, nil
 }
 
-// PropertyOrder returns an string slice with all property names
+// PropertyOrder returns an with all properties of a doctree in order
 func (doctree *DocumentTree) PropertyOrder() []Property {
 	propOrder := []Property{}
 	for _, leaf := range doctree.leaves {
