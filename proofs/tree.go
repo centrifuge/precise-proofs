@@ -52,14 +52,36 @@ Nested and repeated fields will be flattened following a dotted notation. Given 
 A tree will be created out of this document by flattening all the fields values
 as leaves. This would result in a tree with the following leaves:
 
- fieldA, fieldB.length, fieldB[0], fieldB[1], fieldC.length, fieldC[0], fieldC[1], fieldC[2]
+    - "fieldA" aka [1]
+    - "fieldB.length" aka [2]
+    - "fieldB[0]" aka [2, 0]
+    - "fieldB[1]" aka [2, 1]
+    - "fieldC.length" aka [3]
+    - "fieldC[0]" aka [3, 0]
+    - "fieldC[1]" aka [3, 1]
+    - "fieldC[2]" aka [3, 2]
 
 Proof format
 
 This library defines a proof format that ensures both human readable, concise and secure Merkle proofs:
 
  {
-    "property":"ValueA",
+    "readableName":"ValueA",
+    "value":"Example",
+    "salt":"1VWQFUGCXl1AYS0iAULHQow4XEjgJF/TpAuOO2Rnm+E=",
+    "hashes":[
+        { "right":"kYXAGhDdPiFMq1ZQMOZiKmSf1S1eHNgJ6BIPSIExOj8=" },
+        { "left":"GDgT7Km6NK6k4N/Id4CZXErL3p6clNX7sVnlNyegdG0=" },
+        { "right":"qOZzS+YM8t1OfC87zEKgkKz6q0f3wwk5+ed+PR/2cDA=" }
+    ]
+ }
+
+This library can also create proofs with more compact property fields:
+
+ {
+    "compactName":{
+        "components": ["1"],
+    },
     "value":"Example",
     "salt":"1VWQFUGCXl1AYS0iAULHQow4XEjgJF/TpAuOO2Rnm+E=",
     "hashes":[
