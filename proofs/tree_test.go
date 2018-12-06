@@ -75,7 +75,7 @@ func TestValueToString(t *testing.T) {
 }
 
 func TestConcatValues(t *testing.T) {
-	val, err := ConcatValues(LiteralPropName("prop"), strconv.FormatInt(int64(0), 10), testSalt)
+	val, err := ConcatValues(ReadableName("prop"), strconv.FormatInt(int64(0), 10), testSalt)
 	assert.Nil(t, err)
 	f := &messageFlattener{valueEncoder: &defaultValueEncoder{}}
 	v, _ := f.valueToString(int64(0))
@@ -997,13 +997,13 @@ func TestCreateProof_standard(t *testing.T) {
 
 	proof, err = doctree.CreateProof("valueA")
 	assert.Nil(t, err)
-	assert.Equal(t, "valueA", string(proof.Property))
+	assert.Equal(t, ReadableName("valueA"), proof.Property)
 	assert.Equal(t, documentspb.FilledExampleDocument.ValueA, proof.Value)
 	assert.Equal(t, documentspb.ExampleDocumentSalts.ValueA, proof.Salt)
 
 	proofB, err := doctree.CreateProof("value_bytes1")
 	assert.Nil(t, err)
-	assert.Equal(t, "value_bytes1", string(proofB.Property))
+	assert.Equal(t, ReadableName("value_bytes1"), proofB.Property)
 	assert.Equal(t, hexutil.Encode(doc.ValueBytes1), proofB.Value)
 	assert.Equal(t, documentspb.ExampleDocumentSalts.ValueBytes1, proofB.Salt)
 
@@ -1046,17 +1046,13 @@ func TestCreateProof_standard_compactProperties(t *testing.T) {
 
 	proof, err = doctree.CreateProof("valueA")
 	assert.Nil(t, err)
-	assert.Equal(t, []byte{
-        0, 0, 0, 0, 0, 0, 0, 1,
-    }, proof.Property)
+	assert.Equal(t, CompactName(1), proof.Property)
 	assert.Equal(t, documentspb.FilledExampleDocument.ValueA, proof.Value)
 	assert.Equal(t, documentspb.ExampleDocumentSalts.ValueA, proof.Salt)
 
 	proofB, err := doctree.CreateProof("value_bytes1")
 	assert.Nil(t, err)
-	assert.Equal(t, []byte{
-        0, 0, 0, 0, 0, 0, 0, 5,
-    }, proofB.Property)
+	assert.Equal(t, CompactName(5), proofB.Property)
 	assert.Equal(t, hexutil.Encode(doc.ValueBytes1), proofB.Value)
 	assert.Equal(t, documentspb.ExampleDocumentSalts.ValueBytes1, proofB.Salt)
 
@@ -1100,13 +1096,13 @@ func TestCreateProof_standard_customEncoder(t *testing.T) {
 
 	proof, err = doctree.CreateProof("valueA")
 	assert.Nil(t, err)
-	assert.Equal(t, "valueA", string(proof.Property))
+	assert.Equal(t, ReadableName("valueA"), proof.Property)
 	assert.Equal(t, documentspb.FilledExampleDocument.ValueA, proof.Value)
 	assert.Equal(t, documentspb.ExampleDocumentSalts.ValueA, proof.Salt)
 
 	proofB, err := doctree.CreateProof("value_bytes1")
 	assert.Nil(t, err)
-	assert.Equal(t, "value_bytes1", string(proofB.Property))
+	assert.Equal(t, ReadableName("value_bytes1"), proofB.Property)
 	assert.Equal(t, encoder.EncodeToString(doc.ValueBytes1), proofB.Value)
 	assert.Equal(t, documentspb.ExampleDocumentSalts.ValueA, proofB.Salt)
 
@@ -1143,7 +1139,7 @@ func TestCreateProof_sorted(t *testing.T) {
 
 	proof, err := doctree.CreateProof("valueA")
 	assert.Nil(t, err)
-	assert.Equal(t, "valueA", string(proof.Property))
+	assert.Equal(t, ReadableName("valueA"), proof.Property)
 	assert.Equal(t, documentspb.FilledExampleDocument.ValueA, proof.Value)
 	assert.Equal(t, documentspb.ExampleDocumentSalts.ValueA, proof.Salt)
 
@@ -1175,7 +1171,7 @@ func TestCreateRepeatedSortedProof(t *testing.T) {
 
 	proof, err := doctree.CreateProof("valueC[1]")
 	assert.Nil(t, err)
-	assert.Equal(t, "valueC[1]", string(proof.Property))
+	assert.Equal(t, ReadableName("valueC[1]"), proof.Property)
 	assert.Equal(t, documentspb.ExampleFilledRepeatedDocument.ValueC[1], proof.Value)
 	assert.Equal(t, documentspb.ExampleSaltedRepeatedDocument.ValueC[1], proof.Salt)
 
@@ -1212,7 +1208,7 @@ func TestCreateRepeatedSortedProofAutoSalts(t *testing.T) {
 
 	proof, err := doctree.CreateProof("valueA")
 	assert.Nil(t, err)
-	assert.Equal(t, "valueA", string(proof.Property))
+	assert.Equal(t, ReadableName("valueA"), proof.Property)
 	assert.Equal(t, documentspb.ExampleFilledRepeatedDocument.ValueA, proof.Value)
 	assert.Equal(t, docSalts.ValueA, proof.Salt)
 
@@ -1244,7 +1240,7 @@ func TestCreateProofFromRepeatedField(t *testing.T) {
 
 	proof, err := doctree.CreateProof("valueC[1].valueA")
 	assert.Nil(t, err)
-	assert.Equal(t, "valueC[1].valueA", string(proof.Property))
+	assert.Equal(t, ReadableName("valueC[1].valueA"), proof.Property)
 	assert.Equal(t, documentspb.ExampleFilledNestedRepeatedDocument.ValueC[1].ValueA, proof.Value)
 	assert.Equal(t, docSalts.ValueC[1].ValueA, proof.Salt)
 }
@@ -1262,7 +1258,7 @@ func TestCreateProofFromRepeatedFieldWithParentPrefix(t *testing.T) {
 
 	proof, err := doctree.CreateProof("doc.valueC[1].valueA")
 	assert.Nil(t, err)
-	assert.Equal(t, "doc.valueC[1].valueA", string(proof.Property))
+	assert.Equal(t, ReadableName("doc.valueC[1].valueA"), proof.Property)
 	assert.Equal(t, documentspb.ExampleFilledNestedRepeatedDocument.ValueC[1].ValueA, proof.Value)
 	assert.Equal(t, docSalts.ValueC[1].ValueA, proof.Salt)
 }
@@ -1280,7 +1276,7 @@ func TestCreateProofFromNestedField(t *testing.T) {
 
 	proof, err := doctree.CreateProof("valueD.valueA.valueA")
 	assert.Nil(t, err)
-	assert.Equal(t, "valueD.valueA.valueA", string(proof.Property))
+	assert.Equal(t, ReadableName("valueD.valueA.valueA"), proof.Property)
 	assert.Equal(t, documentspb.ExampleFilledNestedRepeatedDocument.ValueD.ValueA.ValueA, proof.Value)
 	assert.Equal(t, docSalts.ValueD.ValueA.ValueA, proof.Salt)
 }
@@ -1298,7 +1294,7 @@ func TestCreateProofFromNestedFieldWithParentPrefix(t *testing.T) {
 
 	proof, err := doctree.CreateProof("doc.valueD.valueA.valueA")
 	assert.Nil(t, err)
-	assert.Equal(t, "doc.valueD.valueA.valueA", string(proof.Property))
+	assert.Equal(t, ReadableName("doc.valueD.valueA.valueA"), proof.Property)
 	assert.Equal(t, documentspb.ExampleFilledNestedRepeatedDocument.ValueD.ValueA.ValueA, proof.Value)
 	assert.Equal(t, docSalts.ValueD.ValueA.ValueA, proof.Salt)
 }

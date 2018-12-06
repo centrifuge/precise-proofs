@@ -1,11 +1,15 @@
 package proofs
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
+
+	"github.com/centrifuge/precise-proofs/proofs/proto"
 )
 
 // Property uniquely identifies a LeafNode
@@ -34,23 +38,29 @@ const SubFieldFormat = "%s.%s"
 const SliceElemFormat = "%s[%s]"
 
 // Name returns either the compact or human-reable name of a Property
-func (n Property) Name(compact bool) PropertyName {
+func (n Property) Name(compact bool) proofspb.PropertyName {
 	if compact {
-		return n.CompactName()
+		return &proofspb.Proof_CompactName{
+			CompactName: &proofspb.FieldNums{
+				Components: n.CompactName(),
+			},
+		}
 	}
-	return n.ReadableName()
+	return &proofspb.Proof_ReadableName{
+		ReadableName: n.ReadableName(),
+	}
 }
 
 // ReadableName returns the human-readable name of a property
-func (n Property) ReadableName() FieldNamePath {
+func (n Property) ReadableName() string {
 	if n.Parent == nil {
-		return FieldNamePath(n.Text)
+		return n.Text
 	}
-	return FieldNamePath(fmt.Sprintf(n.NameFormat, string(n.Parent.ReadableName()), n.Text))
+	return fmt.Sprintf(n.NameFormat, n.Parent.ReadableName(), n.Text)
 }
 
 // CompactName returns the compact name of a property, derived from protobuf tags
-func (n Property) CompactName() (pn FieldNumPath) {
+func (n Property) CompactName() (pn []FieldNum) {
 	if n.Parent != nil {
 		pn = append(pn, n.Parent.CompactName()...)
 	}
@@ -122,4 +132,36 @@ func ExtractFieldTags(protobufTag string) (string, FieldNum, error) {
 	// other fields exist, but aren't needed
 
 	return name, num, nil
+}
+
+// ReadableName creates a PropertyName from a human-readable name
+func ReadableName(prop string) *proofspb.Proof_ReadableName {
+	return &proofspb.Proof_ReadableName{
+		ReadableName: prop,
+	}
+}
+
+// CompactName creates a PropertyName from a list of FieldNums
+func CompactName(prop ...FieldNum) *proofspb.Proof_CompactName {
+	return &proofspb.Proof_CompactName{
+		CompactName: &proofspb.FieldNums{
+			Components: prop,
+		},
+	}
+}
+
+// AsBytes encodes a PropertyName for hashing
+//
+// Human-readable property names are encoded using UTF-8
+// Compact property names are encoded by using big-endian encoding on the individual components
+func AsBytes(propName proofspb.PropertyName) []byte {
+	switch pn := propName.(type) {
+	case *proofspb.Proof_ReadableName:
+		return []byte(pn.ReadableName)
+	case *proofspb.Proof_CompactName:
+		buf := new(bytes.Buffer)
+		binary.Write(buf, binary.BigEndian, pn.CompactName.Components)
+		return buf.Bytes()
+	}
+	return nil
 }

@@ -288,7 +288,7 @@ func (doctree *DocumentTree) Generate() error {
 }
 
 // GetLeafByProperty returns a leaf if it is found
-func (doctree *DocumentTree) GetLeafByProperty(prop FieldNamePath) (int, *LeafNode) {
+func (doctree *DocumentTree) GetLeafByProperty(prop string) (int, *LeafNode) {
 	for index, leaf := range doctree.leaves {
 		if leaf.Property.ReadableName() == prop {
 			return index, &leaf
@@ -298,9 +298,9 @@ func (doctree *DocumentTree) GetLeafByProperty(prop FieldNamePath) (int, *LeafNo
 }
 
 // GetLeafByCompactProperty returns a leaf if it is found
-func (doctree *DocumentTree) GetLeafByCompactProperty(prop FieldNumPath) (int, *LeafNode) {
+func (doctree *DocumentTree) GetLeafByCompactProperty(prop []FieldNum) (int, *LeafNode) {
 	for index, leaf := range doctree.leaves {
-		if reflect.DeepEqual(leaf.Property.CompactName(), []FieldNum(prop)) {
+		if reflect.DeepEqual(leaf.Property.CompactName(), prop) {
 			return index, &leaf
 		}
 	}
@@ -332,16 +332,15 @@ func (doctree *DocumentTree) CreateProof(prop string) (proof proofspb.Proof, err
 		return
 	}
 
-	index, leaf := doctree.GetLeafByProperty(FieldNamePath(prop))
+	index, leaf := doctree.GetLeafByProperty(prop)
 	if leaf == nil {
 		return proofspb.Proof{}, fmt.Errorf("No such field: %s in obj", prop)
 	}
 	propName := leaf.Property.Name(doctree.compactProperties)
 	proof = proofspb.Proof{
-		Property: propName.AsBytes(),
+        Property: propName,
 		Value:    leaf.Value,
 		Salt:     leaf.Salt,
-        Compact:  doctree.compactProperties,
 	}
 
 	if leaf.Hashed {
@@ -461,8 +460,8 @@ func (n *LeafNode) HashNode(h hash.Hash, compact bool) error {
 }
 
 // ConcatValues concatenates property, value & salt into one byte slice.
-func ConcatValues(propName PropertyName, value string, salt []byte) (payload []byte, err error) {
-	payload = append(payload, propName.AsBytes()...)
+func ConcatValues(propName proofspb.PropertyName, value string, salt []byte) (payload []byte, err error) {
+	payload = append(payload, AsBytes(propName)...)
 	payload = append(payload, []byte(value)...)
 	if len(salt) != 32 {
 		return []byte{}, fmt.Errorf("%s: Salt has incorrect length: %d instead of 32", propName, len(salt))
@@ -839,7 +838,7 @@ func CalculateProofNodeList(node, leafCount uint64) (nodes []*HashNode, err erro
 // CalculateHashForProofField takes a Proof struct and returns a hash of the concatenated property name, value & salt.
 // Uses ConcatValues internally.
 func CalculateHashForProofField(proof *proofspb.Proof, hashFunc hash.Hash) (hash []byte, err error) {
-	input, err := ConcatValues(LiteralPropName(proof.Property), proof.Value, proof.Salt)
+	input, err := ConcatValues(proof.Property, proof.Value, proof.Salt)
 	if err != nil {
 		return []byte{}, err
 	}
