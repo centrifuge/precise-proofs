@@ -197,7 +197,7 @@ func TestFlattenMessage_compact(t *testing.T) {
 	f := &messageFlattener{valueEncoder: &defaultValueEncoder{}}
 	v, _ := f.valueToString("Foo")
 
-    expectedPayload := append([]byte{0, 0, 0, 0, 0, 0, 0, 1}, v...)
+	expectedPayload := append([]byte{0, 0, 0, 0, 0, 0, 0, 1}, v...)
 	expectedPayload = append(expectedPayload, messageSalts.ValueA[:]...)
 	expectedHash := sha256.Sum256(expectedPayload)
 	assert.Equal(t, expectedHash[:], leaves[3].Hash)
@@ -1029,7 +1029,7 @@ func TestCreateProof_standard(t *testing.T) {
 }
 
 func TestCreateProof_standard_compactProperties(t *testing.T) {
-    doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, CompactProperties: true})
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, CompactProperties: true})
 	doc := documentspb.FilledExampleDocument
 	doc.ValueBytes1 = []byte("ValueBytes1")
 	err := doctree.AddLeavesFromDocument(&doc, &documentspb.ExampleDocumentSalts)

@@ -300,7 +300,7 @@ func (doctree *DocumentTree) Generate() error {
 
 	hashes := make([][]byte, len(doctree.leaves))
 	for i, leaf := range doctree.leaves {
-		if (! leaf.Hashed) || (len(leaf.Hash) == 0) {
+		if (!leaf.Hashed) || (len(leaf.Hash) == 0) {
 			leaf.HashNode(doctree.hash, doctree.compactProperties)
 		}
 		hashes[i] = leaf.Hash
@@ -363,7 +363,7 @@ func (doctree *DocumentTree) CreateProof(prop string) (proof proofspb.Proof, err
 	}
 	propName := leaf.Property.Name(doctree.compactProperties)
 	proof = proofspb.Proof{
-        Property: propName,
+		Property: propName,
 		Value:    leaf.Value,
 		Salt:     leaf.Salt,
 	}
