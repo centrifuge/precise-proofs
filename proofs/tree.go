@@ -300,6 +300,9 @@ func (doctree *DocumentTree) Generate() error {
 
 	hashes := make([][]byte, len(doctree.leaves))
 	for i, leaf := range doctree.leaves {
+		if (! leaf.Hashed) || (len(leaf.Hash) == 0) {
+			leaf.HashNode(doctree.hash, doctree.compactProperties)
+		}
 		hashes[i] = leaf.Hash
 	}
 	doctree.merkleTree.Generate(hashes, doctree.hash)

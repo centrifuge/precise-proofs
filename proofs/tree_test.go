@@ -1299,6 +1299,52 @@ func TestCreateProofFromNestedFieldWithParentPrefix(t *testing.T) {
 	assert.Equal(t, docSalts.ValueD.ValueA.ValueA, proof.Salt)
 }
 
+func TestTree_AddLeaves_TwoLeafTree(t *testing.T) {
+	// Leaf A: Hashed -- Leaf B: Hashed
+	tree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256.New()})
+	hashLeafA := sha256.Sum256([]byte("leafA"))
+	err := tree.AddLeaf(LeafNode{Hash: hashLeafA[:], Property: NewProperty("LeafA", 1), Hashed: true})
+	assert.Nil(t, err)
+	err = tree.AddLeaf(LeafNode{Hash: hashLeafA[:], Property: NewProperty("LeafB", 2), Hashed: true})
+	assert.Nil(t, err)
+	err = tree.Generate()
+	assert.Nil(t, err)
+	assert.NotEqual(t, hashLeafA[:], tree.RootHash())
+
+	// Leaf A: Regular -- Leaf B: Hashed
+	tree = NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256.New()})
+	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA", 1), Salt: make([]byte, 32), Value: "1"})
+	assert.Nil(t, err)
+	err = tree.AddLeaf(LeafNode{Hash: hashLeafA[:], Property: NewProperty("LeafB", 1), Hashed: true})
+	assert.Nil(t, err)
+	err = tree.Generate()
+	assert.Nil(t, err)
+	assert.NotEqual(t, hashLeafA[:], tree.RootHash())
+
+	// Leaf A: Hashed -- Leaf B: Regular (hashed)
+	tree = NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256.New()})
+	err = tree.AddLeaf(LeafNode{Hash: hashLeafA[:], Property: NewProperty("LeafA", 1), Hashed: true})
+	assert.Nil(t, err)
+	leafB := LeafNode{Property: NewProperty("LeafB", 2), Salt: make([]byte, 32), Value: "1"}
+	leafB.HashNode(sha256.New(), false)
+	err = tree.AddLeaf(leafB)
+	assert.Nil(t, err)
+	err = tree.Generate()
+	assert.Nil(t, err)
+	assert.NotEqual(t, hashLeafA[:], tree.RootHash())
+
+	// Leaf A: Hashed -- Leaf B: Regular (no call to HashNode)
+	tree = NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256.New()})
+	err = tree.AddLeaf(LeafNode{Hash: hashLeafA[:], Property: NewProperty("LeafA", 1), Hashed: true})
+	assert.Nil(t, err)
+	leafB = LeafNode{Property: NewProperty("LeafB", 2), Salt: make([]byte, 32), Value: "1"}
+	err = tree.AddLeaf(leafB)
+	assert.Nil(t, err)
+	err = tree.Generate()
+	assert.Nil(t, err)
+	assert.NotEqual(t, hashLeafA[:], tree.RootHash())
+}
+
 func Example_complete() {
 	// ExampleDocument is a protobuf message
 	document := documentspb.ExampleDocument{
