@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/centrifuge/precise-proofs/examples/documents"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/assert"
@@ -50,7 +49,7 @@ func TestValueToString(t *testing.T) {
 	assert.Nil(t, err)
 
 	v, err = f.valueToString([]byte("42"))
-	expected := hexutil.Encode([]byte("42"))
+	expected := new(defaultValueEncoder).EncodeToString([]byte("42"))
 	assert.Equal(t, expected, v, "[]byte(\"42\") to string failed")
 	assert.Nil(t, err)
 
@@ -1004,7 +1003,7 @@ func TestCreateProof_standard(t *testing.T) {
 	proofB, err := doctree.CreateProof("value_bytes1")
 	assert.Nil(t, err)
 	assert.Equal(t, ReadableName("value_bytes1"), proofB.Property)
-	assert.Equal(t, hexutil.Encode(doc.ValueBytes1), proofB.Value)
+	assert.Equal(t, new(defaultValueEncoder).EncodeToString(doc.ValueBytes1), proofB.Value)
 	assert.Equal(t, documentspb.ExampleDocumentSalts.ValueBytes1, proofB.Salt)
 
 	fieldHash, err := CalculateHashForProofField(&proof, sha256Hash)
@@ -1053,7 +1052,7 @@ func TestCreateProof_standard_compactProperties(t *testing.T) {
 	proofB, err := doctree.CreateProof("value_bytes1")
 	assert.Nil(t, err)
 	assert.Equal(t, CompactName(5), proofB.Property)
-	assert.Equal(t, hexutil.Encode(doc.ValueBytes1), proofB.Value)
+	assert.Equal(t, new(defaultValueEncoder).EncodeToString(doc.ValueBytes1), proofB.Value)
 	assert.Equal(t, documentspb.ExampleDocumentSalts.ValueBytes1, proofB.Salt)
 
 	fieldHash, err := CalculateHashForProofField(&proof, sha256Hash)
