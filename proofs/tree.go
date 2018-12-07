@@ -52,14 +52,36 @@ Nested and repeated fields will be flattened following a dotted notation. Given 
 A tree will be created out of this document by flattening all the fields values
 as leaves. This would result in a tree with the following leaves:
 
- fieldA, fieldB.length, fieldB[0], fieldB[1], fieldC.length, fieldC[0], fieldC[1], fieldC[2]
+    - "fieldA" aka [1]
+    - "fieldB.length" aka [2]
+    - "fieldB[0]" aka [2, 0]
+    - "fieldB[1]" aka [2, 1]
+    - "fieldC.length" aka [3]
+    - "fieldC[0]" aka [3, 0]
+    - "fieldC[1]" aka [3, 1]
+    - "fieldC[2]" aka [3, 2]
 
 Proof format
 
 This library defines a proof format that ensures both human readable, concise and secure Merkle proofs:
 
  {
-    "property":"ValueA",
+    "readableName":"ValueA",
+    "value":"Example",
+    "salt":"1VWQFUGCXl1AYS0iAULHQow4XEjgJF/TpAuOO2Rnm+E=",
+    "hashes":[
+        { "right":"kYXAGhDdPiFMq1ZQMOZiKmSf1S1eHNgJ6BIPSIExOj8=" },
+        { "left":"GDgT7Km6NK6k4N/Id4CZXErL3p6clNX7sVnlNyegdG0=" },
+        { "right":"qOZzS+YM8t1OfC87zEKgkKz6q0f3wwk5+ed+PR/2cDA=" }
+    ]
+ }
+
+This library can also create proofs with more compact property fields:
+
+ {
+    "compactName":{
+        "components": ["1"],
+    },
     "value":"Example",
     "salt":"1VWQFUGCXl1AYS0iAULHQow4XEjgJF/TpAuOO2Rnm+E=",
     "hashes":[
@@ -175,7 +197,8 @@ type TreeOptions struct {
 	Hash              hash.Hash
 	ValueEncoder      ValueEncoder
 	// ParentPrefix defines an arbitrary prefix to prepend to the parent, so all fields are prepended with it
-	ParentPrefix string
+	ParentPrefix      *Property
+	CompactProperties bool
 }
 
 // DocumentTree is a helper object to create a merkleTree and proofs for fields in the document
@@ -188,11 +211,12 @@ type DocumentTree struct {
 	rootHash          []byte
 	salts             proto.Message
 	document          proto.Message
-	propertyList      []string
+	propertyList      []Property
 	hash              hash.Hash
 	saltsLengthSuffix string
 	valueEncoder      ValueEncoder
-	parentPrefix      string
+	parentPrefix      *Property
+	compactProperties bool
 }
 
 func (doctree *DocumentTree) String() string {
@@ -219,13 +243,14 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 		valueEncoder = proofOpts.ValueEncoder
 	}
 	return DocumentTree{
-		propertyList:      []string{},
+		propertyList:      []Property{},
 		merkleTree:        merkle.NewTreeWithOpts(opts),
 		saltsLengthSuffix: saltsLengthSuffix,
 		leaves:            []LeafNode{},
 		hash:              proofOpts.Hash,
 		valueEncoder:      valueEncoder,
 		parentPrefix:      proofOpts.ParentPrefix,
+		compactProperties: proofOpts.CompactProperties,
 	}
 }
 
@@ -258,7 +283,7 @@ func (doctree *DocumentTree) AddLeavesFromDocument(document, salts proto.Message
 	if doctree.hash == nil {
 		return fmt.Errorf("hash is not set")
 	}
-	leaves, err := FlattenMessage(document, salts, doctree.saltsLengthSuffix, doctree.hash, doctree.valueEncoder, doctree.parentPrefix)
+	leaves, err := FlattenMessage(document, salts, doctree.saltsLengthSuffix, doctree.hash, doctree.valueEncoder, doctree.compactProperties, doctree.parentPrefix)
 	if err != nil {
 		return err
 	}
@@ -275,8 +300,8 @@ func (doctree *DocumentTree) Generate() error {
 
 	hashes := make([][]byte, len(doctree.leaves))
 	for i, leaf := range doctree.leaves {
-		if (! leaf.Hashed) || (len(leaf.Hash) == 0) {
-			leaf.HashNode(doctree.hash)
+		if (!leaf.Hashed) || (len(leaf.Hash) == 0) {
+			leaf.HashNode(doctree.hash, doctree.compactProperties)
 		}
 		hashes[i] = leaf.Hash
 	}
@@ -290,16 +315,26 @@ func (doctree *DocumentTree) Generate() error {
 // GetLeafByProperty returns a leaf if it is found
 func (doctree *DocumentTree) GetLeafByProperty(prop string) (int, *LeafNode) {
 	for index, leaf := range doctree.leaves {
-		if leaf.Property == prop {
+		if leaf.Property.ReadableName() == prop {
 			return index, &leaf
 		}
 	}
 	return 0, nil
 }
 
-// PropertyOrder returns an string slice with all property names
-func (doctree *DocumentTree) PropertyOrder() []string {
-	propOrder := []string{}
+// GetLeafByCompactProperty returns a leaf if it is found
+func (doctree *DocumentTree) GetLeafByCompactProperty(prop []FieldNum) (int, *LeafNode) {
+	for index, leaf := range doctree.leaves {
+		if reflect.DeepEqual(leaf.Property.CompactName(), prop) {
+			return index, &leaf
+		}
+	}
+	return 0, nil
+}
+
+// PropertyOrder returns an with all properties of a doctree in order
+func (doctree *DocumentTree) PropertyOrder() []Property {
+	propOrder := []Property{}
 	for _, leaf := range doctree.leaves {
 		propOrder = append(propOrder, leaf.Property)
 	}
@@ -326,8 +361,9 @@ func (doctree *DocumentTree) CreateProof(prop string) (proof proofspb.Proof, err
 	if leaf == nil {
 		return proofspb.Proof{}, fmt.Errorf("No such field: %s in obj", prop)
 	}
+	propName := leaf.Property.Name(doctree.compactProperties)
 	proof = proofspb.Proof{
-		Property: prop,
+		Property: propName,
 		Value:    leaf.Value,
 		Salt:     leaf.Salt,
 	}
@@ -419,7 +455,7 @@ func dereferencePointer(value interface{}) interface{} {
 
 // LeafNode represents a field that can be hashed to create a merkle tree
 type LeafNode struct {
-	Property string
+	Property Property
 	Value    string
 	Salt     []byte
 	// Hash contains either the hash that is calculated from Value, Salt & Property or a user defined hash
@@ -430,12 +466,12 @@ type LeafNode struct {
 }
 
 // HashNode calculates the hash of a node provided it isn't already calculated.
-func (n *LeafNode) HashNode(h hash.Hash) error {
+func (n *LeafNode) HashNode(h hash.Hash, compact bool) error {
 	if len(n.Hash) > 0 || n.Hashed {
 		return errors.New("Hash already set")
 	}
 
-	payload, err := ConcatValues(n.Property, n.Value, n.Salt)
+	payload, err := ConcatValues(n.Property.Name(compact), n.Value, n.Salt)
 	if err != nil {
 		return err
 	}
@@ -449,12 +485,11 @@ func (n *LeafNode) HashNode(h hash.Hash) error {
 }
 
 // ConcatValues concatenates property, value & salt into one byte slice.
-func ConcatValues(prop string, value string, salt []byte) (payload []byte, err error) {
-	propBytes := []byte(prop)
-	payload = append(payload, propBytes...)
+func ConcatValues(propName proofspb.PropertyName, value string, salt []byte) (payload []byte, err error) {
+	payload = append(payload, AsBytes(propName)...)
 	payload = append(payload, []byte(value)...)
 	if len(salt) != 32 {
-		return []byte{}, fmt.Errorf("%s: Salt has incorrect length: %d instead of 32", prop, len(salt))
+		return []byte{}, fmt.Errorf("%s: Salt has incorrect length: %d instead of 32", propName, len(salt))
 	}
 	payload = append(payload, salt[:32]...)
 	return
@@ -483,19 +518,7 @@ func (s LeafList) Swap(i, j int) {
 
 // Less compares two strings lexicographically
 func (s LeafList) Less(i, j int) bool {
-	return strings.Compare(s[i].Property, s[j].Property) == -1
-}
-
-// getPropertyNameFromProtobufTag extracts the name attribute from the protobuf tag, the tag name is essential in defining
-// the order, not the struct field name.
-func getPropertyNameFromProtobufTag(tag string) (name string, err error) {
-	tagList := strings.Split(tag, ",")
-	for _, v := range tagList {
-		if strings.HasPrefix(v, "name") {
-			return strings.Split(v, "=")[1], nil
-		}
-	}
-	return "", fmt.Errorf("Invalid protobuf annotation: %s", tag)
+	return strings.Compare(string(s[i].Property.ReadableName()), string(s[j].Property.ReadableName())) == -1
 }
 
 // messageFlattener takes a proto.Message and flattens it to a list of ordered nodes.
@@ -509,10 +532,11 @@ type messageFlattener struct {
 	saltsValue        reflect.Value
 	leaves            LeafList
 	nodes             [][]byte
-	propOrder         []string
+	propOrder         []Property
 	saltsLengthSuffix string
 	hash              hash.Hash
 	valueEncoder      ValueEncoder
+	compactProperties bool
 }
 
 // ValueToString takes any supported interface and returns a string representation of the value. This is used calculate
@@ -538,7 +562,7 @@ func (f *messageFlattener) valueToString(value interface{}) (s string, err error
 	}
 }
 
-func (f *messageFlattener) generateLeaves(propPrefix string, fcurrent *messageFlattener) (err error) {
+func (f *messageFlattener) generateLeaves(parentProp *Property, fcurrent *messageFlattener) (err error) {
 
 	if err = fcurrent.parseExtensions(); err != nil {
 		return err
@@ -559,27 +583,33 @@ func (f *messageFlattener) generateLeaves(propPrefix string, fcurrent *messageFl
 			continue
 		}
 
-		tag := reflectValueFieldType.Tag.Get("protobuf")
-		prop, err1 := getPropertyNameFromProtobufTag(tag)
+		name, num, err1 := ExtractFieldTags(reflectValueFieldType.Tag.Get("protobuf"))
 		if err1 != nil {
 			return err1
 		}
 
+		var prop Property
+		if parentProp == nil {
+			prop = NewProperty(name, num)
+		} else {
+			prop = parentProp.FieldProp(name, num)
+		}
+
 		// Check if the field has an exclude_from_tree option and skip it
-		if _, ok := fcurrent.excludedFields[prop]; ok {
+		if _, ok := fcurrent.excludedFields[prop.Text]; ok {
 			continue
 		}
 
 		value := valueField.Interface()
 		value = dereferencePointer(value)
 
-		if _, ok := fcurrent.hashedFields[prop]; ok {
+		if _, ok := fcurrent.hashedFields[prop.Text]; ok {
 			// Fields that have the hashed_field tag on the protobuf message will be treated as hashes without prepending
 			// the property & salt.
 			if valueType.Kind() != reflect.Slice && reflect.ValueOf(value).Type() != reflect.TypeOf([]uint8{}) {
 				return errors.New("The option hashed_field is only supported for type `bytes`")
 			}
-			f.handleAppendHashedLeaf(propPrefix, prop, value.([]byte))
+			f.handleAppendHashedLeaf(prop, value.([]byte))
 			continue
 		}
 
@@ -594,15 +624,15 @@ func (f *messageFlattener) generateLeaves(propPrefix string, fcurrent *messageFl
 			// The bytes type is internally represented as []uint8, this needs to be treated as one leaf
 			if sliceValue.Type() == reflect.TypeOf([]uint8{}) {
 				salt := reflect.Indirect(fcurrent.saltsValue).FieldByName(reflectValueFieldType.Name).Interface().([]byte)
-				err = f.handleAppendLeaf(propPrefix, prop, value.([]byte), salt)
+				err = f.handleAppendLeaf(prop, value.([]byte), salt)
 			} else {
-				err = f.handleSlice(propPrefix, prop, fcurrent, i, sliceValue, salts)
+				err = f.handleSlice(prop, fcurrent, i, sliceValue, salts)
 			}
 		} else if valueType.Kind() == reflect.Struct {
-			err = f.handleStruct(propPrefix, prop, valueField, valueType, reflectSaltsValue.Interface())
+			err = f.handleStruct(prop, valueField, valueType, reflectSaltsValue.Interface())
 		} else {
 			salt := reflect.Indirect(fcurrent.saltsValue).FieldByName(reflectValueFieldType.Name).Interface().([]byte)
-			err = f.handleAppendLeaf(propPrefix, prop, value, salt)
+			err = f.handleAppendLeaf(prop, value, salt)
 		}
 
 		if err != nil {
@@ -613,7 +643,7 @@ func (f *messageFlattener) generateLeaves(propPrefix string, fcurrent *messageFl
 	return
 }
 
-func (f *messageFlattener) handleSlice(propPrefix string, prop string, fcurrent *messageFlattener, i int,
+func (f *messageFlattener) handleSlice(prop Property, fcurrent *messageFlattener, i int,
 	sliceValue reflect.Value, salts interface{}) (err error) {
 
 	if !sliceValue.IsValid() {
@@ -624,48 +654,48 @@ func (f *messageFlattener) handleSlice(propPrefix string, prop string, fcurrent 
 	// Append length of slice as tree leaf
 	saltedFieldValue := fcurrent.saltsValue.FieldByName(fmt.Sprintf("%s%s", fcurrent.messageType.Field(i).Name, fcurrent.saltsLengthSuffix))
 	salt := saltedFieldValue.Interface().([]byte)
-	f.appendLeaf(fmt.Sprintf("%s%s.length", propPrefix, prop), strconv.Itoa(sliceValue.Len()), salt, []byte{}, false)
+	f.appendLeaf(prop.LengthProp(), strconv.Itoa(sliceValue.Len()), salt, []byte{}, false)
 
 	for j := 0; j < sliceValue.Len(); j++ {
 		sval := reflect.Indirect(sliceValue.Index(j))
+		elemProp := prop.ElemProp(FieldNum(j))
 		if reflect.TypeOf(sval.Interface()).Kind() == reflect.Struct {
-			err = f.handleStruct(propPrefix, fmt.Sprintf("%s[%d]", prop, j), sliceValue.Index(j),
+			err = f.handleStruct(elemProp, sliceValue.Index(j),
 				reflect.TypeOf(sliceValue.Index(j).Interface()), ss.Index(j).Interface())
 		} else {
-			propItem := fmt.Sprintf("%s[%d]", prop, j)
 			salt := fcurrent.saltsValue.FieldByName(fcurrent.messageType.Field(i).Name).Index(j).Interface().([]byte)
-			err = f.handleAppendLeaf(propPrefix, propItem, sliceValue.Index(j).Interface(), salt)
+			err = f.handleAppendLeaf(elemProp, sliceValue.Index(j).Interface(), salt)
 		}
 	}
 
 	return
 }
 
-func (f *messageFlattener) handleStruct(propPrefix string, prop string, valueField reflect.Value, valueType reflect.Type, salts interface{}) (err error) {
+func (f *messageFlattener) handleStruct(prop Property, valueField reflect.Value, valueType reflect.Type, salts interface{}) (err error) {
 	if valueType == reflect.TypeOf(timestamp.Timestamp{}) { //Specific case where we support serialization for a non primitive complex struct
-		err = f.handleAppendLeaf(propPrefix, prop, valueField.Interface(), salts.([]byte))
+		err = f.handleAppendLeaf(prop, valueField.Interface(), salts.([]byte))
 	} else {
-		fchild := newMessageFlattener(valueField.Interface().(proto.Message), salts.(proto.Message), f.saltsLengthSuffix, f.hash, f.valueEncoder)
-		err = f.generateLeaves(fmt.Sprintf("%s%s.", propPrefix, prop), fchild)
+		fchild := newMessageFlattener(valueField.Interface().(proto.Message), salts.(proto.Message), f.saltsLengthSuffix, f.hash, f.valueEncoder, f.compactProperties)
+		err = f.generateLeaves(&prop, fchild)
 	}
 	return
 }
 
-func (f *messageFlattener) handleAppendLeaf(propPrefix string, prop string, value interface{}, salts interface{}) (err error) {
+func (f *messageFlattener) handleAppendLeaf(prop Property, value interface{}, salts interface{}) (err error) {
 	valueString, err := f.valueToString(value)
 	if err != nil {
 		return err
 	}
-	f.appendLeaf(fmt.Sprintf("%s%s", propPrefix, prop), valueString, salts.([]byte), []byte{}, false)
+	f.appendLeaf(prop, valueString, salts.([]byte), []byte{}, false)
 	return
 }
 
-func (f *messageFlattener) handleAppendHashedLeaf(propPrefix string, prop string, hash []byte) (err error) {
-	f.appendLeaf(fmt.Sprintf("%s%s", propPrefix, prop), "", []byte{}, hash, true)
+func (f *messageFlattener) handleAppendHashedLeaf(prop Property, hash []byte) (err error) {
+	f.appendLeaf(prop, "", []byte{}, hash, true)
 	return
 }
 
-func (f *messageFlattener) appendLeaf(prop string, value string, salt []byte, hash []byte, hashed bool) {
+func (f *messageFlattener) appendLeaf(prop Property, value string, salt []byte, hash []byte, hashed bool) {
 	leaf := LeafNode{
 		Property: prop,
 		Value:    value,
@@ -681,12 +711,12 @@ func (f *messageFlattener) appendLeaf(prop string, value string, salt []byte, ha
 func (f *messageFlattener) sortLeaves() (err error) {
 	sort.Sort(f.leaves)
 	f.nodes = make([][]byte, f.leaves.Len())
-	f.propOrder = make([]string, f.leaves.Len())
+	f.propOrder = make([]Property, f.leaves.Len())
 
 	for i := 0; i < f.leaves.Len(); i++ {
 		leaf := &f.leaves[i]
 		if len(leaf.Hash) == 0 && !leaf.Hashed {
-			err = leaf.HashNode(f.hash)
+			err = leaf.HashNode(f.hash, f.compactProperties)
 			if err != nil {
 				return err
 			}
@@ -742,7 +772,7 @@ func (f *messageFlattener) parseExtensions() (err error) {
 }
 
 // NewMessageFlattener instantiates a flattener for the given document
-func newMessageFlattener(message, messageSalts proto.Message, saltsLengthSuffix string, hashFn hash.Hash, valueEncoder ValueEncoder) *messageFlattener {
+func newMessageFlattener(message, messageSalts proto.Message, saltsLengthSuffix string, hashFn hash.Hash, valueEncoder ValueEncoder, compact bool) *messageFlattener {
 	f := messageFlattener{message: message, salts: messageSalts}
 	f.leaves = LeafList{}
 	f.messageValue = reflect.Indirect(reflect.ValueOf(message))
@@ -753,24 +783,18 @@ func newMessageFlattener(message, messageSalts proto.Message, saltsLengthSuffix 
 	f.saltsLengthSuffix = saltsLengthSuffix
 	f.hash = hashFn
 	f.valueEncoder = valueEncoder
+	f.compactProperties = compact
 	return &f
-}
-
-func ensurePrefixTrailingDot(prefix string) string {
-	if prefix != "" && !strings.HasSuffix(prefix, ".") {
-		prefix = prefix + "."
-	}
-	return prefix
 }
 
 // FlattenMessage takes a protobuf message struct and flattens it into an array
 // of nodes.
 //
 // The fields are sorted lexicographically by their protobuf field names.
-func FlattenMessage(message, messageSalts proto.Message, saltsLengthSuffix string, hashFn hash.Hash, valueEncoder ValueEncoder, parentPrefix string) (leaves []LeafNode, err error) {
-	f := newMessageFlattener(message, messageSalts, saltsLengthSuffix, hashFn, valueEncoder)
+func FlattenMessage(message, messageSalts proto.Message, saltsLengthSuffix string, hashFn hash.Hash, valueEncoder ValueEncoder, compact bool, parentProp *Property) (leaves []LeafNode, err error) {
+	f := newMessageFlattener(message, messageSalts, saltsLengthSuffix, hashFn, valueEncoder, compact)
 
-	err = f.generateLeaves(ensurePrefixTrailingDot(parentPrefix), f)
+	err = f.generateLeaves(parentProp, f)
 	if err != nil {
 		return
 	}
