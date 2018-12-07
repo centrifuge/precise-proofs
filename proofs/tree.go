@@ -153,6 +153,7 @@ package proofs
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"hash"
@@ -162,7 +163,6 @@ import (
 	"strings"
 
 	"github.com/centrifuge/precise-proofs/proofs/proto"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/golang/protobuf/descriptor"
 	"github.com/golang/protobuf/proto"
 	"github.com/golang/protobuf/ptypes"
@@ -178,7 +178,7 @@ type defaultValueEncoder struct{}
 
 // EncodeToString encodes the bytes to string with 0x prefix
 func (valueEncoder *defaultValueEncoder) EncodeToString(value []byte) string {
-	return hexutil.Encode(value)
+	return "0x" + hex.EncodeToString(value)
 }
 
 // ValueEncoder can be implemented by a type that can encode bytes to string

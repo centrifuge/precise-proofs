@@ -37,11 +37,6 @@
   branch = "master"
   name = "github.com/xsleonard/go-merkle"
 
-[[constraint]]
-  name = "github.com/ethereum/go-ethereum"
-  source = "github.com/centrifuge/go-ethereum"
-  revision = "e024c16f34c6028060b645efae1d6258e442442a"
-
 [prune]
   go-tests = true
   unused-packages = true

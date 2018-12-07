@@ -10,14 +10,6 @@
   version = "v1.1.0"
 
 [[projects]]
-  digest = "1:1fd2424a221c4074d001156bca5128a390ecf30c9af6d4758addc18deacad4bf"
-  name = "github.com/ethereum/go-ethereum"
-  packages = ["common/hexutil"]
-  pruneopts = "UT"
-  revision = "e024c16f34c6028060b645efae1d6258e442442a"
-  source = "github.com/centrifuge/go-ethereum"
-
-[[projects]]
   digest = "1:b6192c4aa4f4d8764d1e00cf0bbf6ed04dee9a0318a3f367fb5fd82273eae4d9"
   name = "github.com/golang/protobuf"
   packages = [
@@ -69,7 +61,6 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/ethereum/go-ethereum/common/hexutil",
     "github.com/golang/protobuf/descriptor",
     "github.com/golang/protobuf/proto",
     "github.com/golang/protobuf/protoc-gen-go/descriptor",
