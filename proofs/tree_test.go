@@ -161,6 +161,7 @@ func TestFlattenMessage(t *testing.T) {
 	assert.Equal(t, expectedHash[:], leaves[3].Hash)
 }
 
+
 func TestFlattenMessage_compact(t *testing.T) {
 	message := documentspb.ExampleDocument{
 		ValueA: "Foo",
@@ -184,14 +185,14 @@ func TestFlattenMessage_compact(t *testing.T) {
 		propOrder = append(propOrder, leaf.Property)
 	}
 	assert.Equal(t, []Property{
-		NewProperty("ValueCamelCased", 6),
-		NewProperty("value1", 3),
-		NewProperty("value2", 4),
 		NewProperty("valueA", 1),
 		NewProperty("valueB", 2),
+		NewProperty("value1", 3),
+		NewProperty("value2", 4),
 		NewProperty("value_bytes1", 5),
-		NewProperty("value_not_hashed", 9),
+		NewProperty("ValueCamelCased", 6),
 		NewProperty("value_not_ignored", 7),
+		NewProperty("value_not_hashed", 9),
 	}, propOrder)
 	f := &messageFlattener{valueEncoder: &defaultValueEncoder{}}
 	v, _ := f.valueToString("Foo")
@@ -199,8 +200,9 @@ func TestFlattenMessage_compact(t *testing.T) {
 	expectedPayload := append([]byte{0, 0, 0, 0, 0, 0, 0, 1}, v...)
 	expectedPayload = append(expectedPayload, messageSalts.ValueA[:]...)
 	expectedHash := sha256.Sum256(expectedPayload)
-	assert.Equal(t, expectedHash[:], leaves[3].Hash)
+	assert.Equal(t, expectedHash[:], leaves[0].Hash)
 }
+
 
 func TestFlattenMessageWithPrefix(t *testing.T) {
 	message := documentspb.ExampleDocument{
@@ -225,6 +227,7 @@ func TestFlattenMessageWithPrefix(t *testing.T) {
 	for _, leaf := range leaves {
 		propOrder = append(propOrder, leaf.Property)
 	}
+	
 	assert.Equal(t, []Property{
 		parentProp.FieldProp("ValueCamelCased", 6),
 		parentProp.FieldProp("value1", 3),
@@ -1056,7 +1059,7 @@ func TestCreateProof_standard_compactProperties(t *testing.T) {
 	assert.Equal(t, documentspb.ExampleDocumentSalts.ValueBytes1, proofB.Salt)
 
 	fieldHash, err := CalculateHashForProofField(&proof, sha256Hash)
-	rootHash := []byte{0xf7, 0x34, 0x4d, 0xc5, 0xdb, 0x26, 0x13, 0xdb, 0x34, 0x81, 0xf6, 0x9f, 0x31, 0xf6, 0xb6, 0x43, 0x93, 0xbb, 0x86, 0x79, 0x85, 0x44, 0xea, 0x16, 0xb, 0x13, 0xd1, 0x54, 0x71, 0x7f, 0xa6, 0xe3}
+	rootHash := []byte{0xd2, 0x35, 0x39, 0xf5, 0xf8, 0x86, 0xc1, 0x57, 0xa4, 0x1b, 0xdc, 0xf8, 0x40, 0xb5, 0x4f, 0x41, 0xbd, 0x46, 0xd2, 0xba, 0x35, 0x49, 0x50, 0x2f, 0x75, 0x67, 0x72, 0x13, 0x46, 0x1b, 0xcd, 0xc9}
 	assert.Equal(t, rootHash, doctree.rootHash)
 	valid, err := ValidateProofHashes(fieldHash, proof.Hashes, rootHash, doctree.hash)
 	assert.True(t, valid)
@@ -1075,6 +1078,7 @@ func TestCreateProof_standard_compactProperties(t *testing.T) {
 	assert.False(t, valid)
 	assert.EqualError(t, err, "Hash does not match")
 }
+
 
 func TestCreateProof_standard_customEncoder(t *testing.T) {
 	encoder := &customEncoder{}

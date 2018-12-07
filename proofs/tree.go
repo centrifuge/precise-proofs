@@ -516,9 +516,16 @@ func (s LeafList) Swap(i, j int) {
 	s[i], s[j] = s[j], s[i]
 }
 
-// Less compares two strings lexicographically
-func (s LeafList) Less(i, j int) bool {
-	return strings.Compare(string(s[i].Property.ReadableName()), string(s[j].Property.ReadableName())) == -1
+type sortByReadableName struct{ LeafList }
+// Compare by property name lexicographically
+func (m sortByReadableName) Less(i, j int) bool {
+	return strings.Compare(string(m.LeafList[i].Property.ReadableName()), string(m.LeafList[j].Property.ReadableName())) == -1
+}
+
+type sortByCompactName struct{ LeafList }
+// Compare by property conpact name 
+func (m sortByCompactName) Less(i, j int) bool {
+	return bytes.Compare(AsBytes(m.LeafList[i].Property.Name(true)),AsBytes(m.LeafList[j].Property.Name(true))) ==-1
 }
 
 // messageFlattener takes a proto.Message and flattens it to a list of ordered nodes.
@@ -709,7 +716,11 @@ func (f *messageFlattener) appendLeaf(prop Property, value string, salt []byte, 
 // sortLeaves by the property attribute and copies the properties and
 // concatenated byte values into the nodes
 func (f *messageFlattener) sortLeaves() (err error) {
-	sort.Sort(f.leaves)
+	if f.compactProperties {
+		sort.Sort(sortByCompactName{f.leaves})
+	} else {
+		sort.Sort(sortByReadableName{f.leaves})
+	}
 	f.nodes = make([][]byte, f.leaves.Len())
 	f.propOrder = make([]Property, f.leaves.Len())
 
