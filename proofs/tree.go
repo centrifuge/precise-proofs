@@ -153,7 +153,6 @@ package proofs
 import (
 	"bytes"
 	"crypto/rand"
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"hash"
@@ -526,11 +525,7 @@ func (m sortByReadableName) Less(i, j int) bool {
 type sortByCompactName struct{ LeafList }
 // Compare by property conpact name 
 func (m sortByCompactName) Less(i, j int) bool {
-	first := new(bytes.Buffer)
-	binary.Write(first, binary.BigEndian, m.LeafList[i].Property.CompactName())
-	second := new(bytes.Buffer)
-	binary.Write(second, binary.BigEndian, m.LeafList[j].Property.CompactName())
-	return bytes.Compare(first.Bytes(), second.Bytes()) == -1
+	return bytes.Compare(AsBytes(m.LeafList[i].Property.Name(true)),AsBytes(m.LeafList[j].Property.Name(true))) ==-1
 }
 
 // messageFlattener takes a proto.Message and flattens it to a list of ordered nodes.
