@@ -22,3 +22,38 @@ func TestExtractFieldTags(t *testing.T) {
 	assert.Equal(t, name, "d")
 	assert.Equal(t, num, FieldNum(42))
 }
+
+func TestAsBytes_ReadableName(t *testing.T) {
+	assert.Equal(t, []byte{65, 66, 67, 68, 69}, AsBytes(ReadableName("ABCDE")))
+}
+
+func TestAsBytes_CompactName(t *testing.T) {
+	assert.Equal(t,
+		[]byte{
+			0, 0, 0, 0, 0, 0, 0, 1,
+			0, 0, 0, 0, 0, 0, 0, 255,
+			0, 0, 0, 0, 0, 0, 1, 0,
+			0, 0, 0, 0, 0, 1, 0, 0,
+			0, 0, 0, 0, 0, 0, 255, 255,
+		},
+		AsBytes(CompactName(1, 255, 256, 256*256, 256*256-1)),
+	)
+}
+
+func TestKeyToReadable(t *testing.T) {
+	s, err := keyToReadable("key")
+	assert.NoError(t, err)
+	assert.Equal(t, "key", s)
+
+	s, err = keyToReadable(42)
+	assert.NoError(t, err)
+	assert.Equal(t, "42", s)
+
+	s, err = keyToReadable([]byte{0x2f, 0xa2, 0x93})
+	assert.NoError(t, err)
+	assert.Equal(t, "0x2fa293", s)
+
+	s, err = keyToReadable(`foo[bar].foo\bar`)
+	assert.NoError(t, err)
+	assert.Equal(t, `foo\[bar\]\.foo\\bar`, s)
+}

@@ -3,7 +3,10 @@ package proofs
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
+	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -34,8 +37,8 @@ type FieldNum = uint64
 // SubFieldFormat represents how the property name of a struct field is derived from its parent
 const SubFieldFormat = "%s.%s"
 
-// SliceElemFormat represents how the property name of a slice element is derived from its parent
-const SliceElemFormat = "%s[%s]"
+// ElemFormat represents how the property name of a slice element is derived from its parent
+const ElemFormat = "%s[%s]"
 
 // Name returns either the compact or human-reable name of a Property
 func (n Property) Name(compact bool) proofspb.PropertyName {
@@ -84,14 +87,32 @@ func (n Property) FieldPropFromTag(protobufTag string) (Property, error) {
 	return n.FieldProp(name, num), nil
 }
 
-// ElemProp takes a repeated field index and returns a child Property representing that element of the repeated field
-func (n Property) ElemProp(i FieldNum) Property {
+// SliceElemProp takes a repeated field index and returns a child Property representing that element of the repeated field
+func (n Property) SliceElemProp(i FieldNum) Property {
 	return Property{
 		Parent:     &n,
 		Text:       fmt.Sprintf("%d", i),
 		Nums:       []FieldNum{i},
-		NameFormat: SliceElemFormat,
+		NameFormat: ElemFormat,
 	}
+}
+
+// MapElemProp takes a map key and returns a child Property representing the value at that key in the map
+func (n Property) MapElemProp(k interface{}) (Property, error) {
+	readableKey, err := keyToReadable(k)
+	if err != nil {
+		return Property{}, fmt.Errorf("failed to convert key to readable name: %s", err)
+	}
+	// compactKey, err := keyToCompact(k)
+	// if err != nil {
+	//     return fmt.Errorf("failed to convert key to compact name: %s", err)
+	// }
+	return Property{
+		Parent: &n,
+		Text:   readableKey,
+		// Nums:       compacyKey,
+		NameFormat: ElemFormat,
+	}, nil
 }
 
 // LengthProp returns a child Property representing the length of a repeated field
@@ -164,4 +185,55 @@ func AsBytes(propName proofspb.PropertyName) []byte {
 		return buf.Bytes()
 	}
 	return nil
+}
+
+func keyToReadable(key interface{}) (string, error) {
+
+	// special compound cases
+	switch k := key.(type) {
+	case []byte:
+		return "0x" + hex.EncodeToString(k), nil
+	}
+
+	switch k := reflect.ValueOf(key); k.Kind() {
+	case reflect.String:
+		escaper := regexp.MustCompile(`\\|\.|\[|\]`)
+		return escaper.ReplaceAllStringFunc(k.String(), func(match string) string {
+			switch match {
+			case `\`:
+				return `\\`
+			case `.`:
+				return `\.`
+			case `[`:
+				return `\[`
+			case `]`:
+				return `\]`
+			}
+			return "???"
+		}), nil
+	case reflect.Bool:
+		return fmt.Sprintf("%t", k.Bool()), nil
+	case reflect.Int8:
+		fallthrough
+	case reflect.Int16:
+		fallthrough
+	case reflect.Int32:
+		fallthrough
+	case reflect.Int64:
+		fallthrough
+	case reflect.Int:
+		return fmt.Sprintf("%d", k.Int()), nil
+	case reflect.Uint8:
+		fallthrough
+	case reflect.Uint16:
+		fallthrough
+	case reflect.Uint32:
+		fallthrough
+	case reflect.Uint64:
+		fallthrough
+	case reflect.Uint:
+		return fmt.Sprintf("%d", k.Uint()), nil
+	}
+
+	return "", fmt.Errorf("unsupported key type: %T", key)
 }

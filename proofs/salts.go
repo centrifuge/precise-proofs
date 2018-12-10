@@ -40,6 +40,8 @@ func FillSalts(dataMessage, saltsMessage proto.Message) (err error) {
 			err = handleFillSaltsSlice(saltsType, saltsField, valueField)
 		} else if saltsType.Kind() == reflect.Struct {
 			err = handleFillSaltsStruct(saltsField, saltsType, valueField)
+		} else if saltsType.Kind() == reflect.Map {
+			err = handleFillSaltsMap(saltsType, saltsField, valueField)
 		} else {
 			return fmt.Errorf("Invalid type (%s) for field (%s)", reflect.TypeOf(saltsField.Interface()).String(), saltsMessageValue.Type().Field(i).Name)
 		}
@@ -50,6 +52,40 @@ func FillSalts(dataMessage, saltsMessage proto.Message) (err error) {
 
 	}
 
+	return
+}
+
+func handleFillSaltsMap(saltsType reflect.Type, saltsField reflect.Value, valueField reflect.Value) (err error) {
+	if saltsType.Kind() != reflect.Map || reflect.TypeOf(valueField.Interface()).Kind() != reflect.Map {
+		return fmt.Errorf("Invalid type (%s) or (%s) for field", saltsType.String(), reflect.TypeOf(valueField.Interface()).String())
+	}
+
+	newMap := reflect.MakeMapWithSize(saltsType, valueField.Len())
+	saltsField.Set(newMap)
+
+	for _, k := range valueField.MapKeys() {
+		dataFieldItem := valueField.MapIndex(k)
+		saltsFieldItem := reflect.Indirect(reflect.New(saltsType.Elem()))
+
+		var checkType reflect.Type
+		if reflect.TypeOf(saltsFieldItem.Interface()).Kind() == reflect.Ptr {
+			checkType = reflect.TypeOf(saltsFieldItem.Interface()).Elem()
+		} else {
+			checkType = reflect.TypeOf(saltsFieldItem.Interface())
+		}
+
+		if checkType.Kind() == reflect.Struct {
+			err = handleFillSaltsStruct(saltsFieldItem, checkType, dataFieldItem)
+		} else {
+			err = handleFillSaltsValue(reflect.Indirect(saltsFieldItem))
+		}
+
+		if err != nil {
+			return
+		}
+
+		saltsField.SetMapIndex(k, saltsFieldItem)
+	}
 	return
 }
 

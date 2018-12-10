@@ -305,7 +305,10 @@ func (doctree *DocumentTree) Generate() error {
 		}
 		hashes[i] = leaf.Hash
 	}
-	doctree.merkleTree.Generate(hashes, doctree.hash)
+	err := doctree.merkleTree.Generate(hashes, doctree.hash)
+	if err != nil {
+		return fmt.Errorf("failed to generate merkle tree: %s", err)
+	}
 
 	doctree.rootHash = doctree.merkleTree.Root().Hash
 	doctree.filled = true
@@ -517,15 +520,17 @@ func (s LeafList) Swap(i, j int) {
 }
 
 type sortByReadableName struct{ LeafList }
+
 // Compare by property name lexicographically
 func (m sortByReadableName) Less(i, j int) bool {
 	return strings.Compare(string(m.LeafList[i].Property.ReadableName()), string(m.LeafList[j].Property.ReadableName())) == -1
 }
 
 type sortByCompactName struct{ LeafList }
-// Compare by property conpact name 
+
+// Compare by property compact name
 func (m sortByCompactName) Less(i, j int) bool {
-	return bytes.Compare(AsBytes(m.LeafList[i].Property.Name(true)),AsBytes(m.LeafList[j].Property.Name(true))) ==-1
+	return bytes.Compare(AsBytes(m.LeafList[i].Property.Name(true)), AsBytes(m.LeafList[j].Property.Name(true))) == -1
 }
 
 // messageFlattener takes a proto.Message and flattens it to a list of ordered nodes.
@@ -565,7 +570,7 @@ func (f *messageFlattener) valueToString(value interface{}) (s string, err error
 		v := value.(timestamp.Timestamp)
 		return ptypes.TimestampString(&v), nil
 	default:
-		return "", errors.New(fmt.Sprintf("Got unsupported value: %t", t))
+		return "", errors.New(fmt.Sprintf("Got unsupported value of type %s", t))
 	}
 }
 
@@ -635,6 +640,9 @@ func (f *messageFlattener) generateLeaves(parentProp *Property, fcurrent *messag
 			} else {
 				err = f.handleSlice(prop, fcurrent, i, sliceValue, salts)
 			}
+		} else if valueType.Kind() == reflect.Map {
+			mapValue := reflect.ValueOf(value)
+			err = f.handleMap(prop, fcurrent, i, mapValue, salts)
 		} else if valueType.Kind() == reflect.Struct {
 			err = f.handleStruct(prop, valueField, valueType, reflectSaltsValue.Interface())
 		} else {
@@ -665,7 +673,7 @@ func (f *messageFlattener) handleSlice(prop Property, fcurrent *messageFlattener
 
 	for j := 0; j < sliceValue.Len(); j++ {
 		sval := reflect.Indirect(sliceValue.Index(j))
-		elemProp := prop.ElemProp(FieldNum(j))
+		elemProp := prop.SliceElemProp(FieldNum(j))
 		if reflect.TypeOf(sval.Interface()).Kind() == reflect.Struct {
 			err = f.handleStruct(elemProp, sliceValue.Index(j),
 				reflect.TypeOf(sliceValue.Index(j).Interface()), ss.Index(j).Interface())
@@ -685,6 +693,39 @@ func (f *messageFlattener) handleStruct(prop Property, valueField reflect.Value,
 		fchild := newMessageFlattener(valueField.Interface().(proto.Message), salts.(proto.Message), f.saltsLengthSuffix, f.hash, f.valueEncoder, f.compactProperties)
 		err = f.generateLeaves(&prop, fchild)
 	}
+	return
+}
+
+func (f *messageFlattener) handleMap(prop Property, fcurrent *messageFlattener, i int,
+	mapValue reflect.Value, salts interface{}) (err error) {
+
+	if !mapValue.IsValid() {
+		return fmt.Errorf("Invalid value provided: %v", mapValue)
+	}
+	ss := reflect.ValueOf(salts)
+
+	// Append length of slice as tree leaf
+	saltedFieldValue := fcurrent.saltsValue.FieldByName(fmt.Sprintf("%s%s", fcurrent.messageType.Field(i).Name, fcurrent.saltsLengthSuffix))
+	salt := saltedFieldValue.Interface().([]byte)
+	f.appendLeaf(prop.LengthProp(), strconv.Itoa(mapValue.Len()), salt, []byte{}, false)
+
+	for _, k := range mapValue.MapKeys() {
+		elemProp, err := prop.MapElemProp(k.Interface())
+		if err != nil {
+			return err
+		}
+		elemType := mapValue.Type().Elem()
+		if elemType.Kind() == reflect.Ptr {
+			elemType = elemType.Elem()
+		}
+		if elemType.Kind() == reflect.Struct {
+			err = f.handleStruct(elemProp, mapValue.MapIndex(k), mapValue.Type(), ss.MapIndex(k).Interface())
+		} else {
+			salt := fcurrent.saltsValue.FieldByName(fcurrent.messageType.Field(i).Name).MapIndex(k).Interface().([]byte)
+			err = f.handleAppendLeaf(elemProp, mapValue.MapIndex(k).Interface(), salt)
+		}
+	}
+
 	return
 }
 

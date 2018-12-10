@@ -57,6 +57,24 @@ message SaltedRepeatedItem {
   bytes valueB = 3;
 }
 
+message SimpleMap {
+  map<string,string> value = 1;
+}
+
+message SaltedSimpleMap {
+  map<string,bytes> value = 1;
+  bytes valueLength = 2;
+}
+
+message NestedMap {
+  map<string,SimpleMap> value = 1;
+}
+
+message SaltedNestedMap {
+  map<string,SaltedSimpleMap> value = 1;
+  bytes valueLength = 2;
+}
+
 message TwoLevelRepeatedDocument {
   string valueA = 1;
   repeated RepeatedItem valueB = 2;
@@ -156,4 +174,5 @@ message SaltedExampleDocument {
   bytes value_bytes1 = 5;
   bytes ValueCamelCased = 6;
   bytes value_not_ignored = 7;
+  bytes valueMap = 10;
 }
