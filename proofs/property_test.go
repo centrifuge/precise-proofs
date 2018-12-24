@@ -1,6 +1,7 @@
 package proofs
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,8 +20,45 @@ func TestExtractFieldTags(t *testing.T) {
 
 	name, num, err := ExtractFieldTags("a,42,c,name=d")
 	assert.NoError(t, err)
-	assert.Equal(t, name, "d")
-	assert.Equal(t, num, FieldNum(42))
+	assert.Equal(t, "d", name)
+	assert.Equal(t, FieldNum(42), num)
+}
+
+func TestPropertyName(t *testing.T) {
+	baseProp := NewProperty("base", 42)
+	assert.Equal(t, "base", baseProp.ReadableName())
+	assert.Equal(t, []FieldNum{42}, baseProp.CompactName())
+
+	fieldProp := baseProp.FieldProp("field", 43)
+	assert.Equal(t, "base.field", fieldProp.ReadableName())
+	assert.Equal(t, []FieldNum{42, 43}, fieldProp.CompactName())
+
+	sliceElemProp := baseProp.SliceElemProp(5)
+	assert.Equal(t, "base[5]", sliceElemProp.ReadableName())
+	assert.Equal(t, []FieldNum{42, 5}, sliceElemProp.CompactName())
+
+	mapElemProp, err := baseProp.MapElemProp(fmt.Errorf("not a valid key type"))
+	assert.Error(t, err)
+
+	mapElemProp, err = baseProp.MapElemProp("key")
+	assert.NoError(t, err)
+	assert.Equal(t, "base[key]", mapElemProp.ReadableName())
+	// TODO assert.Equal(t, []FieldNum{42, "key"}, mapElemProp.CompactName())
+
+	lengthProp := baseProp.LengthProp()
+	assert.Equal(t, "base.length", lengthProp.ReadableName())
+	assert.Equal(t, []FieldNum{42}, lengthProp.CompactName())
+}
+
+func TestFieldPropFromTag(t *testing.T) {
+	baseProp := NewProperty("base", 42)
+
+	prop, err := baseProp.FieldPropFromTag("bad proto tags")
+	assert.Error(t, err)
+
+	prop, err = baseProp.FieldPropFromTag("a,42,c,name=d")
+	assert.NoError(t, err)
+	assert.Equal(t, baseProp.FieldProp("d", 42), prop)
 }
 
 func TestAsBytes_ReadableName(t *testing.T) {
@@ -56,4 +94,48 @@ func TestKeyToReadable(t *testing.T) {
 	s, err = keyToReadable(`foo[bar].foo\bar`)
 	assert.NoError(t, err)
 	assert.Equal(t, `foo\[bar\]\.foo\\bar`, s)
+
+	s, err = keyToReadable(true)
+	assert.NoError(t, err)
+	assert.Equal(t, "true", s)
+
+	s, err = keyToReadable(int(4))
+	assert.NoError(t, err)
+	assert.Equal(t, "4", s)
+
+	s, err = keyToReadable(int8(4))
+	assert.NoError(t, err)
+	assert.Equal(t, "4", s)
+
+	s, err = keyToReadable(int16(4))
+	assert.NoError(t, err)
+	assert.Equal(t, "4", s)
+
+	s, err = keyToReadable(int32(4))
+	assert.NoError(t, err)
+	assert.Equal(t, "4", s)
+
+	s, err = keyToReadable(int64(4))
+	assert.NoError(t, err)
+	assert.Equal(t, "4", s)
+
+	s, err = keyToReadable(uint(4))
+	assert.NoError(t, err)
+	assert.Equal(t, "4", s)
+
+	s, err = keyToReadable(uint8(4))
+	assert.NoError(t, err)
+	assert.Equal(t, "4", s)
+
+	s, err = keyToReadable(uint16(4))
+	assert.NoError(t, err)
+	assert.Equal(t, "4", s)
+
+	s, err = keyToReadable(uint32(4))
+	assert.NoError(t, err)
+	assert.Equal(t, "4", s)
+
+	s, err = keyToReadable(uint64(4))
+	assert.NoError(t, err)
+	assert.Equal(t, "4", s)
 }

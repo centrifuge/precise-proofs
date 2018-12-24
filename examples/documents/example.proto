@@ -99,6 +99,19 @@ message SaltedSimpleRepeatedDocument {
   bytes valueCLength = 4;
 }
 
+message SimpleMapDocument {
+  string valueA = 1;
+  string valueB = 2;
+  map<string, string> valueC = 3;
+}
+
+message SaltedSimpleMapDocument {
+  bytes valueA = 1;
+  bytes valueB = 2;
+  map<string, bytes> valueC = 3;
+  bytes valueCLength = 4;
+}
+
 message TwoLevelItem {
   SimpleItem valueA = 1;
   string valueB = 2;

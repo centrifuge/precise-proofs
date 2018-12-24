@@ -209,7 +209,7 @@ func keyToReadable(key interface{}) (string, error) {
 			case `]`:
 				return `\]`
 			}
-			return "???"
+			panic(fmt.Sprintf("unexpected match %q for regex %s", match, escaper))
 		}), nil
 	case reflect.Bool:
 		return fmt.Sprintf("%t", k.Bool()), nil

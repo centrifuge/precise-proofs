@@ -78,3 +78,22 @@ var ExampleSaltedNestedRepeatedDocument = SaltedNestedRepeatedDocument{
 	ValueCLength: salt,
 	ValueD:       &SaltedTwoLevelItem{ValueA: &SaltedSimpleItem{ValueA: salt}, ValueB: salt},
 }
+
+var ExampleSimpleMapDocument = SimpleMapDocument {
+    ValueA: "ValueAA",
+    ValueB: "ValueBB",
+    ValueC: map[string]string{
+        "ValueCAKey": "ValueCAValue",
+        "ValueCBKey": "ValueCBValue",
+    },
+}
+
+var ExampleSaltedSimpleMapDocument = SaltedSimpleMapDocument {
+    ValueA: salt,
+    ValueB: salt,
+    ValueC: map[string][]byte{
+        "ValueCAKey": salt,
+        "ValueCBKey": salt,
+    },
+    ValueCLength: salt,
+}
