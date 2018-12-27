@@ -37,7 +37,7 @@ type FieldNum = uint64
 // SubFieldFormat represents how the property name of a struct field is derived from its parent
 const SubFieldFormat = "%s.%s"
 
-// ElemFormat represents how the property name of a slice element is derived from its parent
+// ElemFormat represents how the property name of a slice or map element is derived from its parent
 const ElemFormat = "%s[%s]"
 
 // Name returns either the compact or human-reable name of a Property
@@ -98,19 +98,26 @@ func (n Property) SliceElemProp(i FieldNum) Property {
 }
 
 // MapElemProp takes a map key and returns a child Property representing the value at that key in the map
-func (n Property) MapElemProp(k interface{}) (Property, error) {
+func (n Property) MapElemProp(k interface{}, maxLength uint64) (Property, error) {
 	readableKey, err := keyToReadable(k)
 	if err != nil {
 		return Property{}, fmt.Errorf("failed to convert key to readable name: %s", err)
 	}
-	// compactKey, err := keyToCompact(k)
-	// if err != nil {
-	//     return fmt.Errorf("failed to convert key to compact name: %s", err)
-	// }
+	if uint64(len(readableKey)) > maxLength {
+		return Property{}, fmt.Errorf("%q exceeds maximum key length %d", readableKey, maxLength)
+	}
+	compactKeyBytes := bytes.Repeat([]byte{0}, int(maxLength-uint64(len(readableKey))))
+	compactKeyBytes = append([]byte(readableKey))
+
+	compactKey := make([]FieldNum, len(compactKeyBytes)/binary.Size(FieldNum(0)))
+	err = binary.Read(bytes.NewReader(compactKeyBytes), binary.BigEndian, compactKey)
+	if err != nil {
+		return Property{}, errors.Wrap(err, "failed to decode compact key from bytes")
+	}
 	return Property{
-		Parent: &n,
-		Text:   readableKey,
-		// Nums:       compacyKey,
+		Parent:     &n,
+		Text:       readableKey,
+		Nums:       compactKey,
 		NameFormat: ElemFormat,
 	}, nil
 }

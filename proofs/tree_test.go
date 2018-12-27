@@ -320,7 +320,7 @@ func TestFlattenMessage_SimpleMap(t *testing.T) {
 		propOrder = append(propOrder, leaf.Property)
 	}
 	mapProp := NewProperty("value", 1)
-	mapElemProp, err := mapProp.MapElemProp("key")
+	mapElemProp, err := mapProp.MapElemProp("key", 32)
 	assert.NoError(t, err)
 	assert.Equal(t, []Property{
 		mapProp.LengthProp(),
@@ -350,10 +350,10 @@ func TestFlattenMessage_NestedMap(t *testing.T) {
 		propOrder = append(propOrder, leaf.Property)
 	}
 	mapProp := NewProperty("value", 1)
-	mapElemProp, err := mapProp.MapElemProp("key")
+	mapElemProp, err := mapProp.MapElemProp("key", 32)
 	assert.NoError(t, err)
 	mapElemProp = mapElemProp.FieldProp("value", 1)
-	mapElemElemProp, err := mapElemProp.MapElemProp("nestedkey")
+	mapElemElemProp, err := mapElemProp.MapElemProp("nestedkey", 32)
 	assert.NoError(t, err)
 	assert.Equal(t, []Property{
 		mapProp.LengthProp(),

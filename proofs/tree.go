@@ -710,7 +710,15 @@ func (f *messageFlattener) handleMap(prop Property, fcurrent *messageFlattener, 
 	f.appendLeaf(prop.LengthProp(), strconv.Itoa(mapValue.Len()), salt, []byte{}, false)
 
 	for _, k := range mapValue.MapKeys() {
-		elemProp, err := prop.MapElemProp(k.Interface())
+        maxLengthI, err := getOptionExtension(fcurrent.messageValue.Addr().Interface(), proofspb.E_KeyMaxLength)
+        if err != nil {
+            return err
+        }
+        maxLength, ok := maxLengthI.(uint64)
+        if !ok {
+            return fmt.Errorf("key_max_length was not a uint64")
+        }
+		elemProp, err := prop.MapElemProp(k.Interface(), maxLength)
 		if err != nil {
 			return err
 		}
@@ -955,4 +963,10 @@ func ValidateProofSortedHashes(hash []byte, hashes [][]byte, rootHash []byte, ha
 	}
 
 	return true, nil
+}
+
+func getOptionExtension(v interface{}, extension *proto.ExtensionDesc) (interface{}, error) {
+    _, md := descriptor.ForMessage(v.(descriptor.Message))
+    options := md.GetOptions()
+    return proto.GetExtension(options, extension)
 }

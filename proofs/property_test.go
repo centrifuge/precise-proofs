@@ -37,10 +37,10 @@ func TestPropertyName(t *testing.T) {
 	assert.Equal(t, "base[5]", sliceElemProp.ReadableName())
 	assert.Equal(t, []FieldNum{42, 5}, sliceElemProp.CompactName())
 
-	mapElemProp, err := baseProp.MapElemProp(fmt.Errorf("not a valid key type"))
+	mapElemProp, err := baseProp.MapElemProp(fmt.Errorf("not a valid key type"), 32)
 	assert.Error(t, err)
 
-	mapElemProp, err = baseProp.MapElemProp("key")
+	mapElemProp, err = baseProp.MapElemProp("key", 32)
 	assert.NoError(t, err)
 	assert.Equal(t, "base[key]", mapElemProp.ReadableName())
 	// TODO assert.Equal(t, []FieldNum{42, "key"}, mapElemProp.CompactName())
