@@ -1,7 +1,6 @@
 package proofs
 
 import (
-	"fmt"
 	"hash"
 	"reflect"
 	"sort"
@@ -21,12 +20,6 @@ import (
 // messageFlattener takes a proto.Message and flattens it to a list of ordered nodes.
 type messageFlattener struct {
 	message           proto.Message
-	messageType       reflect.Type
-	messageValue      reflect.Value
-	excludedFields    map[string]struct{}
-	hashedFields      map[string]struct{}
-	salts             proto.Message
-	saltsValue        reflect.Value
 	leaves            LeafList
 	nodes             [][]byte
 	propOrder         []Property
@@ -65,6 +58,14 @@ func (f *messageFlattener) handleValue(prop *Property, value reflect.Value, salt
 				continue
 			}
 
+			fieldDescriptor := messageDescriptor.Field[i]
+
+			// Check if the field has an exclude_from_tree option and skip it
+			excludeFromTree, err := proto.GetExtension(fieldDescriptor.Options, proofspb.E_ExcludeFromTree)
+			if err == nil && *(excludeFromTree.(*bool)) {
+				continue
+			}
+
 			protoTag := field.Tag.Get("protobuf")
 			name, num, err := ExtractFieldTags(protoTag)
 			if err != nil {
@@ -78,12 +79,8 @@ func (f *messageFlattener) handleValue(prop *Property, value reflect.Value, salt
 				fieldProp = prop.FieldProp(name, num)
 			}
 
-			// Check if the field has an exclude_from_tree option and skip it
-			if _, ok := f.excludedFields[fieldProp.Text]; ok {
-				continue
-			}
-
-			if _, ok := f.hashedFields[fieldProp.Text]; ok {
+			isHashed, err := proto.GetExtension(fieldDescriptor.Options, proofspb.E_HashedField)
+			if err == nil && *(isHashed.(*bool)) {
 				// Fields that have the hashed_field tag on the protobuf message will be treated as hashes without prepending
 				// the property & salt.
 				hash, ok := value.Field(i).Interface().([]byte)
@@ -97,7 +94,7 @@ func (f *messageFlattener) handleValue(prop *Property, value reflect.Value, salt
 
 			fieldSaltValue := saltValue.FieldByName(field.Name)
 			fieldLengthSaltValue := saltValue.FieldByName(field.Name + f.saltsLengthSuffix)
-			err = f.handleValue(&fieldProp, value.Field(i), fieldSaltValue, fieldLengthSaltValue, messageDescriptor.Field[i])
+			err = f.handleValue(&fieldProp, value.Field(i), fieldSaltValue, fieldLengthSaltValue, fieldDescriptor)
 			if err != nil {
 				return errors.Wrapf(err, "error handling field %s", field.Name)
 			}
@@ -204,75 +201,16 @@ func (f *messageFlattener) sortLeaves() (err error) {
 	return nil
 }
 
-// parseExtensions iterates over the prototype descriptor to find fields that
-// should be excluded
-func (f *messageFlattener) parseExtensions() (err error) {
-	descriptorMessage, ok := f.message.(descriptor.Message)
-	if !ok {
-		return fmt.Errorf("message [%s] does not implement descriptor.Message", f.message)
-	}
-	_, messageDescriptor := descriptor.ForMessage(descriptorMessage)
-
-	for i := range messageDescriptor.Field {
-		fieldDescriptor := messageDescriptor.Field[i]
-		fV := reflect.ValueOf(fieldDescriptor).Elem()
-		fType := fV.Type()
-		fieldName := *fieldDescriptor.Name
-		for i := 0; i < fV.NumField(); i++ {
-			field := fV.Field(i)
-			if fType.Field(i).Name != "Options" {
-				continue
-			}
-			if proto.HasExtension(field.Interface().(proto.Message), proofspb.E_ExcludeFromTree) {
-				ext, err := proto.GetExtension(field.Interface().(proto.Message), proofspb.E_ExcludeFromTree)
-				if err != nil {
-					continue
-				}
-				b, _ := ext.(*bool)
-				if *b {
-					f.excludedFields[fieldName] = struct{}{}
-				}
-			}
-			if proto.HasExtension(field.Interface().(proto.Message), proofspb.E_HashedField) {
-				ext, err := proto.GetExtension(field.Interface().(proto.Message), proofspb.E_HashedField)
-				if err != nil {
-					continue
-				}
-				b, _ := ext.(*bool)
-				if *b {
-					f.hashedFields[fieldName] = struct{}{}
-				}
-			}
-		}
-	}
-	return nil
-}
-
-// NewMessageFlattener instantiates a flattener for the given document
-func newMessageFlattener(message, messageSalts proto.Message, saltsLengthSuffix string, hashFn hash.Hash, valueEncoder ValueEncoder, compact bool) *messageFlattener {
-	f := messageFlattener{message: message, salts: messageSalts}
-	f.leaves = LeafList{}
-	f.messageValue = reflect.Indirect(reflect.ValueOf(message))
-	f.messageType = f.messageValue.Type()
-	f.saltsValue = reflect.Indirect(reflect.ValueOf(messageSalts))
-	f.excludedFields = make(map[string]struct{})
-	f.hashedFields = make(map[string]struct{})
-	f.saltsLengthSuffix = saltsLengthSuffix
-	f.hash = hashFn
-	f.valueEncoder = valueEncoder
-	f.compactProperties = compact
-	return &f
-}
-
 // FlattenMessage takes a protobuf message struct and flattens it into an array
 // of nodes.
 //
 // The fields are sorted lexicographically by their protobuf field names.
 func FlattenMessage(message, messageSalts proto.Message, saltsLengthSuffix string, hashFn hash.Hash, valueEncoder ValueEncoder, compact bool, parentProp *Property) (leaves []LeafNode, err error) {
-	f := newMessageFlattener(message, messageSalts, saltsLengthSuffix, hashFn, valueEncoder, compact)
-
-	if err = f.parseExtensions(); err != nil {
-		return
+	f := messageFlattener{
+		saltsLengthSuffix: saltsLengthSuffix,
+		hash:              hashFn,
+		valueEncoder:      valueEncoder,
+		compactProperties: compact,
 	}
 
 	err = f.handleValue(parentProp, reflect.ValueOf(message), reflect.ValueOf(messageSalts), reflect.Value{}, nil)
