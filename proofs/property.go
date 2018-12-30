@@ -107,7 +107,7 @@ func (n Property) MapElemProp(k interface{}, maxLength uint64) (Property, error)
 		return Property{}, fmt.Errorf("%q exceeds maximum key length %d", readableKey, maxLength)
 	}
 	compactKeyBytes := bytes.Repeat([]byte{0}, int(maxLength-uint64(len(readableKey))))
-	compactKeyBytes = append([]byte(readableKey))
+	compactKeyBytes = append(compactKeyBytes, []byte(readableKey)...)
 
 	compactKey := make([]FieldNum, len(compactKeyBytes)/binary.Size(FieldNum(0)))
 	err = binary.Read(bytes.NewReader(compactKeyBytes), binary.BigEndian, compactKey)

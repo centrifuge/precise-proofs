@@ -40,10 +40,13 @@ func TestPropertyName(t *testing.T) {
 	mapElemProp, err := baseProp.MapElemProp(fmt.Errorf("not a valid key type"), 32)
 	assert.Error(t, err)
 
+	mapElemProp, err = baseProp.MapElemProp("keykeykeykeykeykeykeykeykeykeykey", 32)
+	assert.Error(t, err)
+
 	mapElemProp, err = baseProp.MapElemProp("key", 32)
 	assert.NoError(t, err)
 	assert.Equal(t, "base[key]", mapElemProp.ReadableName())
-	// TODO assert.Equal(t, []FieldNum{42, "key"}, mapElemProp.CompactName())
+	assert.Equal(t, []FieldNum{42, 0, 0, 0, 107 << 16 + 101 << 8 + 121}, mapElemProp.CompactName())
 
 	lengthProp := baseProp.LengthProp()
 	assert.Equal(t, "base.length", lengthProp.ReadableName())

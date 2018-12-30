@@ -161,7 +161,6 @@ import (
 	"strings"
 
 	"github.com/centrifuge/precise-proofs/proofs/proto"
-	"github.com/golang/protobuf/descriptor"
 	"github.com/golang/protobuf/proto"
 	"github.com/xsleonard/go-merkle"
 )
@@ -626,10 +625,4 @@ func ValidateProofSortedHashes(hash []byte, hashes [][]byte, rootHash []byte, ha
 	}
 
 	return true, nil
-}
-
-func getOptionExtension(v interface{}, extension *proto.ExtensionDesc) (interface{}, error) {
-    _, md := descriptor.ForMessage(v.(descriptor.Message))
-    options := md.GetOptions()
-    return proto.GetExtension(options, extension)
 }

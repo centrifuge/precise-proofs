@@ -58,7 +58,9 @@ message SaltedRepeatedItem {
 }
 
 message SimpleMap {
-  map<string,string> value = 1;
+  map<string,string> value = 1 [
+    (proofs.key_max_length) = 32
+  ];
 }
 
 message SaltedSimpleMap {
@@ -67,7 +69,9 @@ message SaltedSimpleMap {
 }
 
 message NestedMap {
-  map<string,SimpleMap> value = 1;
+  map<string,SimpleMap> value = 1 [
+    (proofs.key_max_length) = 8
+  ];
 }
 
 message SaltedNestedMap {

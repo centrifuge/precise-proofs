@@ -350,7 +350,7 @@ func TestFlattenMessage_NestedMap(t *testing.T) {
 		propOrder = append(propOrder, leaf.Property)
 	}
 	mapProp := NewProperty("value", 1)
-	mapElemProp, err := mapProp.MapElemProp("key", 32)
+	mapElemProp, err := mapProp.MapElemProp("key", 8)
 	assert.NoError(t, err)
 	mapElemProp = mapElemProp.FieldProp("value", 1)
 	mapElemElemProp, err := mapElemProp.MapElemProp("nestedkey", 32)

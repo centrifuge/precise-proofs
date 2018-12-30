@@ -10,6 +10,7 @@ import (
 
 	"github.com/golang/protobuf/descriptor"
 	"github.com/golang/protobuf/proto"
+	go_descriptor "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/pkg/errors"
@@ -35,7 +36,7 @@ type messageFlattener struct {
 	compactProperties bool
 }
 
-func (f *messageFlattener) handleValue(prop *Property, value reflect.Value, saltValue reflect.Value, lengthSaltValue reflect.Value) (err error) {
+func (f *messageFlattener) handleValue(prop *Property, value reflect.Value, saltValue reflect.Value, lengthSaltValue reflect.Value, fieldDescriptor *go_descriptor.FieldDescriptorProto) (err error) {
 	// handle special cases
 	switch v := value.Interface().(type) {
 	case []byte, *timestamp.Timestamp:
@@ -50,8 +51,11 @@ func (f *messageFlattener) handleValue(prop *Property, value reflect.Value, salt
 	// handle generic recursive cases
 	switch value.Kind() {
 	case reflect.Ptr:
-		return f.handleValue(prop, value.Elem(), saltValue.Elem(), reflect.Value{})
+		return f.handleValue(prop, value.Elem(), saltValue.Elem(), reflect.Value{}, fieldDescriptor)
 	case reflect.Struct:
+
+		_, messageDescriptor := descriptor.ForMessage(value.Addr().Interface().(descriptor.Message))
+
 		// Handle each field of the struct
 		for i := 0; i < value.NumField(); i++ {
 			field := value.Type().Field(i)
@@ -93,7 +97,7 @@ func (f *messageFlattener) handleValue(prop *Property, value reflect.Value, salt
 
 			fieldSaltValue := saltValue.FieldByName(field.Name)
 			fieldLengthSaltValue := saltValue.FieldByName(field.Name + f.saltsLengthSuffix)
-			err = f.handleValue(&fieldProp, value.Field(i), fieldSaltValue, fieldLengthSaltValue)
+			err = f.handleValue(&fieldProp, value.Field(i), fieldSaltValue, fieldLengthSaltValue, messageDescriptor.Field[i])
 			if err != nil {
 				return errors.Wrapf(err, "error handling field %s", field.Name)
 			}
@@ -105,7 +109,7 @@ func (f *messageFlattener) handleValue(prop *Property, value reflect.Value, salt
 		// Handle each element of the slice
 		for i := 0; i < value.Len(); i++ {
 			elemProp := prop.SliceElemProp(FieldNum(i))
-			err := f.handleValue(&elemProp, value.Index(i), saltValue.Index(i), reflect.Value{})
+			err := f.handleValue(&elemProp, value.Index(i), saltValue.Index(i), reflect.Value{}, nil)
 			if err != nil {
 				return errors.Wrapf(err, "error handling slice element %d", i)
 			}
@@ -116,12 +120,18 @@ func (f *messageFlattener) handleValue(prop *Property, value reflect.Value, salt
 
 		// Handle each value of the map
 		for _, k := range value.MapKeys() {
-			// TODO: read from extension
-			elemProp, err := prop.MapElemProp(k.Interface(), 32)
+			extVal, err := proto.GetExtension(fieldDescriptor.Options, proofspb.E_KeyMaxLength)
+			if err != nil {
+				return errors.Wrap(err, "no key_max_length specified")
+			}
+
+			maxLength := *(extVal.(*uint64))
+
+			elemProp, err := prop.MapElemProp(k.Interface(), maxLength)
 			if err != nil {
 				return errors.Wrapf(err, "failed to create elem prop for %q", k)
 			}
-			err = f.handleValue(&elemProp, value.MapIndex(k), saltValue.MapIndex(k), reflect.Value{})
+			err = f.handleValue(&elemProp, value.MapIndex(k), saltValue.MapIndex(k), reflect.Value{}, nil)
 			if err != nil {
 				return errors.Wrapf(err, "error handling slice element %s", k)
 			}
@@ -265,7 +275,7 @@ func FlattenMessage(message, messageSalts proto.Message, saltsLengthSuffix strin
 		return
 	}
 
-	err = f.handleValue(parentProp, reflect.ValueOf(message), reflect.ValueOf(messageSalts), reflect.Value{})
+	err = f.handleValue(parentProp, reflect.ValueOf(message), reflect.ValueOf(messageSalts), reflect.Value{}, nil)
 	if err != nil {
 		return
 	}
