@@ -389,6 +389,68 @@ func TestFlattenMessage_NestedMap(t *testing.T) {
 
 }
 
+func TestFlattenMessage_SimpleEntries(t *testing.T) {
+	message := &documentspb.SimpleEntries{
+		Entries: []*documentspb.SimpleEntry{
+			{
+				EntryKey:   "key",
+				EntryValue: "value",
+			},
+		},
+	}
+	messageSalts := documentspb.SaltedSimpleEntries{}
+	err := FillSalts(message, &messageSalts)
+	assert.NoError(t, err)
+
+	leaves, err := FlattenMessage(message, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
+	assert.NoError(t, err)
+	propOrder := []Property{}
+	for _, leaf := range leaves {
+		propOrder = append(propOrder, leaf.Property)
+	}
+	mapProp := Empty.FieldProp("entries", 1)
+	mapElemProp, err := mapProp.MapElemProp("key", 32)
+	assert.NoError(t, err)
+	assert.Equal(t, []Property{
+		mapProp.LengthProp(),
+		mapElemProp,
+	}, propOrder)
+
+}
+
+func TestFlattenMessage_Entries(t *testing.T) {
+	message := &documentspb.Entries{
+		Entries: []*documentspb.Entry{
+			{
+				EntryKey: "key",
+				ValueA: "valueA",
+				ValueB: []byte("valueB"),
+				ValueC: 42,
+			},
+		},
+	}
+	messageSalts := documentspb.SaltedEntries{}
+	err := FillSalts(message, &messageSalts)
+	assert.NoError(t, err)
+
+	leaves, err := FlattenMessage(message, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
+	assert.NoError(t, err)
+	propOrder := []Property{}
+	for _, leaf := range leaves {
+		propOrder = append(propOrder, leaf.Property)
+	}
+	mapProp := Empty.FieldProp("entries", 1)
+	mapElemProp, err := mapProp.MapElemProp("key", 32)
+	assert.NoError(t, err)
+	assert.Equal(t, []Property{
+		mapProp.LengthProp(),
+        mapElemProp.FieldProp("valueA", 2),
+        mapElemProp.FieldProp("valueB", 3),
+        mapElemProp.FieldProp("valueC", 4),
+	}, propOrder)
+
+}
+
 func TestFlattenMessageFromAutoFillSalts(t *testing.T) {
 	exampleFNDoc := &documentspb.ExampleFilledNestedRepeatedDocument
 	exampleFNSalts := &documentspb.SaltedNestedRepeatedDocument{}

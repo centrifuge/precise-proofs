@@ -86,6 +86,54 @@ message SaltedNestedMap {
   bytes valueLength = 2;
 }
 
+message SimpleEntry {
+  string entryKey = 1;
+  string entryValue = 2;
+}
+
+message SaltedSimpleEntry {
+  string entryKey = 1;
+  bytes entryValue = 2;
+}
+
+message SimpleEntries {
+  repeated SimpleEntry entries = 1 [
+    (proofs.key_length) = 32,
+    (proofs.mapping_key) = "entryKey"
+  ];
+}
+
+message SaltedSimpleEntries {
+  repeated SaltedSimpleEntry entries = 1;
+  bytes entriesLength = 2;
+}
+
+message Entry {
+    string entryKey = 1;
+    string valueA = 2;
+    bytes valueB = 3;
+    int64 valueC = 4;
+}
+
+message SaltedEntry {
+    string entryKey = 1;
+    bytes valueA = 2;
+    bytes valueB = 3;
+    bytes valueC = 4;
+}
+
+message Entries {
+  repeated Entry entries = 1 [
+    (proofs.key_length) = 32,
+    (proofs.mapping_key) = "entryKey"
+  ];
+}
+
+message SaltedEntries {
+  repeated SaltedEntry entries = 1;
+  bytes entriesLength = 2;
+}
+
 message TwoLevelRepeatedDocument {
   string valueA = 1;
   repeated RepeatedItem valueB = 2;

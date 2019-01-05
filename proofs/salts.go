@@ -1,11 +1,17 @@
 package proofs
 
 import (
+	"crypto/rand"
 	"fmt"
 	"reflect"
 	"strings"
 
+	"github.com/golang/protobuf/descriptor"
 	"github.com/golang/protobuf/proto"
+	go_descriptor "github.com/golang/protobuf/protoc-gen-go/descriptor"
+	"github.com/golang/protobuf/protoc-gen-go/generator"
+
+	"github.com/centrifuge/precise-proofs/proofs/proto"
 )
 
 // FillSalts is a helper message that iterates over all fields in a proto.Message struct and fills them with 32 byte
@@ -18,127 +24,119 @@ import (
 //
 // The suffix of the slice field needs to end in: `Length` or customized as described above.
 func FillSalts(dataMessage, saltsMessage proto.Message) (err error) {
-	dataMessageValue := reflect.Indirect(reflect.ValueOf(dataMessage))
-	saltsMessageValue := reflect.Indirect(reflect.ValueOf(saltsMessage))
+	value := reflect.ValueOf(dataMessage)
+	saltValue := reflect.ValueOf(saltsMessage)
+	return fillSalts(value, saltValue, nil)
+}
 
-	for i := 0; i < saltsMessageValue.NumField(); i++ {
-		saltsField := saltsMessageValue.Field(i)
-		saltsType := saltsField.Type()
-		valueField := dataMessageValue.FieldByName(saltsMessageValue.Type().Field(i).Name)
+func fillSalts(value, saltValue reflect.Value, fieldDescriptor *go_descriptor.FieldDescriptorProto) (err error) {
 
-		if saltsType.Kind() == reflect.Ptr {
-			saltsType = saltsType.Elem()
+	if saltValue.Type() == reflect.TypeOf([]byte{}) {
+		saltValue.SetBytes(NewSalt())
+		return nil
+	}
+
+	switch saltValue.Kind() {
+	case reflect.Ptr:
+		if saltValue.CanSet() {
+			saltValue.Set(reflect.New(saltValue.Type().Elem()))
 		}
+		return fillSalts(value.Elem(), saltValue.Elem(), fieldDescriptor)
+	case reflect.Slice:
+		return handleFillSaltsSlice(value, saltValue, fieldDescriptor)
+	case reflect.Struct:
+		return handleFillSaltsStruct(value, saltValue, fieldDescriptor)
+	case reflect.Map:
+		return handleFillSaltsMap(value, saltValue, fieldDescriptor)
+	}
 
-		if strings.HasPrefix(saltsMessageValue.Type().Field(i).Name, "XXX_") {
+	return fmt.Errorf("Cannot fill %q with salts", saltValue.Type())
+
+}
+
+func handleFillSaltsMap(value, saltValue reflect.Value, fieldDescriptor *go_descriptor.FieldDescriptorProto) (err error) {
+	newMap := reflect.MakeMapWithSize(saltValue.Type(), value.Len())
+	saltValue.Set(newMap)
+
+	for _, k := range value.MapKeys() {
+		valueElem := value.MapIndex(k)
+		saltValueElem := reflect.New(saltValue.Type().Elem()).Elem()
+		err := fillSalts(valueElem, saltValueElem, fieldDescriptor)
+		if err != nil {
+			return err
+		}
+		saltValue.SetMapIndex(k, saltValueElem)
+	}
+	return
+}
+
+func handleFillSaltsSlice(value, saltValue reflect.Value, fieldDescriptor *go_descriptor.FieldDescriptorProto) error {
+
+	newSlice := reflect.MakeSlice(saltValue.Type(), value.Len(), value.Len())
+	saltValue.Set(newSlice)
+
+	for i := 0; i < value.Len(); i++ {
+		valueElem := value.Index(i)
+		saltValueElem := saltValue.Index(i)
+
+		err := fillSalts(valueElem, saltValueElem, fieldDescriptor)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func handleFillSaltsStruct(value, saltValue reflect.Value, outerFieldDescriptor *go_descriptor.FieldDescriptorProto) (err error) {
+
+    // lookup map key from field descriptor, if it exists
+    mappingKeyFieldName := ""
+    if outerFieldDescriptor != nil {
+        mappingKeyVal, err := proto.GetExtension(outerFieldDescriptor.Options, proofspb.E_MappingKey)
+        if err == nil {
+            mappingKeyFieldName = generator.CamelCase(*(mappingKeyVal.(*string)))
+        }
+    }
+
+	_, md := descriptor.ForMessage(value.Addr().Interface().(descriptor.Message))
+
+	for i := 0; i < saltValue.NumField(); i++ {
+		saltField := saltValue.Type().Field(i)
+		fieldName := saltField.Name
+
+		if strings.HasPrefix(fieldName, "XXX_") {
 			continue
 		}
 
-		if saltsType == reflect.TypeOf([]uint8{}) {
-			err = handleFillSaltsValue(saltsField)
-		} else if saltsType.Kind() == reflect.Slice {
-			err = handleFillSaltsSlice(saltsType, saltsField, valueField)
-		} else if saltsType.Kind() == reflect.Struct {
-			err = handleFillSaltsStruct(saltsField, saltsType, valueField)
-		} else if saltsType.Kind() == reflect.Map {
-			err = handleFillSaltsMap(saltsType, saltsField, valueField)
-		} else {
-			return fmt.Errorf("Invalid type (%s) for field (%s)", reflect.TypeOf(saltsField.Interface()).String(), saltsMessageValue.Type().Field(i).Name)
+		fieldValue := value.FieldByName(fieldName)
+		saltFieldValue := saltValue.Field(i)
+
+        if fieldName == mappingKeyFieldName {
+            // this is the map key field
+            // so instead of filling this field with a salt
+            // we copy the field value from value
+            saltFieldValue.Set(fieldValue)
+            continue
+        }
+
+        // get the field descriptor for this field to pass along
+		valueField, fieldExistsInValue := value.Type().FieldByName(fieldName)
+		var innerFieldDescriptor *go_descriptor.FieldDescriptorProto
+		if fieldExistsInValue {
+			innerFieldDescriptor = md.Field[valueField.Index[0]]
 		}
 
+		err = fillSalts(fieldValue, saltFieldValue, innerFieldDescriptor)
 		if err != nil {
-			return
-		}
-
-	}
-
-	return
-}
-
-func handleFillSaltsMap(saltsType reflect.Type, saltsField reflect.Value, valueField reflect.Value) (err error) {
-	if saltsType.Kind() != reflect.Map || reflect.TypeOf(valueField.Interface()).Kind() != reflect.Map {
-		return fmt.Errorf("Invalid type (%s) or (%s) for field", saltsType.String(), reflect.TypeOf(valueField.Interface()).String())
-	}
-
-	newMap := reflect.MakeMapWithSize(saltsType, valueField.Len())
-	saltsField.Set(newMap)
-
-	for _, k := range valueField.MapKeys() {
-		dataFieldItem := valueField.MapIndex(k)
-		saltsFieldItem := reflect.Indirect(reflect.New(saltsType.Elem()))
-
-		var checkType reflect.Type
-		if reflect.TypeOf(saltsFieldItem.Interface()).Kind() == reflect.Ptr {
-			checkType = reflect.TypeOf(saltsFieldItem.Interface()).Elem()
-		} else {
-			checkType = reflect.TypeOf(saltsFieldItem.Interface())
-		}
-
-		if checkType.Kind() == reflect.Struct {
-			err = handleFillSaltsStruct(saltsFieldItem, checkType, dataFieldItem)
-		} else {
-			err = handleFillSaltsValue(reflect.Indirect(saltsFieldItem))
-		}
-
-		if err != nil {
-			return
-		}
-
-		saltsField.SetMapIndex(k, saltsFieldItem)
-	}
-	return
-}
-
-func handleFillSaltsSlice(saltsType reflect.Type, saltsField reflect.Value, valueField reflect.Value) (err error) {
-	if saltsType.Kind() != reflect.Slice || reflect.TypeOf(valueField.Interface()).Kind() != reflect.Slice {
-		return fmt.Errorf("Invalid type (%s) or (%s) for field", saltsType.String(), reflect.TypeOf(valueField.Interface()).String())
-	}
-
-	sliceType := reflect.SliceOf(saltsType.Elem())
-	newSlice := reflect.MakeSlice(sliceType, valueField.Len(), valueField.Len())
-	saltsField.Set(newSlice)
-
-	for j := 0; j < valueField.Len(); j++ {
-		dataFieldItem := valueField.Index(j)
-		saltsFieldItem := saltsField.Index(j)
-		saltsFieldItemType := reflect.TypeOf(saltsFieldItem.Interface())
-		saltsFieldItem.Set(reflect.Indirect(reflect.New(saltsFieldItemType)))
-
-		var checkType reflect.Type
-		if reflect.TypeOf(saltsFieldItem.Interface()).Kind() == reflect.Ptr {
-			checkType = reflect.TypeOf(saltsFieldItem.Interface()).Elem()
-		} else {
-			checkType = reflect.TypeOf(saltsFieldItem.Interface())
-		}
-
-		if checkType.Kind() == reflect.Struct {
-			err = handleFillSaltsStruct(saltsFieldItem, checkType, dataFieldItem)
-		} else {
-			err = handleFillSaltsValue(reflect.Indirect(saltsFieldItem))
-		}
-
-		if err != nil {
-			return
+			return err
 		}
 	}
 	return
 }
 
-func handleFillSaltsStruct(saltsField reflect.Value, saltsType reflect.Type, valueField reflect.Value) (err error) {
-	if saltsType.Kind() != reflect.Struct {
-		return fmt.Errorf("Invalid type (%s) for field", saltsType.String())
-	}
-	saltsField.Set(reflect.New(saltsType))
-	err = FillSalts(valueField.Interface().(proto.Message), saltsField.Interface().(proto.Message))
-	return
-}
-
-func handleFillSaltsValue(saltsField reflect.Value) (err error) {
-	if reflect.TypeOf(saltsField.Interface()) != reflect.TypeOf([]uint8{}) {
-		return fmt.Errorf("Invalid type (%s) for field", reflect.TypeOf(saltsField.Interface()).String())
-	}
-	newSalt := NewSalt()
-	saltVal := reflect.ValueOf(newSalt)
-	saltsField.Set(saltVal)
-	return
+// NewSalt creates a 32 byte slice with random data using the crypto/rand RNG
+func NewSalt() (salt []byte) {
+	randbytes := make([]byte, 32)
+	rand.Read(randbytes)
+	return randbytes
 }

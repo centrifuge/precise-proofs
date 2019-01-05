@@ -10,6 +10,7 @@ import (
 	"github.com/golang/protobuf/descriptor"
 	"github.com/golang/protobuf/proto"
 	go_descriptor "github.com/golang/protobuf/protoc-gen-go/descriptor"
+	"github.com/golang/protobuf/protoc-gen-go/generator"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/pkg/errors"
@@ -29,7 +30,7 @@ type messageFlattener struct {
 	compactProperties bool
 }
 
-func (f *messageFlattener) handleValue(prop Property, value reflect.Value, saltValue reflect.Value, lengthSaltValue reflect.Value, fieldDescriptor *go_descriptor.FieldDescriptorProto) (err error) {
+func (f *messageFlattener) handleValue(prop Property, value reflect.Value, saltValue reflect.Value, lengthSaltValue reflect.Value, outerFieldDescriptor *go_descriptor.FieldDescriptorProto) (err error) {
 	// handle special cases
 	switch v := value.Interface().(type) {
 	case []byte, *timestamp.Timestamp:
@@ -44,8 +45,18 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, saltV
 	// handle generic recursive cases
 	switch value.Kind() {
 	case reflect.Ptr:
-		return f.handleValue(prop, value.Elem(), saltValue.Elem(), reflect.Value{}, fieldDescriptor)
+		return f.handleValue(prop, value.Elem(), saltValue.Elem(), reflect.Value{}, outerFieldDescriptor)
 	case reflect.Struct:
+
+		// lookup map key from field descriptor, if it exists
+		mappingKeyFieldName := ""
+		if outerFieldDescriptor != nil {
+			mappingKeyVal, err := proto.GetExtension(outerFieldDescriptor.Options, proofspb.E_MappingKey)
+			if err == nil {
+				mappingKeyFieldName = generator.CamelCase(*(mappingKeyVal.(*string)))
+			}
+		}
+
 		_, messageDescriptor := descriptor.ForMessage(value.Addr().Interface().(descriptor.Message))
 
 		// Handle each field of the struct
@@ -57,10 +68,16 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, saltV
 				continue
 			}
 
-			fieldDescriptor := messageDescriptor.Field[i]
+			if field.Name == mappingKeyFieldName {
+				// this is the map key field
+				// so we skip flattening this field
+				continue
+			}
+
+			innerFieldDescriptor := messageDescriptor.Field[i]
 
 			// Check if the field has an exclude_from_tree option and skip it
-			excludeFromTree, err := proto.GetExtension(fieldDescriptor.Options, proofspb.E_ExcludeFromTree)
+			excludeFromTree, err := proto.GetExtension(innerFieldDescriptor.Options, proofspb.E_ExcludeFromTree)
 			if err == nil && *(excludeFromTree.(*bool)) {
 				continue
 			}
@@ -73,7 +90,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, saltV
 
 			fieldProp := prop.FieldProp(name, num)
 
-			isHashed, err := proto.GetExtension(fieldDescriptor.Options, proofspb.E_HashedField)
+			isHashed, err := proto.GetExtension(innerFieldDescriptor.Options, proofspb.E_HashedField)
 			if err == nil && *(isHashed.(*bool)) {
 				// Fields that have the hashed_field tag on the protobuf message will be treated as hashes without prepending
 				// the property & salt.
@@ -88,12 +105,29 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, saltV
 
 			fieldSaltValue := saltValue.FieldByName(field.Name)
 			fieldLengthSaltValue := saltValue.FieldByName(field.Name + f.saltsLengthSuffix)
-			err = f.handleValue(fieldProp, value.Field(i), fieldSaltValue, fieldLengthSaltValue, fieldDescriptor)
+			err = f.handleValue(fieldProp, value.Field(i), fieldSaltValue, fieldLengthSaltValue, innerFieldDescriptor)
 			if err != nil {
 				return errors.Wrapf(err, "error handling field %s", field.Name)
 			}
 		}
 	case reflect.Slice:
+		mappingKeyVal, err := proto.GetExtension(outerFieldDescriptor.Options, proofspb.E_MappingKey)
+		if err == nil {
+			// a mapping key was defined for this repeated field
+			// convert it to a map, and then handle this value as
+			// a map instead of a slice
+			mappingKey := generator.CamelCase(*(mappingKeyVal.(*string)))
+			mapValue, err := sliceToMap(value, mappingKey)
+			if err != nil {
+				return errors.Wrapf(err, "failed to convert %s value to map with mapping_key %q", value.Type(), mappingKey)
+			}
+			mapSaltValue, err := sliceToMap(saltValue, mappingKey)
+			if err != nil {
+				return errors.Wrapf(err, "failed to convert %s saltValue to map with mapping_key %q", value.Type(), mappingKey)
+			}
+			return f.handleValue(prop, mapValue, mapSaltValue, lengthSaltValue, outerFieldDescriptor)
+		}
+
 		// Append length of slice as tree leaf
 		f.appendLeaf(prop.LengthProp(), strconv.Itoa(value.Len()), lengthSaltValue.Bytes(), []byte{}, false)
 
@@ -111,7 +145,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, saltV
 
 		// Handle each value of the map
 		for _, k := range value.MapKeys() {
-			extVal, err := proto.GetExtension(fieldDescriptor.Options, proofspb.E_KeyLength)
+			extVal, err := proto.GetExtension(outerFieldDescriptor.Options, proofspb.E_KeyLength)
 			var keyLength uint64
 			if err == nil {
 				keyLength = *(extVal.(*uint64))
@@ -121,13 +155,12 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, saltV
 			if err != nil {
 				return errors.Wrapf(err, "failed to create elem prop for %q", k)
 			}
-			err = f.handleValue(elemProp, value.MapIndex(k), saltValue.MapIndex(k), reflect.Value{}, nil)
+			err = f.handleValue(elemProp, value.MapIndex(k), saltValue.MapIndex(k), reflect.Value{}, outerFieldDescriptor)
 			if err != nil {
 				return errors.Wrapf(err, "error handling slice element %s", k)
 			}
 		}
 	default:
-		// return errors.Errorf("cannot flatten %s: %s", prop.ReadableName(), value.Kind())
 		valueString, err := f.valueToString(value.Interface())
 		if err != nil {
 			return err
@@ -216,4 +249,41 @@ func FlattenMessage(message, messageSalts proto.Message, saltsLengthSuffix strin
 		return []LeafNode{}, err
 	}
 	return f.leaves, nil
+}
+
+func sliceToMap(value reflect.Value, mappingKey string) (reflect.Value, error) {
+	elemType := value.Type().Elem().Elem()
+	keyField, keyFound := elemType.FieldByName(mappingKey)
+	if !keyFound {
+		return reflect.Value{}, errors.Errorf("%s does not have field %q", elemType, mappingKey)
+	}
+	keyType := keyField.Type
+	extractValue := func(v reflect.Value) reflect.Value {
+		return v
+	}
+
+	_, elemMD := descriptor.ForMessage(reflect.New(elemType).Interface().(descriptor.Message))
+	if len(elemMD.Field) == 2 {
+		valueField, valueFound := elemType.FieldByNameFunc(func(name string) bool {
+			return !strings.HasPrefix(name, "XXX_") && name != mappingKey
+		})
+		if !valueFound {
+			return reflect.Value{}, errors.Errorf("could not find field in %s not called %q", elemType, mappingKey)
+		}
+		extractValue = func(v reflect.Value) reflect.Value {
+			return v.Elem().FieldByName(valueField.Name)
+		}
+		elemType = valueField.Type
+	} else {
+		elemType = reflect.PtrTo(elemType)
+	}
+
+	mapType := reflect.MapOf(keyType, elemType)
+	mapValue := reflect.MakeMap(mapType)
+	for i := 0; i < value.Len(); i++ {
+		key := value.Index(i).Elem().FieldByIndex(keyField.Index)
+		value := extractValue(value.Index(i))
+		mapValue.SetMapIndex(key, value)
+	}
+	return mapValue, nil
 }
