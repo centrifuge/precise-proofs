@@ -135,7 +135,7 @@ func TestFlattenMessage(t *testing.T) {
 		ValueNotIgnored: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 	}
 	leaves, err := FlattenMessage(&message, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, nil)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, 8, len(leaves))
 
 	propOrder := []Property{}
@@ -161,7 +161,6 @@ func TestFlattenMessage(t *testing.T) {
 	assert.Equal(t, expectedHash[:], leaves[3].Hash)
 }
 
-
 func TestFlattenMessage_compact(t *testing.T) {
 	message := documentspb.ExampleDocument{
 		ValueA: "Foo",
@@ -175,9 +174,10 @@ func TestFlattenMessage_compact(t *testing.T) {
 		ValueBytes1:     []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		ValueCamelCased: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		ValueNotIgnored: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
+		ValueMap:        []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 	}
 	leaves, err := FlattenMessage(&message, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, true, nil)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, 8, len(leaves))
 
 	propOrder := []Property{}
@@ -203,7 +203,6 @@ func TestFlattenMessage_compact(t *testing.T) {
 	assert.Equal(t, expectedHash[:], leaves[0].Hash)
 }
 
-
 func TestFlattenMessageWithPrefix(t *testing.T) {
 	message := documentspb.ExampleDocument{
 		ValueA: "Foo",
@@ -220,14 +219,14 @@ func TestFlattenMessageWithPrefix(t *testing.T) {
 	}
 	parentProp := NewProperty("doc", 42)
 	leaves, err := FlattenMessage(&message, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, &parentProp)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, 8, len(leaves))
 
 	propOrder := []Property{}
 	for _, leaf := range leaves {
 		propOrder = append(propOrder, leaf.Property)
 	}
-	
+
 	assert.Equal(t, []Property{
 		parentProp.FieldProp("ValueCamelCased", 6),
 		parentProp.FieldProp("value1", 3),
@@ -304,6 +303,92 @@ func TestFlattenMessage_HashedField(t *testing.T) {
 	assert.EqualError(t, err, "The option hashed_field is only supported for type `bytes`")
 }
 
+func TestFlattenMessage_SimpleMap(t *testing.T) {
+	message := &documentspb.SimpleMap{
+		Value: map[int32]string{
+			42: "value",
+		},
+	}
+	messageSalts := documentspb.SaltedSimpleMap{}
+	err := FillSalts(message, &messageSalts)
+	assert.NoError(t, err)
+
+	leaves, err := FlattenMessage(message, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, nil)
+	assert.NoError(t, err)
+	propOrder := []Property{}
+	for _, leaf := range leaves {
+		propOrder = append(propOrder, leaf.Property)
+	}
+	mapProp := NewProperty("value", 1)
+	mapElemProp, err := mapProp.MapElemProp(int32(42), 32)
+	assert.NoError(t, err)
+	assert.Equal(t, []Property{
+		mapProp.LengthProp(),
+		mapElemProp,
+	}, propOrder)
+
+}
+
+func TestFlattenMessage_SimpleStringMap(t *testing.T) {
+	message := &documentspb.SimpleStringMap{
+		Value: map[string]string{
+			"key": "value",
+		},
+	}
+	messageSalts := documentspb.SaltedSimpleStringMap{}
+	err := FillSalts(message, &messageSalts)
+	assert.NoError(t, err)
+
+	leaves, err := FlattenMessage(message, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, nil)
+	assert.NoError(t, err)
+	propOrder := []Property{}
+	for _, leaf := range leaves {
+		propOrder = append(propOrder, leaf.Property)
+	}
+	mapProp := NewProperty("value", 1)
+	mapElemProp, err := mapProp.MapElemProp("key", 32)
+	assert.NoError(t, err)
+	assert.Equal(t, []Property{
+		mapProp.LengthProp(),
+		mapElemProp,
+	}, propOrder)
+
+}
+
+func TestFlattenMessage_NestedMap(t *testing.T) {
+	message := &documentspb.NestedMap{
+		Value: map[int32]*documentspb.SimpleMap{
+			42: &documentspb.SimpleMap{
+				Value: map[int32]string{
+					-42: "value",
+				},
+			},
+		},
+	}
+	messageSalts := documentspb.SaltedNestedMap{}
+	err := FillSalts(message, &messageSalts)
+	assert.NoError(t, err)
+
+	leaves, err := FlattenMessage(message, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, nil)
+	assert.NoError(t, err)
+	propOrder := []Property{}
+	for _, leaf := range leaves {
+		propOrder = append(propOrder, leaf.Property)
+	}
+	mapProp := NewProperty("value", 1)
+	mapElemProp, err := mapProp.MapElemProp(int32(42), 0)
+	assert.NoError(t, err)
+	mapElemProp = mapElemProp.FieldProp("value", 1)
+	mapElemElemProp, err := mapElemProp.MapElemProp(int32(-42), 0)
+	assert.NoError(t, err)
+	assert.Equal(t, []Property{
+		mapProp.LengthProp(),
+		mapElemProp.LengthProp(),
+		mapElemElemProp,
+	}, propOrder)
+
+}
+
 func TestFlattenMessageFromAutoFillSalts(t *testing.T) {
 	exampleFNDoc := &documentspb.ExampleFilledNestedRepeatedDocument
 	exampleFNSalts := &documentspb.SaltedNestedRepeatedDocument{}
@@ -325,8 +410,8 @@ func TestFlattenMessageFromAutoFillSalts(t *testing.T) {
 		rootProp.FieldProp("valueA", 1),
 		rootProp.FieldProp("valueB", 2),
 		rootProp.FieldProp("valueC", 3).LengthProp(),
-		rootProp.FieldProp("valueC", 3).ElemProp(0).FieldProp("valueA", 1),
-		rootProp.FieldProp("valueC", 3).ElemProp(1).FieldProp("valueA", 1),
+		rootProp.FieldProp("valueC", 3).SliceElemProp(0).FieldProp("valueA", 1),
+		rootProp.FieldProp("valueC", 3).SliceElemProp(1).FieldProp("valueA", 1),
 		rootProp.FieldProp("valueD", 4).FieldProp("valueA", 1).FieldProp("valueA", 1),
 		rootProp.FieldProp("valueD", 4).FieldProp("valueB", 2),
 	}, propOrder)
@@ -345,8 +430,8 @@ func TestFlattenMessageFromAlreadyFilledSalts(t *testing.T) {
 		NewProperty("valueA", 1),
 		NewProperty("valueB", 2),
 		NewProperty("valueC", 3).LengthProp(),
-		NewProperty("valueC", 3).ElemProp(0).FieldProp("valueA", 1),
-		NewProperty("valueC", 3).ElemProp(1).FieldProp("valueA", 1),
+		NewProperty("valueC", 3).SliceElemProp(0).FieldProp("valueA", 1),
+		NewProperty("valueC", 3).SliceElemProp(1).FieldProp("valueA", 1),
 		NewProperty("valueD", 4).FieldProp("valueA", 1).FieldProp("valueA", 1),
 		NewProperty("valueD", 4).FieldProp("valueB", 2),
 	}, propOrder)
@@ -369,10 +454,10 @@ func TestTree_Generate(t *testing.T) {
 	}
 
 	leaves, err := FlattenMessage(&protoMessage, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, nil)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	tree := merkle.NewTreeWithOpts(merkle.TreeOptions{DisableHashLeaves: true})
 	hashes := [][]byte{}
-	assert.Equal(t, len(leaves), 8)
+	assert.Equal(t, 8, len(leaves))
 	for _, leaf := range leaves {
 		hashes = append(hashes, leaf.Hash)
 	}
@@ -397,10 +482,11 @@ func TestSortedHashTree_Generate(t *testing.T) {
 		ValueBytes1:     []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		ValueNotIgnored: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		ValueCamelCased: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
+		ValueMap:        []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 	}
 
 	leaves, err := FlattenMessage(&protoMessage, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, nil)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	tree := merkle.NewTreeWithOpts(merkle.TreeOptions{DisableHashLeaves: true, EnableHashSorting: true})
 	hashes := [][]byte{}
 	for _, leaf := range leaves {
@@ -758,7 +844,7 @@ func TestTree_GenerateNestedTreeCombinedStandardProof(t *testing.T) {
 	assert.Nil(t, err)
 
 	err = doctreeA.Generate()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	doctreeB := NewDocumentTree(TreeOptions{Hash: sha256Hash})
 	docB := &documentspb.ExampleDocument{
@@ -766,10 +852,10 @@ func TestTree_GenerateNestedTreeCombinedStandardProof(t *testing.T) {
 		ValueNotHashed: doctreeA.rootHash,
 	}
 	err = doctreeB.AddLeavesFromDocument(docB, &documentspb.ExampleDocumentSalts)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	err = doctreeB.Generate()
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	expectedRootHashA := []byte{0xe9, 0x7a, 0x71, 0x75, 0xeb, 0xbf, 0xd9, 0x7a, 0x60, 0x8d, 0x7a, 0x52, 0xf2, 0x7b, 0x4f, 0x84, 0x71, 0xdc, 0xc0, 0x8d, 0x65, 0x64, 0xc7, 0xab, 0x8b, 0xf1, 0x1a, 0x9d, 0x6c, 0xa9, 0x85, 0x55}
 	assert.Equal(t, expectedRootHashA, doctreeA.RootHash())
@@ -778,15 +864,15 @@ func TestTree_GenerateNestedTreeCombinedStandardProof(t *testing.T) {
 	assert.Equal(t, expectedRootHashB, doctreeB.RootHash())
 
 	fieldProofA, err := doctreeA.CreateProof("valueA")
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	fieldHash := doctreeA.merkleTree.Nodes[0].Hash
 	valid, err := ValidateProofHashes(fieldHash, fieldProofA.Hashes, doctreeA.rootHash, doctreeA.hash)
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 	assert.True(t, valid)
 
 	fieldProofB, err := doctreeB.CreateProof("value_not_hashed")
-	assert.Nil(t, err)
+	assert.NoError(t, err)
 
 	valid, err = ValidateProofHashes(docB.ValueNotHashed, fieldProofB.Hashes, doctreeB.rootHash, doctreeB.hash)
 	assert.Nil(t, err)
@@ -940,8 +1026,8 @@ func TestTree_GenerateWithRepeatedFields(t *testing.T) {
 		NewProperty("valueA", 1),
 		NewProperty("valueB", 2),
 		NewProperty("valueC", 3).LengthProp(),
-		NewProperty("valueC", 3).ElemProp(0),
-		NewProperty("valueC", 3).ElemProp(1),
+		NewProperty("valueC", 3).SliceElemProp(0),
+		NewProperty("valueC", 3).SliceElemProp(1),
 	}, propOrder)
 
 	hashes, err := doctree.pickHashesFromMerkleTreeAsList(0)
@@ -967,8 +1053,8 @@ func TestTree_GenerateWithNestedAndRepeatedFields(t *testing.T) {
 		NewProperty("valueA", 1),
 		NewProperty("valueB", 2),
 		NewProperty("valueC", 3).LengthProp(),
-		NewProperty("valueC", 3).ElemProp(0).FieldProp("valueA", 1),
-		NewProperty("valueC", 3).ElemProp(1).FieldProp("valueA", 1),
+		NewProperty("valueC", 3).SliceElemProp(0).FieldProp("valueA", 1),
+		NewProperty("valueC", 3).SliceElemProp(1).FieldProp("valueA", 1),
 		NewProperty("valueD", 4).FieldProp("valueA", 1).FieldProp("valueA", 1),
 		NewProperty("valueD", 4).FieldProp("valueB", 2),
 	}, propOrder)
@@ -1078,7 +1164,6 @@ func TestCreateProof_standard_compactProperties(t *testing.T) {
 	assert.False(t, valid)
 	assert.EqualError(t, err, "Hash does not match")
 }
-
 
 func TestCreateProof_standard_customEncoder(t *testing.T) {
 	encoder := &customEncoder{}

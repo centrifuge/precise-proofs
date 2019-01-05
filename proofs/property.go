@@ -3,7 +3,10 @@ package proofs
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
+	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -34,8 +37,8 @@ type FieldNum = uint64
 // SubFieldFormat represents how the property name of a struct field is derived from its parent
 const SubFieldFormat = "%s.%s"
 
-// SliceElemFormat represents how the property name of a slice element is derived from its parent
-const SliceElemFormat = "%s[%s]"
+// ElemFormat represents how the property name of a slice or map element is derived from its parent
+const ElemFormat = "%s[%s]"
 
 // Name returns either the compact or human-reable name of a Property
 func (n Property) Name(compact bool) proofspb.PropertyName {
@@ -84,14 +87,34 @@ func (n Property) FieldPropFromTag(protobufTag string) (Property, error) {
 	return n.FieldProp(name, num), nil
 }
 
-// ElemProp takes a repeated field index and returns a child Property representing that element of the repeated field
-func (n Property) ElemProp(i FieldNum) Property {
+// SliceElemProp takes a repeated field index and returns a child Property representing that element of the repeated field
+func (n Property) SliceElemProp(i FieldNum) Property {
 	return Property{
 		Parent:     &n,
 		Text:       fmt.Sprintf("%d", i),
 		Nums:       []FieldNum{i},
-		NameFormat: SliceElemFormat,
+		NameFormat: ElemFormat,
 	}
+}
+
+// MapElemProp takes a map key and returns a child Property representing the value at that key in the map
+func (n Property) MapElemProp(k interface{}, keyLength uint64) (Property, error) {
+	readableKey, compactKeyBytes, err := keyNames(k, keyLength)
+	if err != nil {
+		return Property{}, fmt.Errorf("failed to convert key to readable name: %s", err)
+	}
+
+	compactKey := make([]FieldNum, len(compactKeyBytes)/binary.Size(FieldNum(0)))
+	err = binary.Read(bytes.NewReader(compactKeyBytes), binary.BigEndian, compactKey)
+	if err != nil {
+		return Property{}, errors.Wrap(err, "failed to decode compact key from bytes")
+	}
+	return Property{
+		Parent:     &n,
+		Text:       readableKey,
+		Nums:       compactKey,
+		NameFormat: ElemFormat,
+	}, nil
 }
 
 // LengthProp returns a child Property representing the length of a repeated field
@@ -164,4 +187,88 @@ func AsBytes(propName proofspb.PropertyName) []byte {
 		return buf.Bytes()
 	}
 	return nil
+}
+
+func padTo(bs []byte, totalLength uint64) ([]byte, error) {
+	if uint64(len(bs)) > totalLength {
+		return nil, fmt.Errorf("given []byte longer than %d", totalLength)
+	}
+	padding := bytes.Repeat([]byte{0}, int(totalLength-uint64(len(bs))))
+	return append(padding, bs...), nil
+}
+
+// returns the readable and compact names of the given map key
+func keyNames(key interface{}, keyLength uint64) (string, []byte, error) {
+
+	// special compound cases
+	switch k := key.(type) {
+	case []byte:
+		readableKey := "0x" + hex.EncodeToString(k)
+		compactKeyBytes, err := padTo(k, keyLength)
+		if err != nil {
+			return "", nil, errors.Wrapf(err, "failed to pad %q", readableKey)
+		}
+		return readableKey, compactKeyBytes, nil
+	}
+
+	switch k := reflect.ValueOf(key); k.Kind() {
+
+	// dynamic-length cases (need key length for these)
+	case reflect.String:
+		escaper := regexp.MustCompile(`\\|\.|\[|\]`)
+		readableKey := escaper.ReplaceAllStringFunc(k.String(), func(match string) string {
+			switch match {
+			case `\`:
+				return `\\`
+			case `.`:
+				return `\.`
+			case `[`:
+				return `\[`
+			case `]`:
+				return `\]`
+			}
+			panic(fmt.Sprintf("unexpected match %q for regex %s", match, escaper))
+		})
+		compactKeyBytes, err := padTo([]byte(readableKey), keyLength)
+		if err != nil {
+			return "", nil, errors.Wrapf(err, "failed to pad %q", readableKey)
+		}
+		return readableKey, compactKeyBytes, nil
+
+		// simple bool case: single byte 0 or 1
+	case reflect.Bool:
+		var b bytes.Buffer
+		err := binary.Write(&b, binary.BigEndian, k.Bool())
+		return fmt.Sprintf("%t", k.Bool()), b.Bytes(), err
+
+		// platform-length integers
+	case reflect.Int:
+		// extend platform dependent Int into fixed-length Int64
+		return keyNames(k.Int(), keyLength)
+	case reflect.Uint:
+		// extend platform dependent Uint into fixed-length Uint64
+		return keyNames(k.Uint(), keyLength)
+
+		// fixed-length integers
+	case reflect.Int8:
+		fallthrough
+	case reflect.Int16:
+		fallthrough
+	case reflect.Int32:
+		fallthrough
+	case reflect.Int64:
+		fallthrough
+	case reflect.Uint8:
+		fallthrough
+	case reflect.Uint16:
+		fallthrough
+	case reflect.Uint32:
+		fallthrough
+	case reflect.Uint64:
+		var b bytes.Buffer
+		err := binary.Write(&b, binary.BigEndian, k.Interface())
+		return fmt.Sprintf("%d", k.Interface()), b.Bytes(), err
+	}
+
+	return "", nil, fmt.Errorf("unsupported key type: %T", key)
 }

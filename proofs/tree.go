@@ -29,14 +29,18 @@ Fields can be treated as raw (already hashed values) by setting the option `proo
 		];
 	}
 
-Nested and Repeated Structures
+Nested, Repeated and Mapped Structures
 
-Nested and repeated fields will be flattened following a dotted notation. Given the following example:
+Nested, repeated, and map fields will be flattened following a dotted notation. Given the following example:
 
 	message NestedDocument {
 	  string fieldA = 1;
 	  repeated Document fieldB = 2;
 	  repeated string fieldC = 3;
+	  map<string, Document> fieldD = 4 [
+	      proofs.key_length = 4
+	  ];
+	  map<uint64, string> fieldE = 5;
 	}
 
 	message Document {
@@ -46,7 +50,17 @@ Nested and repeated fields will be flattened following a dotted notation. Given 
 	NestedDocument{
 		fieldA: "foobar",
 		fieldB: []Document{Document{fieldA: "1"}, Document{fieldA: "2"}},
-		fieldC: []string{"a", "b", "c"}
+		fieldC: []string{"a", "b", "c"},
+		fieldD: map[string]Document{
+		    "a": Document{fieldA: "1"},
+		    "b": Document{fieldA: "2"},
+		    "c": Document{fieldA: "3"},
+		},
+		fieldE: map[uint64]string{
+		    0: "zero",
+		    1: "one",
+		    2: "two",
+		},
 	}
 
 A tree will be created out of this document by flattening all the fields values
@@ -60,6 +74,14 @@ as leaves. This would result in a tree with the following leaves:
     - "fieldC[0]" aka [3, 0]
     - "fieldC[1]" aka [3, 1]
     - "fieldC[2]" aka [3, 2]
+    - "fieldD.length" aka [4]
+    - "fieldD[a]" aka [4, 97]
+    - "fieldD[b]" aka [4, 98]
+    - "fieldD[c]" aka [4, 99]
+    - "fieldE.length" aka [5]
+    - "fieldE[0]" aka [5, 0]
+    - "fieldE[1]" aka [5, 1]
+    - "fieldE[2]" aka [5, 2]
 
 Proof format
 
@@ -126,20 +148,23 @@ There are a few things to note:
 * The default proof expects values of documents to be salted to prevent rainbow table lookups.
 * The value is included in the file as a string value not a native type.
 
-Salt field for slice length
+Salt field for slice/map length
 
-We encode the length of a slice field in the tree as an additional leaf so a proof can
-be created about the length of a field. This value will be salted as well and the salts
+We encode the length of a slice or map field in the tree as an additional leaf so a proof can
+be created about the size of a field. This value will be salted as well and the salts
 message needs to have an extra field with the suffix `Length`. The suffix can be changed
 with the SaltsLengthSuffix option.
 
 	message Document {
 	  repeated string fieldA = 1;
+	  map<string,string> fieldB = 2;
 	}
 
 	message DocumentSalt {
 	  repeated bytes fieldA = 1;
 	  bytes fieldALength = 2;
+	  map<string,bytes> fieldB = 3;
+	  bytes fieldBLength = 4;
 	}
 
 Custom Document Prefix
@@ -158,15 +183,10 @@ import (
 	"fmt"
 	"hash"
 	"reflect"
-	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/centrifuge/precise-proofs/proofs/proto"
-	"github.com/golang/protobuf/descriptor"
 	"github.com/golang/protobuf/proto"
-	"github.com/golang/protobuf/ptypes"
-	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/xsleonard/go-merkle"
 )
 
@@ -305,7 +325,10 @@ func (doctree *DocumentTree) Generate() error {
 		}
 		hashes[i] = leaf.Hash
 	}
-	doctree.merkleTree.Generate(hashes, doctree.hash)
+	err := doctree.merkleTree.Generate(hashes, doctree.hash)
+	if err != nil {
+		return fmt.Errorf("failed to generate merkle tree: %s", err)
+	}
 
 	doctree.rootHash = doctree.merkleTree.Root().Hash
 	doctree.filled = true
@@ -517,304 +540,17 @@ func (s LeafList) Swap(i, j int) {
 }
 
 type sortByReadableName struct{ LeafList }
+
 // Compare by property name lexicographically
 func (m sortByReadableName) Less(i, j int) bool {
 	return strings.Compare(string(m.LeafList[i].Property.ReadableName()), string(m.LeafList[j].Property.ReadableName())) == -1
 }
 
 type sortByCompactName struct{ LeafList }
-// Compare by property conpact name 
+
+// Compare by property compact name
 func (m sortByCompactName) Less(i, j int) bool {
-	return bytes.Compare(AsBytes(m.LeafList[i].Property.Name(true)),AsBytes(m.LeafList[j].Property.Name(true))) ==-1
-}
-
-// messageFlattener takes a proto.Message and flattens it to a list of ordered nodes.
-type messageFlattener struct {
-	message           proto.Message
-	messageType       reflect.Type
-	messageValue      reflect.Value
-	excludedFields    map[string]struct{}
-	hashedFields      map[string]struct{}
-	salts             proto.Message
-	saltsValue        reflect.Value
-	leaves            LeafList
-	nodes             [][]byte
-	propOrder         []Property
-	saltsLengthSuffix string
-	hash              hash.Hash
-	valueEncoder      ValueEncoder
-	compactProperties bool
-}
-
-// ValueToString takes any supported interface and returns a string representation of the value. This is used calculate
-// the hash and to create the proof object.
-func (f *messageFlattener) valueToString(value interface{}) (s string, err error) {
-	value = dereferencePointer(value)
-	if value == nil {
-		return "", nil
-	}
-
-	switch t := reflect.TypeOf(value); t {
-	case reflect.TypeOf(""):
-		return value.(string), nil
-	case reflect.TypeOf(int64(0)):
-		return strconv.FormatInt(value.(int64), 10), nil
-	case reflect.TypeOf([]uint8{}):
-		return f.valueEncoder.EncodeToString(value.([]uint8)), nil
-	case reflect.TypeOf(timestamp.Timestamp{}):
-		v := value.(timestamp.Timestamp)
-		return ptypes.TimestampString(&v), nil
-	default:
-		return "", errors.New(fmt.Sprintf("Got unsupported value: %t", t))
-	}
-}
-
-func (f *messageFlattener) generateLeaves(parentProp *Property, fcurrent *messageFlattener) (err error) {
-
-	if err = fcurrent.parseExtensions(); err != nil {
-		return err
-	}
-
-	for i := 0; i < fcurrent.messageValue.NumField(); i++ {
-		valueField := fcurrent.messageValue.Field(i)
-		valueType := reflect.TypeOf(valueField.Interface())
-		reflectValueFieldType := fcurrent.messageType.Field(i)
-
-		// Pointer dereference for correct type checks
-		if valueType.Kind() == reflect.Ptr {
-			valueType = valueType.Elem()
-		}
-
-		// Ignore fields starting with XXX_, those are protobuf internals
-		if strings.HasPrefix(reflectValueFieldType.Name, "XXX_") {
-			continue
-		}
-
-		name, num, err1 := ExtractFieldTags(reflectValueFieldType.Tag.Get("protobuf"))
-		if err1 != nil {
-			return err1
-		}
-
-		var prop Property
-		if parentProp == nil {
-			prop = NewProperty(name, num)
-		} else {
-			prop = parentProp.FieldProp(name, num)
-		}
-
-		// Check if the field has an exclude_from_tree option and skip it
-		if _, ok := fcurrent.excludedFields[prop.Text]; ok {
-			continue
-		}
-
-		value := valueField.Interface()
-		value = dereferencePointer(value)
-
-		if _, ok := fcurrent.hashedFields[prop.Text]; ok {
-			// Fields that have the hashed_field tag on the protobuf message will be treated as hashes without prepending
-			// the property & salt.
-			if valueType.Kind() != reflect.Slice && reflect.ValueOf(value).Type() != reflect.TypeOf([]uint8{}) {
-				return errors.New("The option hashed_field is only supported for type `bytes`")
-			}
-			f.handleAppendHashedLeaf(prop, value.([]byte))
-			continue
-		}
-
-		reflectSaltsValue := fcurrent.saltsValue.FieldByName(reflectValueFieldType.Name)
-		salts := reflectSaltsValue.Interface()
-
-		salts = dereferencePointer(salts)
-
-		if valueType.Kind() == reflect.Slice {
-			sliceValue := reflect.ValueOf(value)
-
-			// The bytes type is internally represented as []uint8, this needs to be treated as one leaf
-			if sliceValue.Type() == reflect.TypeOf([]uint8{}) {
-				salt := reflect.Indirect(fcurrent.saltsValue).FieldByName(reflectValueFieldType.Name).Interface().([]byte)
-				err = f.handleAppendLeaf(prop, value.([]byte), salt)
-			} else {
-				err = f.handleSlice(prop, fcurrent, i, sliceValue, salts)
-			}
-		} else if valueType.Kind() == reflect.Struct {
-			err = f.handleStruct(prop, valueField, valueType, reflectSaltsValue.Interface())
-		} else {
-			salt := reflect.Indirect(fcurrent.saltsValue).FieldByName(reflectValueFieldType.Name).Interface().([]byte)
-			err = f.handleAppendLeaf(prop, value, salt)
-		}
-
-		if err != nil {
-			return
-		}
-	}
-
-	return
-}
-
-func (f *messageFlattener) handleSlice(prop Property, fcurrent *messageFlattener, i int,
-	sliceValue reflect.Value, salts interface{}) (err error) {
-
-	if !sliceValue.IsValid() {
-		return fmt.Errorf("Invalid value provided: %v", sliceValue)
-	}
-	ss := reflect.ValueOf(salts)
-
-	// Append length of slice as tree leaf
-	saltedFieldValue := fcurrent.saltsValue.FieldByName(fmt.Sprintf("%s%s", fcurrent.messageType.Field(i).Name, fcurrent.saltsLengthSuffix))
-	salt := saltedFieldValue.Interface().([]byte)
-	f.appendLeaf(prop.LengthProp(), strconv.Itoa(sliceValue.Len()), salt, []byte{}, false)
-
-	for j := 0; j < sliceValue.Len(); j++ {
-		sval := reflect.Indirect(sliceValue.Index(j))
-		elemProp := prop.ElemProp(FieldNum(j))
-		if reflect.TypeOf(sval.Interface()).Kind() == reflect.Struct {
-			err = f.handleStruct(elemProp, sliceValue.Index(j),
-				reflect.TypeOf(sliceValue.Index(j).Interface()), ss.Index(j).Interface())
-		} else {
-			salt := fcurrent.saltsValue.FieldByName(fcurrent.messageType.Field(i).Name).Index(j).Interface().([]byte)
-			err = f.handleAppendLeaf(elemProp, sliceValue.Index(j).Interface(), salt)
-		}
-	}
-
-	return
-}
-
-func (f *messageFlattener) handleStruct(prop Property, valueField reflect.Value, valueType reflect.Type, salts interface{}) (err error) {
-	if valueType == reflect.TypeOf(timestamp.Timestamp{}) { //Specific case where we support serialization for a non primitive complex struct
-		err = f.handleAppendLeaf(prop, valueField.Interface(), salts.([]byte))
-	} else {
-		fchild := newMessageFlattener(valueField.Interface().(proto.Message), salts.(proto.Message), f.saltsLengthSuffix, f.hash, f.valueEncoder, f.compactProperties)
-		err = f.generateLeaves(&prop, fchild)
-	}
-	return
-}
-
-func (f *messageFlattener) handleAppendLeaf(prop Property, value interface{}, salts interface{}) (err error) {
-	valueString, err := f.valueToString(value)
-	if err != nil {
-		return err
-	}
-	f.appendLeaf(prop, valueString, salts.([]byte), []byte{}, false)
-	return
-}
-
-func (f *messageFlattener) handleAppendHashedLeaf(prop Property, hash []byte) (err error) {
-	f.appendLeaf(prop, "", []byte{}, hash, true)
-	return
-}
-
-func (f *messageFlattener) appendLeaf(prop Property, value string, salt []byte, hash []byte, hashed bool) {
-	leaf := LeafNode{
-		Property: prop,
-		Value:    value,
-		Salt:     salt,
-		Hash:     hash,
-		Hashed:   hashed,
-	}
-	f.leaves = append(f.leaves, leaf)
-}
-
-// sortLeaves by the property attribute and copies the properties and
-// concatenated byte values into the nodes
-func (f *messageFlattener) sortLeaves() (err error) {
-	if f.compactProperties {
-		sort.Sort(sortByCompactName{f.leaves})
-	} else {
-		sort.Sort(sortByReadableName{f.leaves})
-	}
-	f.nodes = make([][]byte, f.leaves.Len())
-	f.propOrder = make([]Property, f.leaves.Len())
-
-	for i := 0; i < f.leaves.Len(); i++ {
-		leaf := &f.leaves[i]
-		if len(leaf.Hash) == 0 && !leaf.Hashed {
-			err = leaf.HashNode(f.hash, f.compactProperties)
-			if err != nil {
-				return err
-			}
-		}
-		f.nodes[i] = leaf.Hash
-		f.propOrder[i] = f.leaves[i].Property
-	}
-	return nil
-}
-
-// parseExtensions iterates over the prototype descriptor to find fields that
-// should be excluded
-func (f *messageFlattener) parseExtensions() (err error) {
-	descriptorMessage, ok := f.message.(descriptor.Message)
-	if !ok {
-		return fmt.Errorf("message [%s] does not implement descriptor.Message", f.message)
-	}
-	_, messageDescriptor := descriptor.ForMessage(descriptorMessage)
-
-	for i := range messageDescriptor.Field {
-		fieldDescriptor := messageDescriptor.Field[i]
-		fV := reflect.ValueOf(fieldDescriptor).Elem()
-		fType := fV.Type()
-		fieldName := *fieldDescriptor.Name
-		for i := 0; i < fV.NumField(); i++ {
-			field := fV.Field(i)
-			if fType.Field(i).Name != "Options" {
-				continue
-			}
-			if proto.HasExtension(field.Interface().(proto.Message), proofspb.E_ExcludeFromTree) {
-				ext, err := proto.GetExtension(field.Interface().(proto.Message), proofspb.E_ExcludeFromTree)
-				if err != nil {
-					continue
-				}
-				b, _ := ext.(*bool)
-				if *b {
-					f.excludedFields[fieldName] = struct{}{}
-				}
-			}
-			if proto.HasExtension(field.Interface().(proto.Message), proofspb.E_HashedField) {
-				ext, err := proto.GetExtension(field.Interface().(proto.Message), proofspb.E_HashedField)
-				if err != nil {
-					continue
-				}
-				b, _ := ext.(*bool)
-				if *b {
-					f.hashedFields[fieldName] = struct{}{}
-				}
-			}
-		}
-	}
-	return nil
-}
-
-// NewMessageFlattener instantiates a flattener for the given document
-func newMessageFlattener(message, messageSalts proto.Message, saltsLengthSuffix string, hashFn hash.Hash, valueEncoder ValueEncoder, compact bool) *messageFlattener {
-	f := messageFlattener{message: message, salts: messageSalts}
-	f.leaves = LeafList{}
-	f.messageValue = reflect.Indirect(reflect.ValueOf(message))
-	f.messageType = f.messageValue.Type()
-	f.saltsValue = reflect.Indirect(reflect.ValueOf(messageSalts))
-	f.excludedFields = make(map[string]struct{})
-	f.hashedFields = make(map[string]struct{})
-	f.saltsLengthSuffix = saltsLengthSuffix
-	f.hash = hashFn
-	f.valueEncoder = valueEncoder
-	f.compactProperties = compact
-	return &f
-}
-
-// FlattenMessage takes a protobuf message struct and flattens it into an array
-// of nodes.
-//
-// The fields are sorted lexicographically by their protobuf field names.
-func FlattenMessage(message, messageSalts proto.Message, saltsLengthSuffix string, hashFn hash.Hash, valueEncoder ValueEncoder, compact bool, parentProp *Property) (leaves []LeafNode, err error) {
-	f := newMessageFlattener(message, messageSalts, saltsLengthSuffix, hashFn, valueEncoder, compact)
-
-	err = f.generateLeaves(parentProp, f)
-	if err != nil {
-		return
-	}
-
-	err = f.sortLeaves()
-	if err != nil {
-		return []LeafNode{}, err
-	}
-	return f.leaves, nil
+	return bytes.Compare(AsBytes(m.LeafList[i].Property.Name(true)), AsBytes(m.LeafList[j].Property.Name(true))) == -1
 }
 
 // HashTwoValues concatenate two hashes to calculate hash out of the result. This is used in the merkleTree calculation code
