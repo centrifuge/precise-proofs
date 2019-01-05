@@ -46,7 +46,7 @@ func TestPropertyName(t *testing.T) {
 	mapElemProp, err = baseProp.MapElemProp("key", 32)
 	assert.NoError(t, err)
 	assert.Equal(t, "base[key]", mapElemProp.ReadableName())
-	assert.Equal(t, []FieldNum{42, 0, 0, 0, 107 << 16 + 101 << 8 + 121}, mapElemProp.CompactName())
+	assert.Equal(t, []FieldNum{42, 0, 0, 0, 107<<16 + 101<<8 + 121}, mapElemProp.CompactName())
 
 	lengthProp := baseProp.LengthProp()
 	assert.Equal(t, "base.length", lengthProp.ReadableName())

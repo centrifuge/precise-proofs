@@ -46,7 +46,6 @@ func (f *messageFlattener) handleValue(prop *Property, value reflect.Value, salt
 	case reflect.Ptr:
 		return f.handleValue(prop, value.Elem(), saltValue.Elem(), reflect.Value{}, fieldDescriptor)
 	case reflect.Struct:
-
 		_, messageDescriptor := descriptor.ForMessage(value.Addr().Interface().(descriptor.Message))
 
 		// Handle each field of the struct
