@@ -24,7 +24,7 @@ message MerkleHash {
 message Proof {
   oneof property {
     string readable_name = 7;
-    FieldNums compact_name = 9;
+    bytes compact_name = 9;
   }
   string value = 2;
   bytes salt = 3;
@@ -34,8 +34,4 @@ message Proof {
   // not both
   repeated MerkleHash hashes = 4;
   repeated bytes sorted_hashes = 5;
-}
-
-message FieldNums {
-  repeated uint64 components = 1;
 }

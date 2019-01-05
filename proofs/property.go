@@ -19,20 +19,28 @@ import (
 type Property struct {
 	Parent     *Property
 	Text       string
-	Nums       []FieldNum
+	Compact    []byte
 	NameFormat string
 }
 
 // NewProperty return a new root property
-func NewProperty(name string, nums ...FieldNum) Property {
+func NewProperty(name string, bytes ...byte) Property {
 	return Property{
-		Text: name,
-		Nums: nums,
+		Text:    name,
+		Compact: bytes,
 	}
 }
 
 // FieldNum is a compact, unique identifier for a Property, relative to its parent
 type FieldNum = uint64
+
+func encode(n FieldNum) []byte {
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.BigEndian, n)
+	return buf.Bytes()
+}
+
+var Empty = Property{}
 
 // SubFieldFormat represents how the property name of a struct field is derived from its parent
 const SubFieldFormat = "%s.%s"
@@ -44,9 +52,7 @@ const ElemFormat = "%s[%s]"
 func (n Property) Name(compact bool) proofspb.PropertyName {
 	if compact {
 		return &proofspb.Proof_CompactName{
-			CompactName: &proofspb.FieldNums{
-				Components: n.CompactName(),
-			},
+			CompactName: n.CompactName(),
 		}
 	}
 	return &proofspb.Proof_ReadableName{
@@ -56,26 +62,28 @@ func (n Property) Name(compact bool) proofspb.PropertyName {
 
 // ReadableName returns the human-readable name of a property
 func (n Property) ReadableName() string {
-	if n.Parent == nil {
+	if n.Parent == nil || n.Parent.Text == "" {
 		return n.Text
 	}
 	return fmt.Sprintf(n.NameFormat, n.Parent.ReadableName(), n.Text)
 }
 
 // CompactName returns the compact name of a property, derived from protobuf tags
-func (n Property) CompactName() (pn []FieldNum) {
+func (n Property) CompactName() (pn []byte) {
 	if n.Parent != nil {
 		pn = append(pn, n.Parent.CompactName()...)
 	}
-	return append(pn, n.Nums...)
+	return append(pn, n.Compact...)
 }
 
 // FieldProp returns a child Property representing a field of a struct
 func (n Property) FieldProp(name string, num FieldNum) (field Property) {
-	field = NewProperty(name, num)
-	field.Parent = &n
-	field.NameFormat = SubFieldFormat
-	return
+	return Property{
+		Text:       name,
+		Compact:    encode(num),
+		Parent:     &n,
+		NameFormat: SubFieldFormat,
+	}
 }
 
 // FieldPropFromTag takes the protobuf tag string of a struct field and returns a child Property representing that field of the struct
@@ -89,30 +97,27 @@ func (n Property) FieldPropFromTag(protobufTag string) (Property, error) {
 
 // SliceElemProp takes a repeated field index and returns a child Property representing that element of the repeated field
 func (n Property) SliceElemProp(i FieldNum) Property {
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.BigEndian, i)
 	return Property{
 		Parent:     &n,
 		Text:       fmt.Sprintf("%d", i),
-		Nums:       []FieldNum{i},
+		Compact:    buf.Bytes(),
 		NameFormat: ElemFormat,
 	}
 }
 
 // MapElemProp takes a map key and returns a child Property representing the value at that key in the map
 func (n Property) MapElemProp(k interface{}, keyLength uint64) (Property, error) {
-	readableKey, compactKeyBytes, err := keyNames(k, keyLength)
+	readableKey, compactKey, err := keyNames(k, keyLength)
 	if err != nil {
 		return Property{}, fmt.Errorf("failed to convert key to readable name: %s", err)
 	}
 
-	compactKey := make([]FieldNum, len(compactKeyBytes)/binary.Size(FieldNum(0)))
-	err = binary.Read(bytes.NewReader(compactKeyBytes), binary.BigEndian, compactKey)
-	if err != nil {
-		return Property{}, errors.Wrap(err, "failed to decode compact key from bytes")
-	}
 	return Property{
 		Parent:     &n,
 		Text:       readableKey,
-		Nums:       compactKey,
+		Compact:    compactKey,
 		NameFormat: ElemFormat,
 	}, nil
 }
@@ -164,12 +169,10 @@ func ReadableName(prop string) *proofspb.Proof_ReadableName {
 	}
 }
 
-// CompactName creates a PropertyName from a list of FieldNums
-func CompactName(prop ...FieldNum) *proofspb.Proof_CompactName {
+// CompactName creates a PropertyName from a byte slice
+func CompactName(prop ...byte) *proofspb.Proof_CompactName {
 	return &proofspb.Proof_CompactName{
-		CompactName: &proofspb.FieldNums{
-			Components: prop,
-		},
+		CompactName: prop,
 	}
 }
 
@@ -182,9 +185,7 @@ func AsBytes(propName proofspb.PropertyName) []byte {
 	case *proofspb.Proof_ReadableName:
 		return []byte(pn.ReadableName)
 	case *proofspb.Proof_CompactName:
-		buf := new(bytes.Buffer)
-		binary.Write(buf, binary.BigEndian, pn.CompactName.Components)
-		return buf.Bytes()
+		return pn.CompactName
 	}
 	return nil
 }

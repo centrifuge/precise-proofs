@@ -217,7 +217,7 @@ type TreeOptions struct {
 	Hash              hash.Hash
 	ValueEncoder      ValueEncoder
 	// ParentPrefix defines an arbitrary prefix to prepend to the parent, so all fields are prepended with it
-	ParentPrefix      *Property
+	ParentPrefix      Property
 	CompactProperties bool
 }
 
@@ -235,7 +235,7 @@ type DocumentTree struct {
 	hash              hash.Hash
 	saltsLengthSuffix string
 	valueEncoder      ValueEncoder
-	parentPrefix      *Property
+	parentPrefix      Property
 	compactProperties bool
 }
 

@@ -24,18 +24,44 @@ func TestExtractFieldTags(t *testing.T) {
 	assert.Equal(t, FieldNum(42), num)
 }
 
-func TestPropertyName(t *testing.T) {
+func TestPropertyName_NoParent(t *testing.T) {
+
+	fieldProp := Empty.FieldProp("field", 43)
+	assert.Equal(t, "field", fieldProp.ReadableName())
+	assert.Equal(t, []byte{0, 0, 0, 0, 0, 0, 0, 43}, fieldProp.CompactName())
+
+	sliceElemProp := Empty.SliceElemProp(5)
+	assert.Equal(t, "5", sliceElemProp.ReadableName())
+	assert.Equal(t, []byte{0, 0, 0, 0, 0, 0, 0, 5}, sliceElemProp.CompactName())
+
+	mapElemProp, err := Empty.MapElemProp(fmt.Errorf("not a valid key type"), 32)
+	assert.Error(t, err)
+
+	mapElemProp, err = Empty.MapElemProp("keykeykeykeykeykeykeykeykeykeykey", 32)
+	assert.Error(t, err)
+
+	mapElemProp, err = Empty.MapElemProp("key", 32)
+	assert.NoError(t, err)
+	assert.Equal(t, "key", mapElemProp.ReadableName())
+	assert.Equal(t, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 107, 101, 121}, mapElemProp.CompactName())
+
+	lengthProp := Empty.LengthProp()
+	assert.Equal(t, "length", lengthProp.ReadableName())
+	assert.Equal(t, []byte(nil), lengthProp.CompactName())
+}
+
+func TestPropertyName_Parent(t *testing.T) {
 	baseProp := NewProperty("base", 42)
 	assert.Equal(t, "base", baseProp.ReadableName())
-	assert.Equal(t, []FieldNum{42}, baseProp.CompactName())
+	assert.Equal(t, []byte{42}, baseProp.CompactName())
 
 	fieldProp := baseProp.FieldProp("field", 43)
 	assert.Equal(t, "base.field", fieldProp.ReadableName())
-	assert.Equal(t, []FieldNum{42, 43}, fieldProp.CompactName())
+	assert.Equal(t, []byte{42, 0, 0, 0, 0, 0, 0, 0, 43}, fieldProp.CompactName())
 
 	sliceElemProp := baseProp.SliceElemProp(5)
 	assert.Equal(t, "base[5]", sliceElemProp.ReadableName())
-	assert.Equal(t, []FieldNum{42, 5}, sliceElemProp.CompactName())
+	assert.Equal(t, []byte{42, 0, 0, 0, 0, 0, 0, 0, 5}, sliceElemProp.CompactName())
 
 	mapElemProp, err := baseProp.MapElemProp(fmt.Errorf("not a valid key type"), 32)
 	assert.Error(t, err)
@@ -46,11 +72,11 @@ func TestPropertyName(t *testing.T) {
 	mapElemProp, err = baseProp.MapElemProp("key", 32)
 	assert.NoError(t, err)
 	assert.Equal(t, "base[key]", mapElemProp.ReadableName())
-	assert.Equal(t, []FieldNum{42, 0, 0, 0, 107<<16 + 101<<8 + 121}, mapElemProp.CompactName())
+	assert.Equal(t, []byte{42, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 107, 101, 121}, mapElemProp.CompactName())
 
 	lengthProp := baseProp.LengthProp()
 	assert.Equal(t, "base.length", lengthProp.ReadableName())
-	assert.Equal(t, []FieldNum{42}, lengthProp.CompactName())
+	assert.Equal(t, []byte{42}, lengthProp.CompactName())
 }
 
 func TestFieldPropFromTag(t *testing.T) {
@@ -70,14 +96,8 @@ func TestAsBytes_ReadableName(t *testing.T) {
 
 func TestAsBytes_CompactName(t *testing.T) {
 	assert.Equal(t,
-		[]byte{
-			0, 0, 0, 0, 0, 0, 0, 1,
-			0, 0, 0, 0, 0, 0, 0, 255,
-			0, 0, 0, 0, 0, 0, 1, 0,
-			0, 0, 0, 0, 0, 1, 0, 0,
-			0, 0, 0, 0, 0, 0, 255, 255,
-		},
-		AsBytes(CompactName(1, 255, 256, 256*256, 256*256-1)),
+		[]byte{1, 255, 2, 254},
+		AsBytes(CompactName(1, 255, 2, 254)),
 	)
 }
 
