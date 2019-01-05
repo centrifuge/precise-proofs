@@ -29,14 +29,18 @@ Fields can be treated as raw (already hashed values) by setting the option `proo
 		];
 	}
 
-Nested and Repeated Structures
+Nested, Repeated and Mapped Structures
 
-Nested and repeated fields will be flattened following a dotted notation. Given the following example:
+Nested, repeated, and map fields will be flattened following a dotted notation. Given the following example:
 
 	message NestedDocument {
 	  string fieldA = 1;
 	  repeated Document fieldB = 2;
 	  repeated string fieldC = 3;
+	  map<string, Document> fieldD = 4 [
+	      proofs.key_max_length = 4
+	  ];
+	  map<uint64, string> fieldE = 5;
 	}
 
 	message Document {
@@ -46,7 +50,17 @@ Nested and repeated fields will be flattened following a dotted notation. Given 
 	NestedDocument{
 		fieldA: "foobar",
 		fieldB: []Document{Document{fieldA: "1"}, Document{fieldA: "2"}},
-		fieldC: []string{"a", "b", "c"}
+		fieldC: []string{"a", "b", "c"},
+		fieldD: map[string]Document{
+		    "a": Document{fieldA: "1"},
+		    "b": Document{fieldA: "2"},
+		    "c": Document{fieldA: "3"},
+		},
+		fieldE: map[uint64]string{
+		    0: "zero",
+		    1: "one",
+		    2: "two",
+		},
 	}
 
 A tree will be created out of this document by flattening all the fields values
@@ -60,6 +74,14 @@ as leaves. This would result in a tree with the following leaves:
     - "fieldC[0]" aka [3, 0]
     - "fieldC[1]" aka [3, 1]
     - "fieldC[2]" aka [3, 2]
+    - "fieldD.length" aka [4]
+    - "fieldD[a]" aka [4, 97]
+    - "fieldD[b]" aka [4, 98]
+    - "fieldD[c]" aka [4, 99]
+    - "fieldE.length" aka [5]
+    - "fieldE[0]" aka [5, 0]
+    - "fieldE[1]" aka [5, 1]
+    - "fieldE[2]" aka [5, 2]
 
 Proof format
 
@@ -126,20 +148,23 @@ There are a few things to note:
 * The default proof expects values of documents to be salted to prevent rainbow table lookups.
 * The value is included in the file as a string value not a native type.
 
-Salt field for slice length
+Salt field for slice/map length
 
-We encode the length of a slice field in the tree as an additional leaf so a proof can
-be created about the length of a field. This value will be salted as well and the salts
+We encode the length of a slice or map field in the tree as an additional leaf so a proof can
+be created about the size of a field. This value will be salted as well and the salts
 message needs to have an extra field with the suffix `Length`. The suffix can be changed
 with the SaltsLengthSuffix option.
 
 	message Document {
 	  repeated string fieldA = 1;
+	  map<string,string> fieldB = 2;
 	}
 
 	message DocumentSalt {
 	  repeated bytes fieldA = 1;
 	  bytes fieldALength = 2;
+	  map<string,bytes> fieldB = 3;
+	  bytes fieldBLength = 4;
 	}
 
 Custom Document Prefix
