@@ -38,7 +38,7 @@ Nested, repeated, and map fields will be flattened following a dotted notation. 
 	  repeated Document fieldB = 2;
 	  repeated string fieldC = 3;
 	  map<string, Document> fieldD = 4 [
-	      proofs.key_max_length = 4
+	      proofs.key_length = 4
 	  ];
 	  map<uint64, string> fieldE = 5;
 	}

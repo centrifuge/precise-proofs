@@ -98,16 +98,11 @@ func (n Property) SliceElemProp(i FieldNum) Property {
 }
 
 // MapElemProp takes a map key and returns a child Property representing the value at that key in the map
-func (n Property) MapElemProp(k interface{}, maxLength uint64) (Property, error) {
-	readableKey, err := keyToReadable(k)
+func (n Property) MapElemProp(k interface{}, keyLength uint64) (Property, error) {
+	readableKey, compactKeyBytes, err := keyNames(k, keyLength)
 	if err != nil {
 		return Property{}, fmt.Errorf("failed to convert key to readable name: %s", err)
 	}
-	if uint64(len(readableKey)) > maxLength {
-		return Property{}, fmt.Errorf("%q exceeds maximum key length %d", readableKey, maxLength)
-	}
-	compactKeyBytes := bytes.Repeat([]byte{0}, int(maxLength-uint64(len(readableKey))))
-	compactKeyBytes = append(compactKeyBytes, []byte(readableKey)...)
 
 	compactKey := make([]FieldNum, len(compactKeyBytes)/binary.Size(FieldNum(0)))
 	err = binary.Read(bytes.NewReader(compactKeyBytes), binary.BigEndian, compactKey)
@@ -194,18 +189,34 @@ func AsBytes(propName proofspb.PropertyName) []byte {
 	return nil
 }
 
-func keyToReadable(key interface{}) (string, error) {
+func padTo(bs []byte, totalLength uint64) ([]byte, error) {
+	if uint64(len(bs)) > totalLength {
+		return nil, fmt.Errorf("given []byte longer than %d", totalLength)
+	}
+	padding := bytes.Repeat([]byte{0}, int(totalLength-uint64(len(bs))))
+	return append(padding, bs...), nil
+}
+
+// returns the readable and compact names of the given map key
+func keyNames(key interface{}, keyLength uint64) (string, []byte, error) {
 
 	// special compound cases
 	switch k := key.(type) {
 	case []byte:
-		return "0x" + hex.EncodeToString(k), nil
+		readableKey := "0x" + hex.EncodeToString(k)
+		compactKeyBytes, err := padTo(k, keyLength)
+		if err != nil {
+			return "", nil, errors.Wrapf(err, "failed to pad %q", readableKey)
+		}
+		return readableKey, compactKeyBytes, nil
 	}
 
 	switch k := reflect.ValueOf(key); k.Kind() {
+
+	// dynamic-length cases (need key length for these)
 	case reflect.String:
 		escaper := regexp.MustCompile(`\\|\.|\[|\]`)
-		return escaper.ReplaceAllStringFunc(k.String(), func(match string) string {
+		readableKey := escaper.ReplaceAllStringFunc(k.String(), func(match string) string {
 			switch match {
 			case `\`:
 				return `\\`
@@ -217,9 +228,28 @@ func keyToReadable(key interface{}) (string, error) {
 				return `\]`
 			}
 			panic(fmt.Sprintf("unexpected match %q for regex %s", match, escaper))
-		}), nil
+		})
+		compactKeyBytes, err := padTo([]byte(readableKey), keyLength)
+		if err != nil {
+			return "", nil, errors.Wrapf(err, "failed to pad %q", readableKey)
+		}
+		return readableKey, compactKeyBytes, nil
+
+		// simple bool case: single byte 0 or 1
 	case reflect.Bool:
-		return fmt.Sprintf("%t", k.Bool()), nil
+		var b bytes.Buffer
+		err := binary.Write(&b, binary.BigEndian, k.Bool())
+		return fmt.Sprintf("%t", k.Bool()), b.Bytes(), err
+
+		// platform-length integers
+	case reflect.Int:
+		// extend platform dependent Int into fixed-length Int64
+		return keyNames(k.Int(), keyLength)
+	case reflect.Uint:
+		// extend platform dependent Uint into fixed-length Uint64
+		return keyNames(k.Uint(), keyLength)
+
+		// fixed-length integers
 	case reflect.Int8:
 		fallthrough
 	case reflect.Int16:
@@ -228,8 +258,6 @@ func keyToReadable(key interface{}) (string, error) {
 		fallthrough
 	case reflect.Int64:
 		fallthrough
-	case reflect.Int:
-		return fmt.Sprintf("%d", k.Int()), nil
 	case reflect.Uint8:
 		fallthrough
 	case reflect.Uint16:
@@ -237,10 +265,10 @@ func keyToReadable(key interface{}) (string, error) {
 	case reflect.Uint32:
 		fallthrough
 	case reflect.Uint64:
-		fallthrough
-	case reflect.Uint:
-		return fmt.Sprintf("%d", k.Uint()), nil
+		var b bytes.Buffer
+		err := binary.Write(&b, binary.BigEndian, k.Interface())
+		return fmt.Sprintf("%d", k.Interface()), b.Bytes(), err
 	}
 
-	return "", fmt.Errorf("unsupported key type: %T", key)
+	return "", nil, fmt.Errorf("unsupported key type: %T", key)
 }

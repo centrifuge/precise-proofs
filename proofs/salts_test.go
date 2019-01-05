@@ -32,9 +32,11 @@ func TestFillSalts(t *testing.T) {
 	err = FillSalts(exampleMapDoc, exampleMapSalts)
 	assert.Nil(t, err, "Fill salts should not fail")
 	assert.NotNil(t, exampleMapSalts.ValueCLength)
+	assert.NotNil(t, exampleMapSalts.ValueDLength)
 
 	assert.Equal(t, len(exampleMapDoc.ValueC), len(exampleMapSalts.ValueC))
 	assert.NotNil(t, exampleMapSalts.ValueC["ValueCAKey"])
+	assert.NotNil(t, exampleMapSalts.ValueD[-1])
 
 	// Document with nested and repeated fields
 	exampleFNDoc := &documentspb.ExampleFilledNestedRepeatedDocument

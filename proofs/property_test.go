@@ -81,64 +81,88 @@ func TestAsBytes_CompactName(t *testing.T) {
 	)
 }
 
-func TestKeyToReadable(t *testing.T) {
-	s, err := keyToReadable("key")
+func TestKeyNames(t *testing.T) {
+	_, _, err := keyNames("key", 0)
+	assert.Error(t, err)
+
+	s, bs, err := keyNames("key", 8)
 	assert.NoError(t, err)
 	assert.Equal(t, "key", s)
+	assert.Equal(t, []byte{0, 0, 0, 0, 0, 107, 101, 121}, bs)
 
-	s, err = keyToReadable(42)
+	s, bs, err = keyNames(42, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, "42", s)
+	assert.Equal(t, []byte{0, 0, 0, 0, 0, 0, 0, 42}, bs)
 
-	s, err = keyToReadable([]byte{0x2f, 0xa2, 0x93})
+	_, _, err = keyNames([]byte{0x2f, 0xa2, 0x93}, 0)
+	assert.Error(t, err)
+
+	s, bs, err = keyNames([]byte{0x2f, 0xa2, 0x93}, 8)
 	assert.NoError(t, err)
 	assert.Equal(t, "0x2fa293", s)
+	assert.Equal(t, []byte{0, 0, 0, 0, 0, 0x2f, 0xa2, 0x93}, bs)
 
-	s, err = keyToReadable(`foo[bar].foo\bar`)
+	_, _, err = keyNames(`foo[bar].foo\bar`, 0)
+	assert.Error(t, err)
+
+	s, bs, err = keyNames(`foo[bar].foo\bar`, 20)
 	assert.NoError(t, err)
 	assert.Equal(t, `foo\[bar\]\.foo\\bar`, s)
+	assert.Equal(t, []byte(`foo\[bar\]\.foo\\bar`), bs)
 
-	s, err = keyToReadable(true)
+	s, bs, err = keyNames(true, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, "true", s)
+	assert.Equal(t, []byte{1}, bs)
 
-	s, err = keyToReadable(int(4))
+	s, bs, err = keyNames(int(4), 0)
 	assert.NoError(t, err)
 	assert.Equal(t, "4", s)
+	assert.Equal(t, []byte{0, 0, 0, 0, 0, 0, 0, 4}, bs)
 
-	s, err = keyToReadable(int8(4))
+	s, bs, err = keyNames(int8(4), 0)
 	assert.NoError(t, err)
 	assert.Equal(t, "4", s)
+	assert.Equal(t, []byte{4}, bs)
 
-	s, err = keyToReadable(int16(4))
+	s, bs, err = keyNames(int16(4), 0)
 	assert.NoError(t, err)
 	assert.Equal(t, "4", s)
+	assert.Equal(t, []byte{0, 4}, bs)
 
-	s, err = keyToReadable(int32(4))
+	s, bs, err = keyNames(int32(4), 0)
 	assert.NoError(t, err)
 	assert.Equal(t, "4", s)
+	assert.Equal(t, []byte{0, 0, 0, 4}, bs)
 
-	s, err = keyToReadable(int64(4))
+	s, bs, err = keyNames(int64(4), 0)
 	assert.NoError(t, err)
 	assert.Equal(t, "4", s)
+	assert.Equal(t, []byte{0, 0, 0, 0, 0, 0, 0, 4}, bs)
 
-	s, err = keyToReadable(uint(4))
+	s, bs, err = keyNames(uint(4), 0)
 	assert.NoError(t, err)
 	assert.Equal(t, "4", s)
+	assert.Equal(t, []byte{0, 0, 0, 0, 0, 0, 0, 4}, bs)
 
-	s, err = keyToReadable(uint8(4))
+	s, bs, err = keyNames(uint8(4), 0)
 	assert.NoError(t, err)
 	assert.Equal(t, "4", s)
+	assert.Equal(t, []byte{4}, bs)
 
-	s, err = keyToReadable(uint16(4))
+	s, bs, err = keyNames(uint16(4), 0)
 	assert.NoError(t, err)
+	assert.Equal(t, []byte{0, 4}, bs)
 	assert.Equal(t, "4", s)
 
-	s, err = keyToReadable(uint32(4))
+	s, bs, err = keyNames(uint32(4), 0)
 	assert.NoError(t, err)
 	assert.Equal(t, "4", s)
+	assert.Equal(t, []byte{0, 0, 0, 4}, bs)
 
-	s, err = keyToReadable(uint64(4))
+	s, bs, err = keyNames(uint64(4), 0)
 	assert.NoError(t, err)
 	assert.Equal(t, "4", s)
+	assert.Equal(t, []byte{0, 0, 0, 0, 0, 0, 0, 4}, bs)
 }

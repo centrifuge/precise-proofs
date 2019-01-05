@@ -305,11 +305,37 @@ func TestFlattenMessage_HashedField(t *testing.T) {
 
 func TestFlattenMessage_SimpleMap(t *testing.T) {
 	message := &documentspb.SimpleMap{
+		Value: map[int32]string{
+			42: "value",
+		},
+	}
+	messageSalts := documentspb.SaltedSimpleMap{}
+	err := FillSalts(message, &messageSalts)
+	assert.NoError(t, err)
+
+	leaves, err := FlattenMessage(message, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, nil)
+	assert.NoError(t, err)
+	propOrder := []Property{}
+	for _, leaf := range leaves {
+		propOrder = append(propOrder, leaf.Property)
+	}
+	mapProp := NewProperty("value", 1)
+	mapElemProp, err := mapProp.MapElemProp(int32(42), 32)
+	assert.NoError(t, err)
+	assert.Equal(t, []Property{
+		mapProp.LengthProp(),
+		mapElemProp,
+	}, propOrder)
+
+}
+
+func TestFlattenMessage_SimpleStringMap(t *testing.T) {
+	message := &documentspb.SimpleStringMap{
 		Value: map[string]string{
 			"key": "value",
 		},
 	}
-	messageSalts := documentspb.SaltedSimpleMap{}
+	messageSalts := documentspb.SaltedSimpleStringMap{}
 	err := FillSalts(message, &messageSalts)
 	assert.NoError(t, err)
 
@@ -331,10 +357,10 @@ func TestFlattenMessage_SimpleMap(t *testing.T) {
 
 func TestFlattenMessage_NestedMap(t *testing.T) {
 	message := &documentspb.NestedMap{
-		Value: map[string]*documentspb.SimpleMap{
-			"key": &documentspb.SimpleMap{
-				Value: map[string]string{
-					"nestedkey": "value",
+		Value: map[int32]*documentspb.SimpleMap{
+			42: &documentspb.SimpleMap{
+				Value: map[int32]string{
+					-42: "value",
 				},
 			},
 		},
@@ -350,10 +376,10 @@ func TestFlattenMessage_NestedMap(t *testing.T) {
 		propOrder = append(propOrder, leaf.Property)
 	}
 	mapProp := NewProperty("value", 1)
-	mapElemProp, err := mapProp.MapElemProp("key", 8)
+	mapElemProp, err := mapProp.MapElemProp(int32(42), 0)
 	assert.NoError(t, err)
 	mapElemProp = mapElemProp.FieldProp("value", 1)
-	mapElemElemProp, err := mapElemProp.MapElemProp("nestedkey", 32)
+	mapElemElemProp, err := mapElemProp.MapElemProp(int32(-42), 0)
 	assert.NoError(t, err)
 	assert.Equal(t, []Property{
 		mapProp.LengthProp(),

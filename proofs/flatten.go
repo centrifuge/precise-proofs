@@ -116,14 +116,13 @@ func (f *messageFlattener) handleValue(prop *Property, value reflect.Value, salt
 
 		// Handle each value of the map
 		for _, k := range value.MapKeys() {
-			extVal, err := proto.GetExtension(fieldDescriptor.Options, proofspb.E_KeyMaxLength)
-			if err != nil {
-				return errors.Wrap(err, "no key_max_length specified")
+			extVal, err := proto.GetExtension(fieldDescriptor.Options, proofspb.E_KeyLength)
+			var keyLength uint64
+			if err == nil {
+				keyLength = *(extVal.(*uint64))
 			}
 
-			maxLength := *(extVal.(*uint64))
-
-			elemProp, err := prop.MapElemProp(k.Interface(), maxLength)
+			elemProp, err := prop.MapElemProp(k.Interface(), keyLength)
 			if err != nil {
 				return errors.Wrapf(err, "failed to create elem prop for %q", k)
 			}

@@ -86,6 +86,11 @@ var ExampleSimpleMapDocument = SimpleMapDocument {
         "ValueCAKey": "ValueCAValue",
         "ValueCBKey": "ValueCBValue",
     },
+    ValueD: map[int32]string{
+        -1: "negative one",
+        0: "zero",
+        1: "one",
+    },
 }
 
 var ExampleSaltedSimpleMapDocument = SaltedSimpleMapDocument {
@@ -96,4 +101,10 @@ var ExampleSaltedSimpleMapDocument = SaltedSimpleMapDocument {
         "ValueCBKey": salt,
     },
     ValueCLength: salt,
+    ValueD: map[int32][]byte{
+        -1: salt,
+        0: salt,
+        1: salt,
+    },
+    ValueDLength: salt,
 }

@@ -58,24 +58,31 @@ message SaltedRepeatedItem {
 }
 
 message SimpleMap {
-  map<string,string> value = 1 [
-    (proofs.key_max_length) = 32
-  ];
+  map<int32,string> value = 1;
 }
 
 message SaltedSimpleMap {
+  map<int32,bytes> value = 1;
+  bytes valueLength = 2;
+}
+
+message SimpleStringMap {
+  map<string,string> value = 1 [
+    (proofs.key_length) = 32
+  ];
+}
+
+message SaltedSimpleStringMap {
   map<string,bytes> value = 1;
   bytes valueLength = 2;
 }
 
 message NestedMap {
-  map<string,SimpleMap> value = 1 [
-    (proofs.key_max_length) = 8
-  ];
+  map<int32,SimpleMap> value = 1;
 }
 
 message SaltedNestedMap {
-  map<string,SaltedSimpleMap> value = 1;
+  map<int32,SaltedSimpleMap> value = 1;
   bytes valueLength = 2;
 }
 
@@ -107,8 +114,9 @@ message SimpleMapDocument {
   string valueA = 1;
   string valueB = 2;
   map<string, string> valueC = 3 [
-    (proofs.key_max_length) = 32
+    (proofs.key_length) = 32
   ];
+  map<int32, string> valueD = 4;
 }
 
 message SaltedSimpleMapDocument {
@@ -116,6 +124,8 @@ message SaltedSimpleMapDocument {
   bytes valueB = 2;
   map<string, bytes> valueC = 3;
   bytes valueCLength = 4;
+  map<int32, bytes> valueD = 5;
+  bytes valueDLength = 6;
 }
 
 message TwoLevelItem {
