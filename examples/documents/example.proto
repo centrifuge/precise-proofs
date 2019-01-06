@@ -87,13 +87,13 @@ message SaltedNestedMap {
 }
 
 message SimpleEntry {
-  string entryKey = 1;
-  string entryValue = 2;
+  string entry_key = 1;
+  string entry_value = 2;
 }
 
 message SaltedSimpleEntry {
-  string entryKey = 1;
-  bytes entryValue = 2;
+  string entry_key = 1;
+  bytes entry_value = 2;
 }
 
 message SimpleEntries {
@@ -109,14 +109,14 @@ message SaltedSimpleEntries {
 }
 
 message Entry {
-    string entryKey = 1;
+    string entry_key = 1;
     string valueA = 2;
     bytes valueB = 3;
     int64 valueC = 4;
 }
 
 message SaltedEntry {
-    string entryKey = 1;
+    string entry_key = 1;
     bytes valueA = 2;
     bytes valueB = 3;
     bytes valueC = 4;
