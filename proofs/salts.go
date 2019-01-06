@@ -89,14 +89,14 @@ func handleFillSaltsSlice(value, saltValue reflect.Value, fieldDescriptor *go_de
 
 func handleFillSaltsStruct(value, saltValue reflect.Value, outerFieldDescriptor *go_descriptor.FieldDescriptorProto) (err error) {
 
-    // lookup map key from field descriptor, if it exists
-    mappingKeyFieldName := ""
-    if outerFieldDescriptor != nil {
-        mappingKeyVal, err := proto.GetExtension(outerFieldDescriptor.Options, proofspb.E_MappingKey)
-        if err == nil {
-            mappingKeyFieldName = generator.CamelCase(*(mappingKeyVal.(*string)))
-        }
-    }
+	// lookup map key from field descriptor, if it exists
+	mappingKeyFieldName := ""
+	if outerFieldDescriptor != nil {
+		mappingKeyVal, err := proto.GetExtension(outerFieldDescriptor.Options, proofspb.E_MappingKey)
+		if err == nil {
+			mappingKeyFieldName = generator.CamelCase(*(mappingKeyVal.(*string)))
+		}
+	}
 
 	_, md := descriptor.ForMessage(value.Addr().Interface().(descriptor.Message))
 
@@ -111,15 +111,15 @@ func handleFillSaltsStruct(value, saltValue reflect.Value, outerFieldDescriptor 
 		fieldValue := value.FieldByName(fieldName)
 		saltFieldValue := saltValue.Field(i)
 
-        if fieldName == mappingKeyFieldName {
-            // this is the map key field
-            // so instead of filling this field with a salt
-            // we copy the field value from value
-            saltFieldValue.Set(fieldValue)
-            continue
-        }
+		if fieldName == mappingKeyFieldName {
+			// this is the map key field
+			// so instead of filling this field with a salt
+			// we copy the field value from value
+			saltFieldValue.Set(fieldValue)
+			continue
+		}
 
-        // get the field descriptor for this field to pass along
+		// get the field descriptor for this field to pass along
 		valueField, fieldExistsInValue := value.Type().FieldByName(fieldName)
 		var innerFieldDescriptor *go_descriptor.FieldDescriptorProto
 		if fieldExistsInValue {

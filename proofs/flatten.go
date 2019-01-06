@@ -49,13 +49,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, saltV
 	case reflect.Struct:
 
 		// lookup map key from field descriptor, if it exists
-		mappingKeyFieldName := ""
-		if outerFieldDescriptor != nil {
-			mappingKeyVal, err := proto.GetExtension(outerFieldDescriptor.Options, proofspb.E_MappingKey)
-			if err == nil {
-				mappingKeyFieldName = generator.CamelCase(*(mappingKeyVal.(*string)))
-			}
-		}
+		mappingKeyFieldName := generator.CamelCase(getMappingKeyFrom(outerFieldDescriptor))
 
 		_, messageDescriptor := descriptor.ForMessage(value.Addr().Interface().(descriptor.Message))
 
@@ -111,17 +105,17 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, saltV
 			}
 		}
 	case reflect.Slice:
-		mappingKeyVal, err := proto.GetExtension(outerFieldDescriptor.Options, proofspb.E_MappingKey)
-		if err == nil {
+		mappingKey := generator.CamelCase(getMappingKeyFrom(outerFieldDescriptor))
+		if mappingKey != "" {
+			keyLength := getKeyLengthFrom(outerFieldDescriptor)
 			// a mapping key was defined for this repeated field
 			// convert it to a map, and then handle this value as
 			// a map instead of a slice
-			mappingKey := generator.CamelCase(*(mappingKeyVal.(*string)))
-			mapValue, err := sliceToMap(value, mappingKey)
+			mapValue, err := sliceToMap(value, mappingKey, keyLength)
 			if err != nil {
 				return errors.Wrapf(err, "failed to convert %s value to map with mapping_key %q", value.Type(), mappingKey)
 			}
-			mapSaltValue, err := sliceToMap(saltValue, mappingKey)
+			mapSaltValue, err := sliceToMap(saltValue, mappingKey, keyLength)
 			if err != nil {
 				return errors.Wrapf(err, "failed to convert %s saltValue to map with mapping_key %q", value.Type(), mappingKey)
 			}
@@ -145,11 +139,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, saltV
 
 		// Handle each value of the map
 		for _, k := range value.MapKeys() {
-			extVal, err := proto.GetExtension(outerFieldDescriptor.Options, proofspb.E_KeyLength)
-			var keyLength uint64
-			if err == nil {
-				keyLength = *(extVal.(*uint64))
-			}
+			keyLength := getKeyLengthFrom(outerFieldDescriptor)
 
 			elemProp, err := prop.MapElemProp(k.Interface(), keyLength)
 			if err != nil {
@@ -251,13 +241,33 @@ func FlattenMessage(message, messageSalts proto.Message, saltsLengthSuffix strin
 	return f.leaves, nil
 }
 
-func sliceToMap(value reflect.Value, mappingKey string) (reflect.Value, error) {
+func sliceToMap(value reflect.Value, mappingKey string, keyLength uint64) (reflect.Value, error) {
 	elemType := value.Type().Elem().Elem()
 	keyField, keyFound := elemType.FieldByName(mappingKey)
 	if !keyFound {
 		return reflect.Value{}, errors.Errorf("%s does not have field %q", elemType, mappingKey)
 	}
 	keyType := keyField.Type
+	extractKey := func(v reflect.Value) (reflect.Value, error) {
+		return v.Elem().FieldByIndex(keyField.Index), nil
+	}
+	if keyType == reflect.TypeOf([]byte(nil)) {
+		// Go does not allow slices to be the keys of a map
+		// but it does allow arrays to be keys
+		// since we know the key length, we convert each
+		// []byte to [keyLength]byte before using it as a key
+		keyType = reflect.ArrayOf(int(keyLength), reflect.TypeOf(byte(0)))
+		extractKeyByteSlice := extractKey
+		extractKey = func(v reflect.Value) (reflect.Value, error) {
+			bs, _ := extractKeyByteSlice(v)
+			if uint64(bs.Len()) != keyLength {
+				return reflect.Value{}, errors.Errorf("could not use %x as mapping_key - does not have length %d", bs, keyLength)
+			}
+			ba := reflect.New(keyType)
+			reflect.Copy(ba.Elem(), bs)
+			return ba.Elem(), nil
+		}
+	}
 	extractValue := func(v reflect.Value) reflect.Value {
 		return v
 	}
@@ -281,9 +291,38 @@ func sliceToMap(value reflect.Value, mappingKey string) (reflect.Value, error) {
 	mapType := reflect.MapOf(keyType, elemType)
 	mapValue := reflect.MakeMap(mapType)
 	for i := 0; i < value.Len(); i++ {
-		key := value.Index(i).Elem().FieldByIndex(keyField.Index)
+		key, err := extractKey(value.Index(i))
+		if err != nil {
+			return reflect.Value{}, err
+		}
 		value := extractValue(value.Index(i))
 		mapValue.SetMapIndex(key, value)
 	}
 	return mapValue, nil
+}
+
+func getKeyLengthFrom(fd *go_descriptor.FieldDescriptorProto) (keyLength uint64) {
+	if fd == nil {
+		return
+	}
+
+	extVal, err := proto.GetExtension(fd.Options, proofspb.E_KeyLength)
+	if err == nil {
+		keyLength = *(extVal.(*uint64))
+	}
+
+	return
+}
+
+func getMappingKeyFrom(fd *go_descriptor.FieldDescriptorProto) (mappingKey string) {
+	if fd == nil {
+		return
+	}
+
+	extVal, err := proto.GetExtension(fd.Options, proofspb.E_MappingKey)
+	if err == nil {
+		mappingKey = *(extVal.(*string))
+	}
+
+	return
 }

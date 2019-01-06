@@ -423,9 +423,9 @@ func TestFlattenMessage_Entries(t *testing.T) {
 		Entries: []*documentspb.Entry{
 			{
 				EntryKey: "key",
-				ValueA: "valueA",
-				ValueB: []byte("valueB"),
-				ValueC: 42,
+				ValueA:   "valueA",
+				ValueB:   []byte("valueB"),
+				ValueC:   42,
 			},
 		},
 	}
@@ -444,9 +444,38 @@ func TestFlattenMessage_Entries(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, []Property{
 		mapProp.LengthProp(),
-        mapElemProp.FieldProp("valueA", 2),
-        mapElemProp.FieldProp("valueB", 3),
-        mapElemProp.FieldProp("valueC", 4),
+		mapElemProp.FieldProp("valueA", 2),
+		mapElemProp.FieldProp("valueB", 3),
+		mapElemProp.FieldProp("valueC", 4),
+	}, propOrder)
+
+}
+
+func TestFlattenMessage_BytesKeyEntries(t *testing.T) {
+	message := &documentspb.BytesKeyEntries{
+		Entries: []*documentspb.BytesKeyEntry{
+			{
+				Address: []byte("abcdefghijklmnopqrst"),
+				Value:   "value",
+			},
+		},
+	}
+	messageSalts := documentspb.SaltedBytesKeyEntries{}
+	err := FillSalts(message, &messageSalts)
+	assert.NoError(t, err)
+
+	leaves, err := FlattenMessage(message, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
+	assert.NoError(t, err)
+	propOrder := []Property{}
+	for _, leaf := range leaves {
+		propOrder = append(propOrder, leaf.Property)
+	}
+	mapProp := Empty.FieldProp("entries", 1)
+	mapElemProp, err := mapProp.MapElemProp([]byte("abcdefghijklmnopqrst"), 20)
+	assert.NoError(t, err)
+	assert.Equal(t, []Property{
+		mapProp.LengthProp(),
+		mapElemProp,
 	}, propOrder)
 
 }

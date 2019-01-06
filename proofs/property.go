@@ -213,8 +213,11 @@ func keyNames(key interface{}, keyLength uint64) (string, []byte, error) {
 	}
 
 	switch k := reflect.ValueOf(key); k.Kind() {
-
-	// dynamic-length cases (need key length for these)
+	case reflect.Array:
+		// if we receive an array, covert to a slice, and handle it like a slice
+		sk := reflect.MakeSlice(reflect.SliceOf(k.Type().Elem()), k.Len(), k.Len())
+		reflect.Copy(sk, k)
+		return keyNames(sk.Interface(), keyLength)
 	case reflect.String:
 		escaper := regexp.MustCompile(`\\|\.|\[|\]`)
 		readableKey := escaper.ReplaceAllStringFunc(k.String(), func(match string) string {
