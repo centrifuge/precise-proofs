@@ -12,5 +12,5 @@ func (pn *Proof_ReadableName) String() string {
 }
 
 func (pn *Proof_CompactName) String() string {
-	return fmt.Sprint(pn.CompactName.Components)
+	return fmt.Sprint(pn.CompactName)
 }

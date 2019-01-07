@@ -177,7 +177,6 @@ package proofs
 
 import (
 	"bytes"
-	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -217,7 +216,7 @@ type TreeOptions struct {
 	Hash              hash.Hash
 	ValueEncoder      ValueEncoder
 	// ParentPrefix defines an arbitrary prefix to prepend to the parent, so all fields are prepended with it
-	ParentPrefix      *Property
+	ParentPrefix      Property
 	CompactProperties bool
 }
 
@@ -235,7 +234,7 @@ type DocumentTree struct {
 	hash              hash.Hash
 	saltsLengthSuffix string
 	valueEncoder      ValueEncoder
-	parentPrefix      *Property
+	parentPrefix      Property
 	compactProperties bool
 }
 
@@ -516,13 +515,6 @@ func ConcatValues(propName proofspb.PropertyName, value string, salt []byte) (pa
 	}
 	payload = append(payload, salt[:32]...)
 	return
-}
-
-// NewSalt creates a 32 byte slice with random data using the crypto/rand RNG
-func NewSalt() (salt []byte) {
-	randbytes := make([]byte, 32)
-	rand.Read(randbytes)
-	return randbytes
 }
 
 // LeafList is a list implementation that can be sorted by the LeafNode.Property value. This is needed for ordering all
