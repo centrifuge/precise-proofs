@@ -100,7 +100,7 @@ message SaltedSimpleEntry {
 message SimpleEntries {
   repeated SimpleEntry entries = 1 [
     (proofs.key_length) = 32,
-    (proofs.mapping_key) = "entryKey"
+    (proofs.mapping_key) = "entry_key"
   ];
 }
 
@@ -126,7 +126,7 @@ message SaltedEntry {
 message Entries {
   repeated Entry entries = 1 [
     (proofs.key_length) = 32,
-    (proofs.mapping_key) = "entryKey"
+    (proofs.mapping_key) = "entry_key"
   ];
 }
 
