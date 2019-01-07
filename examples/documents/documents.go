@@ -1,6 +1,6 @@
 package documentspb
 
-//go:generate protoc -I $PROTOBUF/src/ -I. -I $GOPATH/src --go_out=$GOPATH/src/ examples.proto
+//go:generate protoc -I $PROTOBUF/src/ -I. -I $GOPATH/src --go_out=$GOPATH/src/ example.proto
 
 import (
 	"time"
@@ -79,32 +79,32 @@ var ExampleSaltedNestedRepeatedDocument = SaltedNestedRepeatedDocument{
 	ValueD:       &SaltedTwoLevelItem{ValueA: &SaltedSimpleItem{ValueA: salt}, ValueB: salt},
 }
 
-var ExampleSimpleMapDocument = SimpleMapDocument {
-    ValueA: "ValueAA",
-    ValueB: "ValueBB",
-    ValueC: map[string]string{
-        "ValueCAKey": "ValueCAValue",
-        "ValueCBKey": "ValueCBValue",
-    },
-    ValueD: map[int32]string{
-        -1: "negative one",
-        0: "zero",
-        1: "one",
-    },
+var ExampleSimpleMapDocument = SimpleMapDocument{
+	ValueA: "ValueAA",
+	ValueB: "ValueBB",
+	ValueC: map[string]string{
+		"ValueCAKey": "ValueCAValue",
+		"ValueCBKey": "ValueCBValue",
+	},
+	ValueD: map[int32]string{
+		-1: "negative one",
+		0:  "zero",
+		1:  "one",
+	},
 }
 
-var ExampleSaltedSimpleMapDocument = SaltedSimpleMapDocument {
-    ValueA: salt,
-    ValueB: salt,
-    ValueC: map[string][]byte{
-        "ValueCAKey": salt,
-        "ValueCBKey": salt,
-    },
-    ValueCLength: salt,
-    ValueD: map[int32][]byte{
-        -1: salt,
-        0: salt,
-        1: salt,
-    },
-    ValueDLength: salt,
+var ExampleSaltedSimpleMapDocument = SaltedSimpleMapDocument{
+	ValueA: salt,
+	ValueB: salt,
+	ValueC: map[string][]byte{
+		"ValueCAKey": salt,
+		"ValueCBKey": salt,
+	},
+	ValueCLength: salt,
+	ValueD: map[int32][]byte{
+		-1: salt,
+		0:  salt,
+		1:  salt,
+	},
+	ValueDLength: salt,
 }

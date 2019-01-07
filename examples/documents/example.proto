@@ -26,6 +26,7 @@ message ExampleDocument {
   bytes value_not_hashed = 9 [
     (proofs.hashed_field) = true
   ];
+  Enum enum_type = 10;
 }
 
 message AllFieldTypes {
@@ -274,4 +275,10 @@ message SaltedExampleDocument {
   bytes ValueCamelCased = 6;
   bytes value_not_ignored = 7;
   bytes valueMap = 10;
+  bytes enum_type = 11;
+}
+
+enum Enum {
+  type_one = 0;
+  type_two = 1;
 }
