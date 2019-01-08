@@ -133,17 +133,20 @@ func TestFlattenMessage(t *testing.T) {
 		ValueBytes1:     []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		ValueCamelCased: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		ValueNotIgnored: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
+		EnumType:        []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 	}
 	leaves, err := FlattenMessage(&message, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
 	assert.NoError(t, err)
-	assert.Equal(t, 8, len(leaves))
+	assert.Equal(t, 9, len(leaves))
 
-	propOrder := []Property{}
+	var propOrder []Property
 	for _, leaf := range leaves {
 		propOrder = append(propOrder, leaf.Property)
 	}
+
 	assert.Equal(t, []Property{
 		Empty.FieldProp("ValueCamelCased", 6),
+		Empty.FieldProp("enum_type", 10),
 		Empty.FieldProp("value1", 3),
 		Empty.FieldProp("value2", 4),
 		Empty.FieldProp("valueA", 1),
@@ -152,13 +155,15 @@ func TestFlattenMessage(t *testing.T) {
 		Empty.FieldProp("value_not_hashed", 9),
 		Empty.FieldProp("value_not_ignored", 7),
 	}, propOrder)
+
 	f := &messageFlattener{valueEncoder: &defaultValueEncoder{}}
-	v, _ := f.valueToString("Foo")
+	v, err := f.valueToString("Foo")
+	assert.NoError(t, err)
 
 	expectedPayload := append([]byte("valueA"), v...)
 	expectedPayload = append(expectedPayload, messageSalts.ValueA[:]...)
 	expectedHash := sha256.Sum256(expectedPayload)
-	assert.Equal(t, expectedHash[:], leaves[3].Hash)
+	assert.Equal(t, expectedHash[:], leaves[4].Hash)
 }
 
 func TestFlattenMessage_compact(t *testing.T) {
@@ -175,12 +180,13 @@ func TestFlattenMessage_compact(t *testing.T) {
 		ValueCamelCased: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		ValueNotIgnored: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		ValueMap:        []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
+		EnumType:        []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 	}
 	leaves, err := FlattenMessage(&message, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, true, Empty)
 	assert.NoError(t, err)
-	assert.Equal(t, 8, len(leaves))
+	assert.Equal(t, 9, len(leaves))
 
-	propOrder := []Property{}
+	var propOrder []Property
 	for _, leaf := range leaves {
 		propOrder = append(propOrder, leaf.Property)
 	}
@@ -193,6 +199,7 @@ func TestFlattenMessage_compact(t *testing.T) {
 		Empty.FieldProp("ValueCamelCased", 6),
 		Empty.FieldProp("value_not_ignored", 7),
 		Empty.FieldProp("value_not_hashed", 9),
+		Empty.FieldProp("enum_type", 10),
 	}, propOrder)
 	f := &messageFlattener{valueEncoder: &defaultValueEncoder{}}
 	v, _ := f.valueToString("Foo")
@@ -216,19 +223,21 @@ func TestFlattenMessageWithPrefix(t *testing.T) {
 		ValueBytes1:     []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		ValueCamelCased: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		ValueNotIgnored: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
+		EnumType:        []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 	}
 	parentProp := NewProperty("doc", 42)
 	leaves, err := FlattenMessage(&message, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, parentProp)
 	assert.NoError(t, err)
-	assert.Equal(t, 8, len(leaves))
+	assert.Equal(t, 9, len(leaves))
 
-	propOrder := []Property{}
+	var propOrder []Property
 	for _, leaf := range leaves {
 		propOrder = append(propOrder, leaf.Property)
 	}
 
 	assert.Equal(t, []Property{
 		parentProp.FieldProp("ValueCamelCased", 6),
+		parentProp.FieldProp("enum_type", 10),
 		parentProp.FieldProp("value1", 3),
 		parentProp.FieldProp("value2", 4),
 		parentProp.FieldProp("valueA", 1),
@@ -243,7 +252,7 @@ func TestFlattenMessageWithPrefix(t *testing.T) {
 	expectedPayload := append([]byte("doc.valueA"), v...)
 	expectedPayload = append(expectedPayload, messageSalts.ValueA[:]...)
 	expectedHash := sha256.Sum256(expectedPayload)
-	assert.Equal(t, expectedHash[:], leaves[3].Hash)
+	assert.Equal(t, expectedHash[:], leaves[4].Hash)
 }
 
 func TestFlattenMessage_AllFieldTypes(t *testing.T) {
@@ -277,12 +286,13 @@ func TestFlattenMessage_HashedField(t *testing.T) {
 	assert.Nil(t, err)
 
 	leaves, err := FlattenMessage(message, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
-	propOrder := []Property{}
+	var propOrder []Property
 	for _, leaf := range leaves {
 		propOrder = append(propOrder, leaf.Property)
 	}
 	assert.Equal(t, []Property{
 		Empty.FieldProp("ValueCamelCased", 6),
+		Empty.FieldProp("enum_type", 10),
 		Empty.FieldProp("value1", 3),
 		Empty.FieldProp("value2", 4),
 		Empty.FieldProp("valueA", 1),
@@ -292,8 +302,8 @@ func TestFlattenMessage_HashedField(t *testing.T) {
 		Empty.FieldProp("value_not_ignored", 7),
 	}, propOrder)
 	assert.Nil(t, err)
-	assert.Equal(t, leaves[6].Hash, foobarHash[:])
-	assert.Equal(t, leaves[6].Value, "")
+	assert.Equal(t, leaves[7].Hash, foobarHash[:])
+	assert.Equal(t, leaves[7].Value, "")
 
 	invalidMessage := &documentspb.InvalidHashedFieldDocument{
 		Value: "foobar",
@@ -542,20 +552,21 @@ func TestTree_Generate(t *testing.T) {
 		ValueBytes1:     []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		ValueNotIgnored: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		ValueCamelCased: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
+		EnumType:        []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 	}
 
 	leaves, err := FlattenMessage(&protoMessage, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
 	assert.NoError(t, err)
 	tree := merkle.NewTreeWithOpts(merkle.TreeOptions{DisableHashLeaves: true})
-	hashes := [][]byte{}
-	assert.Equal(t, 8, len(leaves))
+	var hashes [][]byte
+	assert.Equal(t, 9, len(leaves))
 	for _, leaf := range leaves {
 		hashes = append(hashes, leaf.Hash)
 	}
 
 	tree.Generate(hashes, sha256Hash)
 	h := tree.Root().Hash
-	expectedHash := []byte{0xc7, 0xde, 0x9e, 0x46, 0x73, 0x6, 0xb3, 0xe4, 0x49, 0xa2, 0x25, 0x46, 0x9c, 0x9b, 0x1, 0x9a, 0xd2, 0x95, 0x17, 0x2d, 0x89, 0x67, 0x88, 0x24, 0x36, 0xb, 0x78, 0xd5, 0x85, 0xf5, 0x41, 0xdf}
+	expectedHash := []byte{0x94, 0x8b, 0x55, 0x57, 0x33, 0xd8, 0xc4, 0xdb, 0xaa, 0xcc, 0xb, 0xba, 0x35, 0x3f, 0x5b, 0x67, 0x2e, 0x2a, 0x3a, 0x78, 0xdc, 0x82, 0xbb, 0x2a, 0xab, 0xdb, 0x99, 0xb4, 0x88, 0x78, 0x8d, 0x8d}
 	assert.Equal(t, expectedHash, h, "Hash should match")
 }
 
@@ -574,18 +585,19 @@ func TestSortedHashTree_Generate(t *testing.T) {
 		ValueNotIgnored: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		ValueCamelCased: []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 		ValueMap:        []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
+		EnumType:        []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225},
 	}
 
 	leaves, err := FlattenMessage(&protoMessage, &messageSalts, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
 	assert.NoError(t, err)
 	tree := merkle.NewTreeWithOpts(merkle.TreeOptions{DisableHashLeaves: true, EnableHashSorting: true})
-	hashes := [][]byte{}
+	var hashes [][]byte
 	for _, leaf := range leaves {
 		hashes = append(hashes, leaf.Hash)
 	}
 	tree.Generate(hashes, sha256Hash)
 	h := tree.Root().Hash
-	expectedHash := []byte{0x5d, 0x65, 0x4f, 0x78, 0x4d, 0x14, 0xaf, 0xb0, 0xbf, 0xf8, 0x34, 0x52, 0xda, 0x19, 0x9c, 0xd4, 0x65, 0x2e, 0x2b, 0xa5, 0x22, 0x32, 0x58, 0x1e, 0x33, 0x6c, 0x51, 0xae, 0x75, 0xf9, 0x9a, 0x4a}
+	expectedHash := []byte{0x6b, 0x93, 0x26, 0x8c, 0xae, 0xa7, 0x65, 0x5b, 0x0, 0xc, 0x38, 0x7b, 0xd0, 0x1e, 0x84, 0xbc, 0x74, 0xa2, 0xbc, 0xfd, 0x53, 0xbe, 0x8a, 0x28, 0xfc, 0xac, 0xec, 0x46, 0x69, 0x12, 0x2f, 0x61}
 	assert.Equal(t, expectedHash, h, "Hash should match")
 }
 
@@ -951,7 +963,7 @@ func TestTree_GenerateNestedTreeCombinedStandardProof(t *testing.T) {
 	expectedRootHashA := []byte{0xe9, 0x7a, 0x71, 0x75, 0xeb, 0xbf, 0xd9, 0x7a, 0x60, 0x8d, 0x7a, 0x52, 0xf2, 0x7b, 0x4f, 0x84, 0x71, 0xdc, 0xc0, 0x8d, 0x65, 0x64, 0xc7, 0xab, 0x8b, 0xf1, 0x1a, 0x9d, 0x6c, 0xa9, 0x85, 0x55}
 	assert.Equal(t, expectedRootHashA, doctreeA.RootHash())
 
-	expectedRootHashB := []byte{0x16, 0xf1, 0x95, 0x3c, 0x97, 0x2f, 0x33, 0x56, 0xba, 0x8, 0x97, 0x5f, 0xb0, 0x53, 0xe7, 0xc, 0x8f, 0x2b, 0xc1, 0xd0, 0x32, 0xd, 0xd4, 0x17, 0xbe, 0x59, 0xd9, 0xd8, 0xc, 0x21, 0x35, 0xda}
+	expectedRootHashB := []byte{0x4a, 0x10, 0xdd, 0xee, 0x8, 0x4d, 0xe6, 0xeb, 0xda, 0x47, 0x61, 0xaa, 0x80, 0x65, 0x66, 0x49, 0xd1, 0xe5, 0xa4, 0xb6, 0xa9, 0xd6, 0x51, 0x38, 0x71, 0x4d, 0x4f, 0x91, 0xf0, 0x47, 0x1a, 0xcc}
 	assert.Equal(t, expectedRootHashB, doctreeB.RootHash())
 
 	fieldProofA, err := doctreeA.CreateProof("valueA")
@@ -1000,7 +1012,7 @@ func TestTree_GenerateNestedTreeCombinedSortedHashesProof(t *testing.T) {
 	expectedRootHashA := []byte{0xfa, 0x84, 0xf0, 0x2c, 0xed, 0xea, 0x3, 0x99, 0x80, 0xd6, 0x2f, 0xfb, 0x7, 0x19, 0xc6, 0xe2, 0x36, 0x71, 0x99, 0xb4, 0xe4, 0x56, 0xe9, 0xa4, 0xf4, 0x96, 0xde, 0xa, 0xef, 0xbc, 0xd1, 0xd}
 	assert.Equal(t, expectedRootHashA, doctreeA.RootHash())
 
-	expectedRootHashB := []byte{0x7, 0x4, 0xf0, 0x66, 0xf0, 0x3a, 0x4e, 0x85, 0xb5, 0xa1, 0xee, 0x62, 0xc6, 0x57, 0xb2, 0xe9, 0xda, 0x97, 0xb4, 0xa2, 0xce, 0xb6, 0x9e, 0xfe, 0xa2, 0x48, 0x8b, 0x8f, 0xd8, 0xf0, 0x8, 0x47}
+	expectedRootHashB := []byte{0x91, 0x50, 0x51, 0x2d, 0x9e, 0x94, 0xcd, 0xcb, 0xdb, 0x5c, 0xd, 0x3d, 0x85, 0xbb, 0x1a, 0xe0, 0xae, 0x9d, 0x1e, 0xa6, 0xf8, 0x6d, 0x7f, 0x4d, 0x78, 0x46, 0xef, 0x5d, 0x30, 0x60, 0xf7, 0xb7}
 	assert.Equal(t, expectedRootHashB, doctreeB.RootHash())
 
 	fieldProofA, err := doctreeA.CreateProof("valueA")
@@ -1187,7 +1199,7 @@ func TestCreateProof_standard(t *testing.T) {
 	assert.Equal(t, documentspb.ExampleDocumentSalts.ValueBytes1, proofB.Salt)
 
 	fieldHash, err := CalculateHashForProofField(&proof, sha256Hash)
-	rootHash := []byte{0x3d, 0xc0, 0xbc, 0xd7, 0xdc, 0xd7, 0x99, 0x10, 0x4e, 0x3d, 0xe8, 0xa7, 0x67, 0xcf, 0x9c, 0xf6, 0xab, 0x65, 0x42, 0xdb, 0x2a, 0x9f, 0xd5, 0x93, 0xd1, 0x33, 0x39, 0x4e, 0x93, 0x99, 0x17, 0x96}
+	rootHash := []byte{0x85, 0x52, 0x3e, 0xf5, 0x84, 0x6d, 0x63, 0xdd, 0x12, 0x80, 0x13, 0x2d, 0xda, 0xcf, 0x28, 0x7e, 0x9b, 0xcb, 0xda, 0xb, 0xe6, 0x82, 0x8a, 0x29, 0x44, 0x4d, 0x2, 0x12, 0xe1, 0x73, 0x66, 0x34}
 	assert.Equal(t, rootHash, doctree.rootHash)
 	valid, err := ValidateProofHashes(fieldHash, proof.Hashes, rootHash, doctree.hash)
 	assert.True(t, valid)
@@ -1524,13 +1536,14 @@ func TestTree_AddLeaves_TwoLeafTree(t *testing.T) {
 	assert.NotEqual(t, hashLeafA[:], tree.RootHash())
 }
 
-func Example_complete() {
+func Test_Enums(t *testing.T) {
 	// ExampleDocument is a protobuf message
 	document := documentspb.ExampleDocument{
 		Value1:      1,
 		ValueA:      "Foo",
 		ValueB:      "Bar",
 		ValueBytes1: []byte("foobar"),
+		EnumType:    documentspb.Enum_type_two,
 	}
 
 	// The FillSalts method is a helper function that fills all fields with 32
@@ -1544,11 +1557,14 @@ func Example_complete() {
 	doctree.Generate()
 	fmt.Printf("Generated tree: %s\n", doctree.String())
 
-	proof, _ := doctree.CreateProof("ValueA")
-	proofJson, _ := json.Marshal(proof)
-	fmt.Println("Proof:\n", string(proofJson))
-
-	valid, _ := doctree.ValidateProof(&proof)
-
-	fmt.Printf("Proof validated: %v\n", valid)
+	for _, field := range []string{"valueA", "enum_type"} {
+		proof, err := doctree.CreateProof(field)
+		assert.NoError(t, err)
+		proofJson, err := json.Marshal(proof)
+		assert.NoError(t, err)
+		fmt.Println("Proof:\n", string(proofJson))
+		valid, err := doctree.ValidateProof(&proof)
+		assert.NoError(t, err)
+		assert.True(t, valid, "proof must be valid")
+	}
 }

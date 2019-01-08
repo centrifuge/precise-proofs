@@ -413,7 +413,6 @@ func (doctree *DocumentTree) CreateProof(prop string) (proof proofspb.Proof, err
 // pickHashesFromMerkleTree takes the required hashes needed to create a proof
 func (doctree *DocumentTree) pickHashesFromMerkleTree(leaf uint64) (hashes []*proofspb.MerkleHash, err error) {
 	proofNodes, err := CalculateProofNodeList(leaf, uint64(len(doctree.merkleTree.Leaves())))
-
 	if err != nil {
 		return hashes, err
 	}
@@ -464,15 +463,6 @@ func (doctree *DocumentTree) ValidateProof(proof *proofspb.Proof) (valid bool, e
 		valid, err = ValidateProofHashes(fieldHash, proof.Hashes, doctree.rootHash, doctree.hash)
 	}
 	return
-}
-
-func dereferencePointer(value interface{}) interface{} {
-	reflectValue := reflect.Indirect(reflect.ValueOf(value))
-	if !reflectValue.IsValid() {
-		return nil
-	}
-
-	return reflectValue.Interface()
 }
 
 // LeafNode represents a field that can be hashed to create a merkle tree
