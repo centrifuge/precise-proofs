@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/centrifuge/precise-proofs/proofs/proto"
 	"github.com/golang/protobuf/descriptor"
 	"github.com/golang/protobuf/proto"
 	go_descriptor "github.com/golang/protobuf/protoc-gen-go/descriptor"
@@ -14,8 +15,6 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/pkg/errors"
-
-	"github.com/centrifuge/precise-proofs/proofs/proto"
 )
 
 // messageFlattener takes a proto.Message and flattens it to a list of ordered nodes.
@@ -38,7 +37,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, saltV
 		if err != nil {
 			return errors.Wrap(err, "failed convert value to string")
 		}
-		f.appendLeaf(prop, valueString, saltValue.Bytes(), []byte{}, false)
+		f.appendLeaf(prop, valueString, saltValue.Bytes(), nil, false)
 		return nil
 	}
 
