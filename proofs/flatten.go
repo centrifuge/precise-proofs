@@ -127,7 +127,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, saltV
 
 		// Handle each element of the slice
 		for i := 0; i < value.Len(); i++ {
-			elemProp := prop.SliceElemProp(FieldNum(i))
+			elemProp := prop.SliceElemProp(FieldNumForSliceLength(i))
 			err := f.handleValue(elemProp, value.Index(i), saltValue.Index(i), reflect.Value{}, nil)
 			if err != nil {
 				return errors.Wrapf(err, "error handling slice element %d", i)

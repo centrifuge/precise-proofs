@@ -32,7 +32,8 @@ func NewProperty(name string, bytes ...byte) Property {
 }
 
 // FieldNum is a compact, unique identifier for a Property, relative to its parent
-type FieldNum = uint64
+type FieldNum = uint32
+type FieldNumForSliceLength = uint64
 
 func encode(n FieldNum) []byte {
 	buf := new(bytes.Buffer)
@@ -96,7 +97,7 @@ func (n Property) FieldPropFromTag(protobufTag string) (Property, error) {
 }
 
 // SliceElemProp takes a repeated field index and returns a child Property representing that element of the repeated field
-func (n Property) SliceElemProp(i FieldNum) Property {
+func (n Property) SliceElemProp(i FieldNumForSliceLength) Property {
 	buf := new(bytes.Buffer)
 	binary.Write(buf, binary.BigEndian, i)
 	return Property{
@@ -159,7 +160,7 @@ func ExtractFieldTags(protobufTag string) (string, FieldNum, error) {
 
 	// other fields exist, but aren't needed
 
-	return name, num, nil
+	return name, FieldNum(num), nil
 }
 
 // ReadableName creates a PropertyName from a human-readable name
