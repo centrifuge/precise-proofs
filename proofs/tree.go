@@ -306,8 +306,8 @@ func (doctree *DocumentTree) AddLeavesFromDocument(document, salts proto.Message
 	if err != nil {
 		return err
 	}
-	err = doctree.AddLeaves(leaves)
-	return err
+
+	return doctree.AddLeaves(leaves)
 }
 
 // Generate calculated the merkle root with all supplied leaves. This method can only be called once and makes
@@ -319,9 +319,13 @@ func (doctree *DocumentTree) Generate() error {
 
 	hashes := make([][]byte, len(doctree.leaves))
 	for i, leaf := range doctree.leaves {
-		if (!leaf.Hashed) || (len(leaf.Hash) == 0) {
-			leaf.HashNode(doctree.hash, doctree.compactProperties)
+		if len(leaf.Hash) < 1 || leaf.Hashed {
+			err := leaf.HashNode(doctree.hash, doctree.compactProperties)
+			if err != nil {
+				return err
+			}
 		}
+
 		hashes[i] = leaf.Hash
 	}
 	err := doctree.merkleTree.Generate(hashes, doctree.hash)
@@ -413,7 +417,6 @@ func (doctree *DocumentTree) CreateProof(prop string) (proof proofspb.Proof, err
 // pickHashesFromMerkleTree takes the required hashes needed to create a proof
 func (doctree *DocumentTree) pickHashesFromMerkleTree(leaf uint64) (hashes []*proofspb.MerkleHash, err error) {
 	proofNodes, err := CalculateProofNodeList(leaf, uint64(len(doctree.merkleTree.Leaves())))
-
 	if err != nil {
 		return hashes, err
 	}
@@ -466,15 +469,6 @@ func (doctree *DocumentTree) ValidateProof(proof *proofspb.Proof) (valid bool, e
 	return
 }
 
-func dereferencePointer(value interface{}) interface{} {
-	reflectValue := reflect.Indirect(reflect.ValueOf(value))
-	if !reflectValue.IsValid() {
-		return nil
-	}
-
-	return reflectValue.Interface()
-}
-
 // LeafNode represents a field that can be hashed to create a merkle tree
 type LeafNode struct {
 	Property Property
@@ -490,13 +484,14 @@ type LeafNode struct {
 // HashNode calculates the hash of a node provided it isn't already calculated.
 func (n *LeafNode) HashNode(h hash.Hash, compact bool) error {
 	if len(n.Hash) > 0 || n.Hashed {
-		return errors.New("Hash already set")
+		return nil
 	}
 
 	payload, err := ConcatValues(n.Property.Name(compact), n.Value, n.Salt)
 	if err != nil {
 		return err
 	}
+
 	defer h.Reset()
 	_, err = h.Write(payload)
 	if err != nil {

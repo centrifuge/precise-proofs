@@ -188,6 +188,12 @@ func (f *messageFlattener) valueToString(value interface{}) (s string, err error
 		}
 		return ptypes.TimestampString(v), nil
 	default:
+		// special case for enums
+		rv := reflect.ValueOf(value)
+		if rv.Kind() == reflect.Int32 {
+			return strconv.FormatInt(rv.Int(), 10), nil
+		}
+
 		return "", errors.Errorf("Got unsupported value of type %T", v)
 	}
 }
