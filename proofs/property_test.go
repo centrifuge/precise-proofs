@@ -22,6 +22,14 @@ func TestExtractFieldTags(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "d", name)
 	assert.Equal(t, FieldNum(42), num)
+
+	_, _, err = ExtractFieldTags("a,42,c,packed")
+	assert.EqualError(t, err, "not enough elements in protobuf tag list")
+
+	name, num, err = ExtractFieldTags("a,42,c,packed,name=d")
+	assert.NoError(t, err)
+	assert.Equal(t, "d", name)
+	assert.Equal(t, FieldNum(42), num)
 }
 
 func TestPropertyName_NoParent(t *testing.T) {
