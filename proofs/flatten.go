@@ -1,6 +1,7 @@
 package proofs
 
 import (
+	"fmt"
 	"hash"
 	"reflect"
 	"sort"
@@ -177,8 +178,8 @@ func (f *messageFlattener) valueToString(value interface{}) (s string, err error
 		return "", nil
 	case string:
 		return v, nil
-	case int64:
-		return strconv.FormatInt(v, 10), nil
+	case int8, int16, int32, int64, uint8, uint16, uint32, uint64:
+		return fmt.Sprint(value), nil
 	case []byte:
 		return f.valueEncoder.EncodeToString(v), nil
 	case *timestamp.Timestamp:

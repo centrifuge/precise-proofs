@@ -1566,3 +1566,25 @@ func Test_Enums(t *testing.T) {
 		assert.True(t, valid, "proof must be valid")
 	}
 }
+
+func Test_integers(t *testing.T) {
+	doc := new(documentspb.Integers)
+	salts := new(documentspb.SaltedIntegers)
+	FillSalts(doc, salts)
+
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New()})
+	doctree.AddLeavesFromDocument(doc, salts)
+	doctree.Generate()
+	fmt.Printf("Generated tree: %s\n", doctree.String())
+
+	for _, field := range []string{"valueA", "valueB", "valueG", "valueH", "valueJ"} {
+		proof, err := doctree.CreateProof(field)
+		assert.NoError(t, err)
+		proofJson, err := json.Marshal(proof)
+		assert.NoError(t, err)
+		fmt.Println("Proof:\n", string(proofJson))
+		valid, err := doctree.ValidateProof(&proof)
+		assert.NoError(t, err)
+		assert.True(t, valid, "proof must be valid")
+	}
+}
