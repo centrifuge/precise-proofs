@@ -12,23 +12,10 @@ var salt []byte = []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 6
 
 var LongDocumentExample LongDocument = LongDocument{Value0: 1, Value1: 2, Value2: 3, Value3: 4, Value4: 5, Value5: 6, Value6: 7, Value7: 8, Value8: 9, Value9: 10, ValueA: 11, ValueB: 12, ValueC: 13, ValueD: 14, ValueE: 15}
 
-var SaltedLongDocumentExample SaltedLongDocument = SaltedLongDocument{Value0: salt, Value1: salt, Value2: salt, Value3: salt, Value4: salt, Value5: salt, Value6: salt, Value7: salt, Value8: salt, Value9: salt, ValueA: salt, ValueB: salt, ValueC: salt, ValueD: salt, ValueE: salt}
-
 var FilledExampleDocument ExampleDocument = ExampleDocument{
 	ValueA: "Example",
 }
 
-var ExampleDocumentSalts SaltedExampleDocument = SaltedExampleDocument{
-	ValueA:          salt,
-	ValueB:          salt,
-	Value1:          salt,
-	Value2:          salt,
-	ValueBytes1:     salt,
-	ValueCamelCased: salt,
-	ValueNotIgnored: salt,
-	ValueMap:        salt,
-	EnumType:        salt,
-}
 
 var ExampleTimeString string = "2018-04-10T01:23:12.697116Z"
 
@@ -48,22 +35,9 @@ var ExampleFilledRepeatedDocument = SimpleRepeatedDocument{
 	ValueC: []string{"ValueCA", "ValueCB"},
 }
 
-var ExampleSaltedRepeatedDocument = SaltedSimpleRepeatedDocument{
-	ValueA:       salt,
-	ValueB:       salt,
-	ValueC:       [][]byte{salt, salt},
-	ValueCLength: salt,
-}
-
 var ExampleFilledTwoLevelRepeatedDocument = TwoLevelRepeatedDocument{
 	ValueA: "ValueAA",
 	ValueB: []*RepeatedItem{{ValueA: []*SimpleItem{{ValueA: "ValueBAAA"}, {ValueA: "ValueBAAB"}}, ValueB: "ValueBBA"}},
-}
-
-var ExampleSaltedTwoLevelRepeatedDocument = SaltedTwoLevelRepeatedDocument{
-	ValueA:       salt,
-	ValueB:       []*SaltedRepeatedItem{{ValueA: []*SaltedSimpleItem{{ValueA: salt}, {ValueA: salt}}, ValueALength: salt, ValueB: salt}},
-	ValueBLength: salt,
 }
 
 var ExampleFilledNestedRepeatedDocument = NestedRepeatedDocument{
@@ -71,14 +45,6 @@ var ExampleFilledNestedRepeatedDocument = NestedRepeatedDocument{
 	ValueB: "ValueBB",
 	ValueC: []*SimpleItem{{ValueA: "ValueCA"}, {ValueA: "ValueCB"}},
 	ValueD: &TwoLevelItem{ValueA: &SimpleItem{ValueA: "ValueDAA"}, ValueB: "ValueDB"},
-}
-
-var ExampleSaltedNestedRepeatedDocument = SaltedNestedRepeatedDocument{
-	ValueA:       salt,
-	ValueB:       salt,
-	ValueC:       []*SaltedSimpleItem{{ValueA: salt}, {ValueA: salt}},
-	ValueCLength: salt,
-	ValueD:       &SaltedTwoLevelItem{ValueA: &SaltedSimpleItem{ValueA: salt}, ValueB: salt},
 }
 
 var ExampleSimpleMapDocument = SimpleMapDocument{
@@ -95,18 +61,3 @@ var ExampleSimpleMapDocument = SimpleMapDocument{
 	},
 }
 
-var ExampleSaltedSimpleMapDocument = SaltedSimpleMapDocument{
-	ValueA: salt,
-	ValueB: salt,
-	ValueC: map[string][]byte{
-		"ValueCAKey": salt,
-		"ValueCBKey": salt,
-	},
-	ValueCLength: salt,
-	ValueD: map[int32][]byte{
-		-1: salt,
-		0:  salt,
-		1:  salt,
-	},
-	ValueDLength: salt,
-}

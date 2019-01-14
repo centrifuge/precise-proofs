@@ -6,14 +6,14 @@ Precise Proofs
 
 Read the [introduction on Precise-Proofs](https://medium.com/centrifuge/introducing-precise-proofs-create-validate-field-level-merkle-proofs-a31af9220df0)
 
-Precise-Proofs is a library for creating Merkle proofs out of protobuf messages. It 
+Precise-Proofs is a library for creating Merkle proofs out of protobuf messages. It
 handles flattening of objects, ordering the fields by label and creating shareable and
 independently verifiable proofs.
 
 This library takes arbitrary protobuf messages and makes sure a Merkle tree can be reliable calculated
-from the values with each value representing a leaf in the tree. 
+from the values with each value representing a leaf in the tree.
 ```js,
-{ 
+{
     "Amount": "$1500",
     "InvoiceDate": "2018-03-01",
     "DueDate": "2018-08-01",
@@ -60,14 +60,8 @@ See below code sample (`examples/simple.go`) for a usage example. For detailed u
 		ValueBytes1: []byte("foobar"),
 	}
 
-	// The FillSalts method is a helper function that fills all fields with 32
-	// random bytes. SaltedExampleDocument is a protobuf message that has the
-	// same structure as ExampleDocument but has all `bytes` field types.
-	salts := documentspb.SaltedExampleDocument{}
-	FillSalts(&document, &salts)
-
 	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New()})
-	doctree.AddLeavesFromDocument(&document, &salts)
+	doctree.AddLeavesFromDocument(&document, NewSalt)
 	doctree.Generate()
 	fmt.Printf("Generated tree: %s\n", doctree.String())
 
