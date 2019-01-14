@@ -32,7 +32,8 @@ func NewProperty(name string, bytes ...byte) Property {
 }
 
 // FieldNum is a compact, unique identifier for a Property, relative to its parent
-type FieldNum = uint64
+type FieldNum = uint32
+type FieldNumForSliceLength = uint64
 
 func encode(n FieldNum) []byte {
 	buf := new(bytes.Buffer)
@@ -96,7 +97,7 @@ func (n Property) FieldPropFromTag(protobufTag string) (Property, error) {
 }
 
 // SliceElemProp takes a repeated field index and returns a child Property representing that element of the repeated field
-func (n Property) SliceElemProp(i FieldNum) Property {
+func (n Property) SliceElemProp(i FieldNumForSliceLength) Property {
 	buf := new(bytes.Buffer)
 	binary.Write(buf, binary.BigEndian, i)
 	return Property{
@@ -141,6 +142,16 @@ func ExtractFieldTags(protobufTag string) (string, FieldNum, error) {
 		return "", 0, err
 	}
 
+	ni := 3
+	if tagList[ni] == "packed" {
+		ni++
+	}
+
+	if len(tagList) < ni+1 {
+		err = errors.New("not enough elements in protobuf tag list")
+		return "", 0, err
+	}
+
 	// first element describes field encoding: bytes, varint, etc.
 	// second element is the field ordinal number
 	num, err := strconv.ParseUint(tagList[1], 10, 64)
@@ -151,15 +162,14 @@ func ExtractFieldTags(protobufTag string) (string, FieldNum, error) {
 
 	// third element describes optionality of the field
 	// fourth element has protobuf field name: e.g. 'name=ThisField'
-	name := strings.TrimPrefix(tagList[3], "name=")
-	if name == tagList[3] {
+	name := strings.TrimPrefix(tagList[ni], "name=")
+	if name == tagList[ni] {
 		err = errors.Errorf("error parsing protobuf field name: %q does not begin with %q", tagList[3], "name=")
 		return "", 0, err
 	}
 
 	// other fields exist, but aren't needed
-
-	return name, num, nil
+	return name, FieldNum(num), nil
 }
 
 // ReadableName creates a PropertyName from a human-readable name

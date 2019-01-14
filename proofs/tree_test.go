@@ -200,7 +200,7 @@ func TestFlattenMessage_compact(t *testing.T) {
 	f := &messageFlattener{valueEncoder: &defaultValueEncoder{}}
 	v, _ := f.valueToString("Foo")
 
-	expectedPayload := append([]byte{0, 0, 0, 0, 0, 0, 0, 1}, v...)
+	expectedPayload := append([]byte{0, 0, 0, 1}, v...)
 	expectedPayload = append(expectedPayload, messageSalts.ValueA[:]...)
 	expectedHash := sha256.Sum256(expectedPayload)
 	assert.Equal(t, expectedHash[:], leaves[0].Hash)
@@ -1234,18 +1234,18 @@ func TestCreateProof_standard_compactProperties(t *testing.T) {
 
 	proof, err = doctree.CreateProof("valueA")
 	assert.Nil(t, err)
-	assert.Equal(t, CompactName(0, 0, 0, 0, 0, 0, 0, 1), proof.Property)
+	assert.Equal(t, CompactName(0, 0, 0, 1), proof.Property)
 	assert.Equal(t, documentspb.FilledExampleDocument.ValueA, proof.Value)
 	assert.Equal(t, documentspb.ExampleDocumentSalts.ValueA, proof.Salt)
 
 	proofB, err := doctree.CreateProof("value_bytes1")
 	assert.Nil(t, err)
-	assert.Equal(t, CompactName(0, 0, 0, 0, 0, 0, 0, 5), proofB.Property)
+	assert.Equal(t, CompactName(0, 0, 0, 5), proofB.Property)
 	assert.Equal(t, new(defaultValueEncoder).EncodeToString(doc.ValueBytes1), proofB.Value)
 	assert.Equal(t, documentspb.ExampleDocumentSalts.ValueBytes1, proofB.Salt)
 
 	fieldHash, err := CalculateHashForProofField(&proof, sha256Hash)
-	rootHash := []byte{0x4c, 0x4, 0x6a, 0x58, 0xe4, 0x84, 0x2a, 0x75, 0x4a, 0x2e, 0x6a, 0xf5, 0xb9, 0xd9, 0xcf, 0x85, 0x4b, 0xa9, 0x67, 0x42, 0x3d, 0x12, 0x6b, 0x9f, 0xc7, 0x19, 0x2f, 0xf2, 0xf6, 0x87, 0xfa, 0x6b}
+	rootHash := []byte{0x7b, 0x23, 0x90, 0x3, 0xf1, 0xf8, 0xe7, 0x64, 0xea, 0x75, 0xc5, 0x26, 0x55, 0xe1, 0x2d, 0xe8, 0xf, 0x58, 0x69, 0x60, 0xec, 0x27, 0x13, 0x81, 0xd7, 0xfe, 0x80, 0x98, 0x9a, 0xb2, 0x71, 0xc9}
 	assert.Equal(t, rootHash, doctree.rootHash)
 	valid, err := ValidateProofHashes(fieldHash, proof.Hashes, rootHash, doctree.hash)
 	assert.True(t, valid)
@@ -1556,6 +1556,28 @@ func Test_Enums(t *testing.T) {
 	fmt.Printf("Generated tree: %s\n", doctree.String())
 
 	for _, field := range []string{"valueA", "enum_type"} {
+		proof, err := doctree.CreateProof(field)
+		assert.NoError(t, err)
+		proofJson, err := json.Marshal(proof)
+		assert.NoError(t, err)
+		fmt.Println("Proof:\n", string(proofJson))
+		valid, err := doctree.ValidateProof(&proof)
+		assert.NoError(t, err)
+		assert.True(t, valid, "proof must be valid")
+	}
+}
+
+func Test_integers(t *testing.T) {
+	doc := new(documentspb.Integers)
+	salts := new(documentspb.SaltedIntegers)
+	FillSalts(doc, salts)
+
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New()})
+	doctree.AddLeavesFromDocument(doc, salts)
+	doctree.Generate()
+	fmt.Printf("Generated tree: %s\n", doctree.String())
+
+	for _, field := range []string{"valueA", "valueB", "valueG", "valueH", "valueJ"} {
 		proof, err := doctree.CreateProof(field)
 		assert.NoError(t, err)
 		proofJson, err := json.Marshal(proof)

@@ -22,13 +22,21 @@ func TestExtractFieldTags(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "d", name)
 	assert.Equal(t, FieldNum(42), num)
+
+	_, _, err = ExtractFieldTags("a,42,c,packed")
+	assert.EqualError(t, err, "not enough elements in protobuf tag list")
+
+	name, num, err = ExtractFieldTags("a,42,c,packed,name=d")
+	assert.NoError(t, err)
+	assert.Equal(t, "d", name)
+	assert.Equal(t, FieldNum(42), num)
 }
 
 func TestPropertyName_NoParent(t *testing.T) {
 
 	fieldProp := Empty.FieldProp("field", 43)
 	assert.Equal(t, "field", fieldProp.ReadableName())
-	assert.Equal(t, []byte{0, 0, 0, 0, 0, 0, 0, 43}, fieldProp.CompactName())
+	assert.Equal(t, []byte{0, 0, 0, 43}, fieldProp.CompactName())
 
 	sliceElemProp := Empty.SliceElemProp(5)
 	assert.Equal(t, "5", sliceElemProp.ReadableName())
@@ -57,7 +65,7 @@ func TestPropertyName_Parent(t *testing.T) {
 
 	fieldProp := baseProp.FieldProp("field", 43)
 	assert.Equal(t, "base.field", fieldProp.ReadableName())
-	assert.Equal(t, []byte{42, 0, 0, 0, 0, 0, 0, 0, 43}, fieldProp.CompactName())
+	assert.Equal(t, []byte{42, 0, 0, 0, 43}, fieldProp.CompactName())
 
 	sliceElemProp := baseProp.SliceElemProp(5)
 	assert.Equal(t, "base[5]", sliceElemProp.ReadableName())

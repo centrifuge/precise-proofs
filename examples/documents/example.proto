@@ -282,3 +282,29 @@ enum Enum {
   type_one = 0;
   type_two = 1;
 }
+
+message Integers {
+  int32 valueA = 1;
+  int64 valueB = 2;
+  uint32 valueC = 3;
+  uint64 valueD = 4;
+  sint32 valueE = 5;
+  sint64 valueF = 6;
+  fixed32 valueG = 7;
+  fixed64 valueH = 8;
+  sfixed32 valueI = 9;
+  sfixed64 valueJ = 10;
+}
+
+message SaltedIntegers {
+  bytes valueA = 1;
+  bytes valueB = 2;
+  bytes valueC = 3;
+  bytes valueD = 4;
+  bytes valueE = 5;
+  bytes valueF = 6;
+  bytes valueG = 7;
+  bytes valueH = 8;
+  bytes valueI = 9;
+  bytes valueJ = 10;
+}
