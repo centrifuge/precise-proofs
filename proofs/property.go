@@ -77,6 +77,12 @@ func (n Property) CompactName() (pn []byte) {
 	return append(pn, n.Compact...)
 }
 
+// CompactNameHexString returns the compact hex string of a property
+func (n Property) CompactNameHexString() (CompactHexString) {
+  pn:= n.CompactName()
+  return CompactHexString("0x" + hex.EncodeToString(pn))
+}
+
 // FieldProp returns a child Property representing a field of a struct
 func (n Property) FieldProp(name string, num FieldNum) (field Property) {
 	return Property{

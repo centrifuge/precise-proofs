@@ -198,17 +198,25 @@ type ValueEncoder interface {
 	EncodeToString([]byte) string
 }
 
-// NewSalt creates a 32 byte slice with random data using the crypto/rand RNG
-func NewSalt() (salt []byte) {
-	randbytes := make([]byte, 32)
-	rand.Read(randbytes)
-	return randbytes
+// defaultGetSalt creates a 32 byte slice with random data using the crypto/rand RNG
+func defaultGetSalt(compactHextString CompactHexString, saltsMap SaltsMap) (salt []byte) {
+  if v, ok := saltsMap[compactHextString]; ok {
+    return v
+  } else {
+	  randbytes := make([]byte, 32)
+    rand.Read(randbytes)
+    saltsMap[compactHextString] = randbytes
+    return randbytes
+  }
 }
 
 // TreeOptions allows customizing the generation of the tree
 type TreeOptions struct {
 	//	EnableHashSorting: Implement a merkle tree with sorted hashes
-	EnableHashSorting bool
+  EnableHashSorting bool
+
+  GetSalt           GetSalt
+  SaltsMap          SaltsMap
 	// SaltsLengthSuffix: As precise proofs support repeated fields, when generating the merkle tree we need to add a
 	// leaf that represents the length of the slice. The default suffix is `Length`, although it is customizable so it
 	// does not collide with potential field names of your own proto structs.
@@ -220,6 +228,9 @@ type TreeOptions struct {
 	CompactProperties bool
 }
 
+type CompactHexString string
+type Salt     []byte
+type SaltsMap map[CompactHexString]Salt
 // DocumentTree is a helper object to create a merkleTree and proofs for fields in the document
 type DocumentTree struct {
 	merkleTree merkle.Tree
@@ -229,6 +240,8 @@ type DocumentTree struct {
 	filled            bool
 	rootHash          []byte
 	document          proto.Message
+  getSalt           GetSalt
+  saltsMap          SaltsMap
 	propertyList      []Property
 	hash              hash.Hash
 	saltsLengthSuffix string
@@ -251,7 +264,15 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 	}
 	if proofOpts.EnableHashSorting {
 		opts.EnableHashSorting = proofOpts.EnableHashSorting
-	}
+  }
+  getSalt := defaultGetSalt;
+  if proofOpts.GetSalt != nil {
+    getSalt = proofOpts.GetSalt;
+  }
+  saltsMap := SaltsMap{}
+  if proofOpts.SaltsMap != nil {
+    saltsMap = proofOpts.SaltsMap;
+  }
 	saltsLengthSuffix := DefaultSaltsLengthSuffix
 	if proofOpts.SaltsLengthSuffix != "" {
 		saltsLengthSuffix = proofOpts.SaltsLengthSuffix
@@ -262,7 +283,9 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 	}
 	return DocumentTree{
 		propertyList:      []Property{},
-		merkleTree:        merkle.NewTreeWithOpts(opts),
+    merkleTree:        merkle.NewTreeWithOpts(opts),
+    getSalt:           getSalt,
+    saltsMap:          saltsMap,
 		saltsLengthSuffix: saltsLengthSuffix,
 		leaves:            []LeafNode{},
 		hash:              proofOpts.Hash,
@@ -297,11 +320,11 @@ func (doctree *DocumentTree) AddLeaf(leaf LeafNode) error {
 }
 
 // AddLeavesFromDocument iterates over a protobuf message, flattens it and adds all leaves to the tree
-func (doctree *DocumentTree) AddLeavesFromDocument(document proto.Message, gSalt GenerateSalt) (err error) {
+func (doctree *DocumentTree) AddLeavesFromDocument(document proto.Message) (err error) {
 	if doctree.hash == nil {
 		return fmt.Errorf("hash is not set")
 	}
-	leaves, err := FlattenMessage(document, gSalt, doctree.saltsLengthSuffix, doctree.hash, doctree.valueEncoder, doctree.compactProperties, doctree.parentPrefix)
+	leaves, err := FlattenMessage(document, doctree.getSalt, doctree.saltsMap, doctree.saltsLengthSuffix, doctree.hash, doctree.valueEncoder, doctree.compactProperties, doctree.parentPrefix)
 	if err != nil {
 		return err
 	}

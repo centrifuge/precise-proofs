@@ -29,9 +29,9 @@ type messageFlattener struct {
 	valueEncoder      ValueEncoder
 	compactProperties bool
 }
-type GenerateSalt func() []byte
+type GetSalt func(compactHextString CompactHexString, saltsMap SaltsMap) []byte
 
-func (f *messageFlattener) handleValue(prop Property, value reflect.Value,  generateSalt GenerateSalt, saltsLengthSuffix string, outerFieldDescriptor *go_descriptor.FieldDescriptorProto) (err error) {
+func (f *messageFlattener) handleValue(prop Property, value reflect.Value,  getSalt GetSalt, saltsMap SaltsMap, saltsLengthSuffix string, outerFieldDescriptor *go_descriptor.FieldDescriptorProto) (err error) {
 	// handle special cases
 	switch v := value.Interface().(type) {
 	case []byte, *timestamp.Timestamp:
@@ -39,14 +39,14 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value,  gene
 		if err != nil {
 			return errors.Wrap(err, "failed convert value to string")
 		}
-		f.appendLeaf(prop, valueString, generateSalt(), saltsLengthSuffix, nil, false)
+		f.appendLeaf(prop, valueString, getSalt(prop.CompactNameHexString(), saltsMap), saltsLengthSuffix, nil, false)
 		return nil
 	}
 
 	// handle generic recursive cases
 	switch value.Kind() {
 	case reflect.Ptr:
-		return f.handleValue(prop, value.Elem(), generateSalt, saltsLengthSuffix, outerFieldDescriptor)
+		return f.handleValue(prop, value.Elem(), getSalt, saltsMap, saltsLengthSuffix, outerFieldDescriptor)
 	case reflect.Struct:
 
 		// lookup map key from field descriptor, if it exists
@@ -98,7 +98,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value,  gene
 				continue
 			}
 
-			err = f.handleValue(fieldProp, value.Field(i), generateSalt, saltsLengthSuffix, innerFieldDescriptor)
+			err = f.handleValue(fieldProp, value.Field(i), getSalt, saltsMap, saltsLengthSuffix, innerFieldDescriptor)
 			if err != nil {
 				return errors.Wrapf(err, "error handling field %s", field.Name)
 			}
@@ -117,23 +117,25 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value,  gene
       if err != nil {
 				return errors.Wrapf(err, "failed to convert %s saltValue to map with mapping_key %q", value.Type(), mappingKey)
 			}
-			return f.handleValue(prop, mapValue, generateSalt, saltsLengthSuffix, outerFieldDescriptor)
+			return f.handleValue(prop, mapValue, getSalt, saltsMap, saltsLengthSuffix, outerFieldDescriptor)
 		}
 
-		// Append length of slice as tree leaf
-		f.appendLeaf(prop.LengthProp(saltsLengthSuffix), strconv.Itoa(value.Len()), generateSalt(), saltsLengthSuffix, []byte{}, false)
+    // Append length of slice as tree leaf
+    lengthProp := prop.LengthProp(saltsLengthSuffix)
+		f.appendLeaf(lengthProp, strconv.Itoa(value.Len()), getSalt(lengthProp.CompactNameHexString(), saltsMap), saltsLengthSuffix, []byte{}, false)
 
 		// Handle each element of the slice
 		for i := 0; i < value.Len(); i++ {
 			elemProp := prop.SliceElemProp(FieldNumForSliceLength(i))
-			err := f.handleValue(elemProp, value.Index(i), generateSalt, saltsLengthSuffix, nil)
+			err := f.handleValue(elemProp, value.Index(i), getSalt, saltsMap, saltsLengthSuffix, nil)
 			if err != nil {
 				return errors.Wrapf(err, "error handling slice element %d", i)
 			}
 		}
 	case reflect.Map:
-		// Append size of map as tree leaf
-		f.appendLeaf(prop.LengthProp(saltsLengthSuffix), strconv.Itoa(value.Len()), generateSalt(), saltsLengthSuffix, []byte{}, false)
+    // Append size of map as tree leaf
+    lengthProp := prop.LengthProp(saltsLengthSuffix)
+		f.appendLeaf(lengthProp, strconv.Itoa(value.Len()), getSalt(lengthProp.CompactNameHexString(), saltsMap), saltsLengthSuffix, []byte{}, false)
 
 		// Handle each value of the map
 		for _, k := range value.MapKeys() {
@@ -143,7 +145,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value,  gene
 			if err != nil {
 				return errors.Wrapf(err, "failed to create elem prop for %q", k)
 			}
-			err = f.handleValue(elemProp, value.MapIndex(k), generateSalt, saltsLengthSuffix, outerFieldDescriptor)
+			err = f.handleValue(elemProp, value.MapIndex(k), getSalt, saltsMap, saltsLengthSuffix, outerFieldDescriptor)
 			if err != nil {
 				return errors.Wrapf(err, "error handling slice element %s", k)
 			}
@@ -153,7 +155,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value,  gene
 		if err != nil {
 			return err
 		}
-		f.appendLeaf(prop, valueString, generateSalt(), saltsLengthSuffix, []byte{}, false)
+		f.appendLeaf(prop, valueString, getSalt(prop.CompactNameHexString(), saltsMap), saltsLengthSuffix, []byte{}, false)
 	}
 
 	return nil
@@ -225,7 +227,7 @@ func (f *messageFlattener) sortLeaves() (err error) {
 // of nodes.
 //
 // The fields are sorted lexicographically by their protobuf field names.
-func FlattenMessage(message proto.Message, generateSalt GenerateSalt, saltsLengthSuffix string, hashFn hash.Hash, valueEncoder ValueEncoder, compact bool, parentProp Property) (leaves []LeafNode, err error) {
+func FlattenMessage(message proto.Message, getSalt GetSalt, saltsMap SaltsMap, saltsLengthSuffix string, hashFn hash.Hash, valueEncoder ValueEncoder, compact bool, parentProp Property) (leaves []LeafNode, err error) {
 	f := messageFlattener{
 		saltsLengthSuffix: saltsLengthSuffix,
 		hash:              hashFn,
@@ -233,7 +235,7 @@ func FlattenMessage(message proto.Message, generateSalt GenerateSalt, saltsLengt
 		compactProperties: compact,
 	}
 
-	err = f.handleValue(parentProp, reflect.ValueOf(message), generateSalt, saltsLengthSuffix, nil)
+	err = f.handleValue(parentProp, reflect.ValueOf(message), getSalt, saltsMap, saltsLengthSuffix, nil)
 	if err != nil {
 		return
 	}
