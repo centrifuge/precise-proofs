@@ -60,11 +60,11 @@ See below code sample (`examples/simple.go`) for a usage example. For detailed u
 		ValueBytes1: []byte("foobar"),
 	}
 
-  // You can also use compacts salts map generated in last session.
-	compactsSaltsMap := CompactsSaltsMap{}
-	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New(), CompactsSaltsMap: &compactsSaltsMap})
+  // You can also use compacts salts mapping generated in last session.
+	compactSaltPairs := CompactSaltPairs{}
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New(), CompactSaltPairs: &compactSaltPairs})
 	doctree.AddLeavesFromDocument(&document)
-  // Here compactsSaltsMap will contain generated salts for those fields whose salts are not provided in the map
+  // Here compactSaltPairs will contain generated salts for those fields whose salts are not provided in the slice
 
 	doctree.Generate()
 	fmt.Printf("Generated tree: %s\n", doctree.String())

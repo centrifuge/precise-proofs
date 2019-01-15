@@ -77,12 +77,6 @@ func (n Property) CompactName() (pn []byte) {
 	return append(pn, n.Compact...)
 }
 
-// CompactNameHexString returns the compact hex string of a property
-func (n Property) CompactNameHexString() (string) {
-
-  return hex.EncodeToString(n.CompactName())
-}
-
 // FieldProp returns a child Property representing a field of a struct
 func (n Property) FieldProp(name string, num FieldNum) (field Property) {
 	return Property{
@@ -133,7 +127,7 @@ func (n Property) MapElemProp(k interface{}, keyLength uint64) (Property, error)
 func (n Property) LengthProp(saltsLengthSuffix string) Property {
 	return Property{
 		Parent:     &n,
-		Text:       "length" + saltsLengthSuffix,
+		Text:       saltsLengthSuffix,
 		NameFormat: SubFieldFormat,
 	}
 }
