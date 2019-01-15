@@ -29,9 +29,9 @@ type messageFlattener struct {
 	valueEncoder      ValueEncoder
 	compactProperties bool
 }
-type GetSalt func(compactHextString CompactHexString, saltsMap SaltsMap) []byte
+type GetSalt func(compactHextString string, saltsMap InnerCompactsSaltsMap) []byte
 
-func (f *messageFlattener) handleValue(prop Property, value reflect.Value,  getSalt GetSalt, saltsMap SaltsMap, saltsLengthSuffix string, outerFieldDescriptor *go_descriptor.FieldDescriptorProto) (err error) {
+func (f *messageFlattener) handleValue(prop Property, value reflect.Value,  getSalt GetSalt, saltsMap InnerCompactsSaltsMap, saltsLengthSuffix string, outerFieldDescriptor *go_descriptor.FieldDescriptorProto) (err error) {
 	// handle special cases
 	switch v := value.Interface().(type) {
 	case []byte, *timestamp.Timestamp:
@@ -227,7 +227,7 @@ func (f *messageFlattener) sortLeaves() (err error) {
 // of nodes.
 //
 // The fields are sorted lexicographically by their protobuf field names.
-func FlattenMessage(message proto.Message, getSalt GetSalt, saltsMap SaltsMap, saltsLengthSuffix string, hashFn hash.Hash, valueEncoder ValueEncoder, compact bool, parentProp Property) (leaves []LeafNode, err error) {
+func FlattenMessage(message proto.Message, getSalt GetSalt, saltsMap InnerCompactsSaltsMap, saltsLengthSuffix string, hashFn hash.Hash, valueEncoder ValueEncoder, compact bool, parentProp Property) (leaves []LeafNode, err error) {
 	f := messageFlattener{
 		saltsLengthSuffix: saltsLengthSuffix,
 		hash:              hashFn,

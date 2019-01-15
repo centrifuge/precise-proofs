@@ -24,7 +24,7 @@ func main() {
 
 	doctree := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New()})
 
-	checkErr(doctree.AddLeavesFromDocument(&document, proofs.NewSalt))
+	checkErr(doctree.AddLeavesFromDocument(&document))
 	checkErr(doctree.Generate())
 	fmt.Printf("Generated tree: %s\n", doctree.String())
 

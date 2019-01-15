@@ -16,13 +16,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/xsleonard/go-merkle"
 )
-var testSalt []byte = []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225}
 
-func NewSaltForTest(compactHextString CompactHexString, saltsMap SaltsMap) (salt []byte) {
+var testSalt []byte = []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225}
+func NewSaltForTest(compactHextString string, saltsMap InnerCompactsSaltsMap) (salt []byte) {
   return testSalt
 }
 
-var emptySaltsMap SaltsMap = SaltsMap{}
+var emptySaltsMap InnerCompactsSaltsMap = InnerCompactsSaltsMap{}
 var sha256Hash = sha256.New()
 
 type UnsupportedType struct {
@@ -1487,10 +1487,10 @@ func Test_integers(t *testing.T) {
 }
 
 func Test_SaltsMap(t *testing.T) {
-  saltsMap := SaltsMap{}
+  saltsMap := CompactsSaltsMap{}
   doc := documentspb.FilledExampleDocument
 
-  doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, SaltsMap: saltsMap})
+  doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, CompactsSaltsMap: &saltsMap})
 	err := doctree.AddLeavesFromDocument(&doc)
   assert.Nil(t, err)
   doctree.Generate()
@@ -1501,7 +1501,7 @@ func Test_SaltsMap(t *testing.T) {
 	assert.True(t, valid)
   assert.Nil(t, err)
 
-  doctree2 := NewDocumentTree(TreeOptions{Hash: sha256Hash, SaltsMap: saltsMap})
+  doctree2 := NewDocumentTree(TreeOptions{Hash: sha256Hash, CompactsSaltsMap: &saltsMap})
   err = doctree2.AddLeavesFromDocument(&doc)
   assert.Nil(t, err)
   doctree2.Generate()
@@ -1515,7 +1515,7 @@ func Test_SaltsMap(t *testing.T) {
   assert.NotEqual(t, salt1, salt2, "Two salts should be different")
   assert.Equal(t, doctree.RootHash(), doctree2.RootHash(), "Two rootHash should be same")
 
-  doctree3 := NewDocumentTree(TreeOptions{Hash: sha256Hash, SaltsMap: saltsMap})
+  doctree3 := NewDocumentTree(TreeOptions{Hash: sha256Hash, CompactsSaltsMap: &saltsMap})
   err = doctree3.AddLeavesFromDocument(&doc)
   assert.Nil(t, err)
   doctree3.Generate()
