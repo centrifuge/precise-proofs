@@ -101,9 +101,7 @@ This library defines a proof format that ensures both human readable, concise an
 This library can also create proofs with more compact property fields:
 
  {
-    "compactName":{
-        "components": ["1"],
-    },
+    "compactName":[0,0,0,1],
     "value":"Example",
     "salt":"1VWQFUGCXl1AYS0iAULHQow4XEjgJF/TpAuOO2Rnm+E=",
     "hashes":[
@@ -151,8 +149,9 @@ There are a few things to note:
 Salt field for slice/map length
 
 We encode the length of a slice or map field in the tree as an additional leaf so a proof can
-be created about the size of a field. Default is "length". The new added length field can be changed
-with the SaltsLengthSuffix option.
+be created about the size of a field. Default is "length". The new added length field can be customized
+with the SaltsLengthSuffix option. For example if SaltsLengthSuffix is "_precise", ending length field name
+will be "length_precise"
 
 	message Document {
 	  repeated string fieldA = 1;
@@ -228,8 +227,13 @@ type TreeOptions struct {
 	CompactProperties bool
 }
 
+//to support compacts salts map during proof creation,
+//golang does not support map with slice and struct key, also compacts' length are not fixed
+//here use a map with slice ptr key to mimic, internally precise use map with hex string (transformed from provided compacts)
+//after flattening, inner compacts (hex string) salts map will be transformed to outer form, so client can get generated salts and persist them
 type CompactsSaltsMap       map[*[]byte][]byte
 type InnerCompactsSaltsMap  map[string][]byte
+
 // DocumentTree is a helper object to create a merkleTree and proofs for fields in the document
 type DocumentTree struct {
 	merkleTree merkle.Tree

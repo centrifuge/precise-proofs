@@ -52,7 +52,7 @@ doctree := NewDocumentTree(TreeOptions{ValueEncoder: &customEncoder{}})
 See below code sample (`examples/simple.go`) for a usage example. For detailed usage, check godocs.
 
 ```go,
-        // ExampleDocument is a protobuf message
+  // ExampleDocument is a protobuf message
 	document := documentspb.ExampleDocument{
 		Value1:      1,
 		ValueA:      "Foo",
@@ -60,8 +60,12 @@ See below code sample (`examples/simple.go`) for a usage example. For detailed u
 		ValueBytes1: []byte("foobar"),
 	}
 
-	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New()})
-	doctree.AddLeavesFromDocument(&document, NewSalt)
+  // You can also use compacts salts map generated in last session.
+	compactsSaltsMap := CompactsSaltsMap{}
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New(), CompactsSaltsMap: &compactsSaltsMap})
+	doctree.AddLeavesFromDocument(&document)
+  // Here compactsSaltsMap will contain generated salts for those fields whose salts are not provided in the map
+
 	doctree.Generate()
 	fmt.Printf("Generated tree: %s\n", doctree.String())
 
