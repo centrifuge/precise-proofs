@@ -53,8 +53,9 @@ func TestPropertyName_NoParent(t *testing.T) {
 	assert.Equal(t, "key", mapElemProp.ReadableName())
 	assert.Equal(t, []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 107, 101, 121}, mapElemProp.CompactName())
 
-	lengthProp := Empty.LengthProp()
-	assert.Equal(t, "length", lengthProp.ReadableName())
+	testLengthSuffix := "_precise"
+	lengthProp := Empty.LengthProp(testLengthSuffix)
+	assert.Equal(t, testLengthSuffix, lengthProp.ReadableName())
 	assert.Equal(t, []byte(nil), lengthProp.CompactName())
 }
 
@@ -82,8 +83,9 @@ func TestPropertyName_Parent(t *testing.T) {
 	assert.Equal(t, "base[key]", mapElemProp.ReadableName())
 	assert.Equal(t, []byte{42, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 107, 101, 121}, mapElemProp.CompactName())
 
-	lengthProp := baseProp.LengthProp()
-	assert.Equal(t, "base.length", lengthProp.ReadableName())
+	testLengthSuffix := "length"
+	lengthProp := baseProp.LengthProp(testLengthSuffix)
+	assert.Equal(t, "base." + testLengthSuffix, lengthProp.ReadableName())
 	assert.Equal(t, []byte{42}, lengthProp.CompactName())
 }
 

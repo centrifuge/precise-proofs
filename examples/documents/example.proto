@@ -43,28 +43,13 @@ message SimpleItem {
   string valueA = 1;
 }
 
-message SaltedSimpleItem {
-  bytes valueA = 1;
-}
-
 message RepeatedItem {
   repeated SimpleItem valueA = 1;
   string valueB = 2;
 }
 
-message SaltedRepeatedItem {
-  repeated SaltedSimpleItem valueA = 1;
-  bytes valueALength = 2;
-  bytes valueB = 3;
-}
-
 message SimpleMap {
   map<int32,string> value = 1;
-}
-
-message SaltedSimpleMap {
-  map<int32,bytes> value = 1;
-  bytes valueLength = 2;
 }
 
 message SimpleStringMap {
@@ -73,28 +58,13 @@ message SimpleStringMap {
   ];
 }
 
-message SaltedSimpleStringMap {
-  map<string,bytes> value = 1;
-  bytes valueLength = 2;
-}
-
 message NestedMap {
   map<int32,SimpleMap> value = 1;
-}
-
-message SaltedNestedMap {
-  map<int32,SaltedSimpleMap> value = 1;
-  bytes valueLength = 2;
 }
 
 message SimpleEntry {
   string entry_key = 1;
   string entry_value = 2;
-}
-
-message SaltedSimpleEntry {
-  string entry_key = 1;
-  bytes entry_value = 2;
 }
 
 message SimpleEntries {
@@ -104,23 +74,11 @@ message SimpleEntries {
   ];
 }
 
-message SaltedSimpleEntries {
-  repeated SaltedSimpleEntry entries = 1;
-  bytes entriesLength = 2;
-}
-
 message Entry {
     string entry_key = 1;
     string valueA = 2;
     bytes valueB = 3;
     int64 valueC = 4;
-}
-
-message SaltedEntry {
-    string entry_key = 1;
-    bytes valueA = 2;
-    bytes valueB = 3;
-    bytes valueC = 4;
 }
 
 message Entries {
@@ -130,19 +88,9 @@ message Entries {
   ];
 }
 
-message SaltedEntries {
-  repeated SaltedEntry entries = 1;
-  bytes entriesLength = 2;
-}
-
 message BytesKeyEntry {
     bytes address = 1;
     string value = 2;
-}
-
-message SaltedBytesKeyEntry {
-    bytes address = 1;
-    bytes value = 2;
 }
 
 message BytesKeyEntries {
@@ -152,33 +100,15 @@ message BytesKeyEntries {
   ];
 }
 
-message SaltedBytesKeyEntries {
-  repeated SaltedBytesKeyEntry entries = 1;
-  bytes entriesLength = 2;
-}
-
 message TwoLevelRepeatedDocument {
   string valueA = 1;
   repeated RepeatedItem valueB = 2;
-}
-
-message SaltedTwoLevelRepeatedDocument {
-  bytes valueA = 1;
-  repeated SaltedRepeatedItem valueB = 2;
-  bytes valueBLength = 3;
 }
 
 message SimpleRepeatedDocument {
   string valueA = 1;
   string valueB = 2;
   repeated string valueC = 3;
-}
-
-message SaltedSimpleRepeatedDocument {
-  bytes valueA = 1;
-  bytes valueB = 2;
-  repeated bytes valueC = 3;
-  bytes valueCLength = 4;
 }
 
 message SimpleMapDocument {
@@ -190,23 +120,9 @@ message SimpleMapDocument {
   map<int32, string> valueD = 4;
 }
 
-message SaltedSimpleMapDocument {
-  bytes valueA = 1;
-  bytes valueB = 2;
-  map<string, bytes> valueC = 3;
-  bytes valueCLength = 4;
-  map<int32, bytes> valueD = 5;
-  bytes valueDLength = 6;
-}
-
 message TwoLevelItem {
   SimpleItem valueA = 1;
   string valueB = 2;
-}
-
-message SaltedTwoLevelItem {
-  SaltedSimpleItem valueA = 1;
-  bytes valueB = 2;
 }
 
 message NestedRepeatedDocument {
@@ -214,14 +130,6 @@ message NestedRepeatedDocument {
   string valueB = 2;
   repeated SimpleItem valueC = 3;
   TwoLevelItem valueD = 4;
-}
-
-message SaltedNestedRepeatedDocument {
-  bytes valueA = 1;
-  bytes valueB = 2;
-  repeated SaltedSimpleItem valueC = 3;
-  bytes valueCLength = 4;
-  SaltedTwoLevelItem valueD = 5;
 }
 
 message InvalidHashedFieldDocument {
@@ -248,36 +156,6 @@ message LongDocument {
   int64 valueE = 14;
 }
 
-message SaltedLongDocument {
-  bytes value0 = 16;
-  bytes value1 = 1;
-  bytes value2 = 2;
-  bytes value3 = 3;
-  bytes value4 = 4;
-  bytes value5 = 5;
-  bytes value6 = 6;
-  bytes value7 = 7;
-  bytes value8 = 8;
-  bytes value9 = 9;
-  bytes valueA = 10;
-  bytes valueB = 11;
-  bytes valueC = 12;
-  bytes valueD = 13;
-  bytes valueE = 14;
-}
-
-message SaltedExampleDocument {
-  bytes valueA = 1;
-  bytes valueB = 2;
-  bytes value1 = 3;
-  bytes value2 = 4;
-  bytes value_bytes1 = 5;
-  bytes ValueCamelCased = 6;
-  bytes value_not_ignored = 7;
-  bytes valueMap = 10;
-  bytes enum_type = 11;
-}
-
 enum Enum {
   type_one = 0;
   type_two = 1;
@@ -294,17 +172,4 @@ message Integers {
   fixed64 valueH = 8;
   sfixed32 valueI = 9;
   sfixed64 valueJ = 10;
-}
-
-message SaltedIntegers {
-  bytes valueA = 1;
-  bytes valueB = 2;
-  bytes valueC = 3;
-  bytes valueD = 4;
-  bytes valueE = 5;
-  bytes valueF = 6;
-  bytes valueG = 7;
-  bytes valueH = 8;
-  bytes valueI = 9;
-  bytes valueJ = 10;
 }

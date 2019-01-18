@@ -21,15 +21,10 @@ func main() {
 		EnumType:    documentspb.Enum_type_two,
 	}
 
-	// The FillSalts method is a helper function that fills all fields with 32
-	// random bytes. SaltedExampleDocument is a protobuf message that has the
-	// same structure as ExampleDocument but has all `bytes` field types.
-	salts := documentspb.SaltedExampleDocument{}
-	checkErr(proofs.FillSalts(&document, &salts))
+	salts := proofs.Salts{}
+	doctree := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New(), Salts: &salts})
 
-	doctree := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New()})
-
-	checkErr(doctree.AddLeavesFromDocument(&document, &salts))
+	checkErr(doctree.AddLeavesFromDocument(&document))
 	checkErr(doctree.Generate())
 	fmt.Printf("Generated tree: %s\n", doctree.String())
 
@@ -44,6 +39,10 @@ func main() {
 	checkErr(err)
 
 	fmt.Printf("Proof validated: %v\n", valid)
+	fmt.Println("Compacts -------> Salts")
+	for ii:= range salts{
+		fmt.Println(salts[ii].Compact, "------->" ,salts[ii].Value)
+	}
 }
 
 func checkErr(err error) {
