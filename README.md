@@ -61,10 +61,10 @@ See below code sample (`examples/simple.go`) for a usage example. For detailed u
 	}
 
   // You can also use compacts salts mapping generated in last session.
-	compactSaltPairs := CompactSaltPairs{}
-	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New(), CompactSaltPairs: &compactSaltPairs})
+	salts := Salts{}
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New(), Salts: &salts})
 	doctree.AddLeavesFromDocument(&document)
-  // Here compactSaltPairs will contain generated salts for those fields whose salts are not provided in the slice
+  // Here salts will contain generated salts for those fields whose salts are not provided in the slice
 
 	doctree.Generate()
 	fmt.Printf("Generated tree: %s\n", doctree.String())

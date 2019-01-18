@@ -148,7 +148,7 @@ There are a few things to note:
 
 Compact Salt Slice
 When you do processing for a document, if you want to save the salts, you can provide
-an empty instance of CompactSaltPairs by TreeOption CompactSaltPairs. After processing you can use this compact to salt mapping for
+an empty instance of Salts by TreeOption Salts. After processing you can use this compact to salt mapping for
 rebuilding of the doctree for the same document in the future. In this way you get same rootHash
 in different proof generation sessions for the same document.
 
@@ -207,7 +207,7 @@ type TreeOptions struct {
 	//	EnableHashSorting: Implement a merkle tree with sorted hashes
   EnableHashSorting bool
   GetSalt           GetSalt
-  CompactSaltPairs  *CompactSaltPairs
+  Salts             *Salts
 	// SaltsLengthSuffix: As precise proofs support repeated fields, when generating the merkle tree we need to add a
 	// leaf that represents the length of the slice. The default suffix is `Length`, although it is customizable so it
 	// does not collide with potential field names of your own proto structs.
@@ -219,22 +219,22 @@ type TreeOptions struct {
 	CompactProperties bool
 }
 
-type CompactSaltPair struct{
+type Salt struct{
 	Compact []byte
-	Salt    []byte
+	Value    []byte
 }
-type CompactSaltPairs   []CompactSaltPair
+type Salts   []Salt
 type GetSalt func(compact []byte) []byte
-func defaultGetSalt(compactSaltPairs *CompactSaltPairs) func([]byte) (salt []byte) {
-	return func(compact []byte) (salt []byte){
-		for ii := range *compactSaltPairs{
-			if (bytes.Compare((*compactSaltPairs)[ii].Compact, compact) == 0){
-				return (*compactSaltPairs)[ii].Salt
+func defaultGetSalt(salts *Salts) func([]byte) ([]byte) {
+	return func(compact []byte) ([]byte){
+		for ii := range *salts{
+			if (bytes.Compare((*salts)[ii].Compact, compact) == 0){
+				return (*salts)[ii].Value
 			}
 		}
 		randbytes := make([]byte, 32)
 		rand.Read(randbytes)
-		*compactSaltPairs = append(*compactSaltPairs, CompactSaltPair{Compact:compact, Salt:randbytes})
+		*salts = append(*salts, Salt{Compact:compact, Value:randbytes})
 		return randbytes
 	}
 }
@@ -249,7 +249,7 @@ type DocumentTree struct {
 	rootHash          []byte
 	document          proto.Message
 	getSalt           GetSalt
-	compactSaltPairs  *CompactSaltPairs
+	salts             *Salts
 	propertyList      []Property
 	hash              hash.Hash
 	saltsLengthSuffix string
@@ -277,9 +277,9 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 	if proofOpts.GetSalt != nil {
 		getSalt = proofOpts.GetSalt;
 	}
-	compactSaltPairs := &CompactSaltPairs{}
-	if proofOpts.CompactSaltPairs != nil {
-		compactSaltPairs = proofOpts.CompactSaltPairs;
+	salts := &Salts{}
+	if proofOpts.Salts != nil {
+		salts = proofOpts.Salts;
 	}
 	saltsLengthSuffix := DefaultSaltsLengthSuffix
 	if proofOpts.SaltsLengthSuffix != "" {
@@ -293,7 +293,7 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 		propertyList:      []Property{},
     merkleTree:        merkle.NewTreeWithOpts(opts),
     getSalt:           getSalt,
-    compactSaltPairs:  compactSaltPairs,
+    salts:             salts,
 		saltsLengthSuffix: saltsLengthSuffix,
 		leaves:            []LeafNode{},
 		hash:              proofOpts.Hash,
@@ -336,7 +336,7 @@ func (doctree *DocumentTree) AddLeavesFromDocument(document proto.Message) (err 
 	if (doctree.getSalt != nil){
 		getSalt = doctree.getSalt
 	}else{
-		getSalt = defaultGetSalt(doctree.compactSaltPairs)
+		getSalt = defaultGetSalt(doctree.salts)
 	}
 	leaves, err := FlattenMessage(document, getSalt, doctree.saltsLengthSuffix, doctree.hash, doctree.valueEncoder, doctree.compactProperties, doctree.parentPrefix)
 	if err != nil {
