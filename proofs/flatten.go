@@ -55,8 +55,12 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value,  getS
 
 		// Handle each field of the struct
 		for i := 0; i < value.NumField(); i++ {
+			var oneOfField bool
 			field := value.Type().Field(i)
-
+			if field.Tag.Get("protobuf_oneof") != "" && !value.Field(i).IsNil(){
+				field = value.Field(i).Elem().Elem().Type().Field(0)
+				oneOfField = !false
+			}
 			// Ignore fields starting with XXX_, those are protobuf internals
 			if strings.HasPrefix(field.Name, "XXX_") {
 				continue
@@ -89,6 +93,9 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value,  getS
 				// Fields that have the hashed_field tag on the protobuf message will be treated as hashes without prepending
 				// the property & salt.
 				hash, ok := value.Field(i).Interface().([]byte)
+				if oneOfField {
+					hash, ok = value.Field(i).Elem().Elem().Field(0).Interface().([]byte)
+				}
 				if !ok {
 					return errors.New("The option hashed_field is only supported for type `bytes`")
 				}
@@ -96,8 +103,12 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value,  getS
 				f.appendLeaf(fieldProp, "", nil, saltsLengthSuffix, hash, true)
 				continue
 			}
+			if oneOfField {
+				err = f.handleValue(fieldProp, value.Field(i).Elem().Elem().Field(0), getSalt, saltsLengthSuffix, innerFieldDescriptor)
+			} else {
+				err = f.handleValue(fieldProp, value.Field(i), getSalt, saltsLengthSuffix, innerFieldDescriptor)
+			}
 
-			err = f.handleValue(fieldProp, value.Field(i), getSalt, saltsLengthSuffix, innerFieldDescriptor)
 			if err != nil {
 				return errors.Wrapf(err, "error handling field %s", field.Name)
 			}
