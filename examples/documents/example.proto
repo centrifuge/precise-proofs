@@ -145,6 +145,7 @@ message  oneofSample{
     int32 valueB = 2;
     string valueC = 3;
   }
+   int32 valueD = 4;
 }
 
 

@@ -57,7 +57,10 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value,  getS
 		for i := 0; i < value.NumField(); i++ {
 			var oneOfField bool
 			field := value.Type().Field(i)
-			if field.Tag.Get("protobuf_oneof") != "" && !value.Field(i).IsNil(){
+			if field.Tag.Get("protobuf_oneof") != "" {
+				if value.Field(i).IsNil() {
+					continue
+				}
 				field = value.Field(i).Elem().Elem().Type().Field(0)
 				oneOfField = !false
 			}
