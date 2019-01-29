@@ -141,10 +141,9 @@ The respective JSON for the proof would be:
   }
 
 There are a few things to note:
-* When calculating the hash of the leaf, the dot notation of the property,
-  the value and salt should be concatenated to produce the hash.
-* The default proof expects values of documents to be salted to prevent rainbow table lookups.
-* The value is included in the file as a string value not a native type.
+    - When calculating the hash of the leaf, the dot notation of the property, the value and salt should be concatenated to produce the hash.
+    - The default proof expects values of documents to be salted to prevent rainbow table lookups.
+    - The value is included in the file as a string value not a native type.
 
 Compact Salt Slice
 When you do processing for a document, if you want to save the salts, you can provide
@@ -165,7 +164,7 @@ with the SaltsLengthSuffix option.
 
 Custom Document Prefix
 
-Library supports adding a prefix to the document path by setting up TreeOption.ParentPrefix to the desired value.
+Library supports adding a prefix to the document path by setting up `TreeOption.ParentPrefix` to the desired value.
 
 
 */
