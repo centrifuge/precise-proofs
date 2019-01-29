@@ -85,7 +85,7 @@ func TestPropertyName_Parent(t *testing.T) {
 
 	testLengthSuffix := "length"
 	lengthProp := baseProp.LengthProp(testLengthSuffix)
-	assert.Equal(t, "base." + testLengthSuffix, lengthProp.ReadableName())
+	assert.Equal(t, "base."+testLengthSuffix, lengthProp.ReadableName())
 	assert.Equal(t, []byte{42}, lengthProp.CompactName())
 }
 
