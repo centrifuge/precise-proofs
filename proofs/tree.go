@@ -24,7 +24,7 @@ Fields can be treated as raw (already hashed values) by setting the option `proo
 		string value_b = 2 [
 			(proofs.exclude_from_tree) = true
 		];
-		bytes value_c = 3[
+		bytes value_c = 3 [
 			(proofs.hashed_field) = true
 		];
 	}
@@ -38,7 +38,7 @@ Nested, repeated, and map fields will be flattened following a dotted notation. 
 	  repeated Document fieldB = 2;
 	  repeated string fieldC = 3;
 	  map<string, Document> fieldD = 4 [
-	      proofs.key_length = 4
+	      (proofs.key_length) = 4
 	  ];
 	  map<uint64, string> fieldE = 5;
 	}
