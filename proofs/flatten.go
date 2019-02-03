@@ -30,7 +30,7 @@ type messageFlattener struct {
 	compactProperties bool
 }
 
-func (f *messageFlattener) handleValue(prop Property, value reflect.Value,  getSalt GetSalt, saltsLengthSuffix string, outerFieldDescriptor *go_descriptor.FieldDescriptorProto) (err error) {
+func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSalt GetSalt, saltsLengthSuffix string, outerFieldDescriptor *go_descriptor.FieldDescriptorProto) (err error) {
 	// handle special cases
 	switch v := value.Interface().(type) {
 	case []byte, *timestamp.Timestamp:
@@ -112,15 +112,15 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value,  getS
 			mapValue, err := sliceToMap(value, mappingKey, keyLength)
 			if err != nil {
 				return errors.Wrapf(err, "failed to convert %s value to map with mapping_key %q", value.Type(), mappingKey)
-      }
-      if err != nil {
+			}
+			if err != nil {
 				return errors.Wrapf(err, "failed to convert %s saltValue to map with mapping_key %q", value.Type(), mappingKey)
 			}
 			return f.handleValue(prop, mapValue, getSalt, saltsLengthSuffix, outerFieldDescriptor)
 		}
 
-    // Append length of slice as tree leaf
-    lengthProp := prop.LengthProp(saltsLengthSuffix)
+		// Append length of slice as tree leaf
+		lengthProp := prop.LengthProp(saltsLengthSuffix)
 		f.appendLeaf(lengthProp, strconv.Itoa(value.Len()), getSalt(lengthProp.CompactName()), saltsLengthSuffix, []byte{}, false)
 
 		// Handle each element of the slice
@@ -132,8 +132,8 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value,  getS
 			}
 		}
 	case reflect.Map:
-    // Append size of map as tree leaf
-    lengthProp := prop.LengthProp(saltsLengthSuffix)
+		// Append size of map as tree leaf
+		lengthProp := prop.LengthProp(saltsLengthSuffix)
 		f.appendLeaf(lengthProp, strconv.Itoa(value.Len()), getSalt(lengthProp.CompactName()), saltsLengthSuffix, []byte{}, false)
 
 		// Handle each value of the map
