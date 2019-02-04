@@ -59,3 +59,9 @@ var ExampleSimpleMapDocument = SimpleMapDocument{
 		1:  "one",
 	},
 }
+
+var ExampleOneofSampleDocument = OneofSample{
+	ValueA:     2,
+	OneofBlock: &OneofSample_ValueB{int32(1)},
+	ValueE:     7,
+}

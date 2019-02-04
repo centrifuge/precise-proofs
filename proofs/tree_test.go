@@ -276,6 +276,51 @@ func TestFlattenMessage_HashedField(t *testing.T) {
 	assert.EqualError(t, err, "The option hashed_field is only supported for type `bytes`")
 }
 
+func TestFlattenMessage_Oneof(t *testing.T) {
+	message := &documentspb.OneofSample{
+		OneofBlock: &documentspb.OneofSample_ValueB{int32(1)},
+	}
+	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
+	var propOrder []Property
+	for _, leaf := range leaves {
+		propOrder = append(propOrder, leaf.Property)
+	}
+	assert.Equal(t, []Property{
+		Empty.FieldProp("valueA", 1),
+		Empty.FieldProp("valueB", 2),
+		Empty.FieldProp("valueE", 5),
+	}, propOrder)
+
+	assert.Nil(t, err)
+
+	propOrder = []Property{}
+	message.OneofBlock = &documentspb.OneofSample_ValueC{"test"}
+	leaves, err = FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
+	for _, leaf := range leaves {
+		propOrder = append(propOrder, leaf.Property)
+	}
+	assert.Equal(t, []Property{
+		Empty.FieldProp("valueA", 1),
+		Empty.FieldProp("valueC", 3),
+		Empty.FieldProp("valueE", 5),
+	}, propOrder)
+	assert.Nil(t, err)
+
+	propOrder = []Property{}
+	message.OneofBlock = &documentspb.OneofSample_ValueD{&documentspb.SimpleItem{ValueA: "testValA"}}
+	leaves, err = FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
+	for _, leaf := range leaves {
+		propOrder = append(propOrder, leaf.Property)
+	}
+	mp := Empty.FieldProp("valueD", 4)
+	assert.Equal(t, []Property{
+		Empty.FieldProp("valueA", 1),
+		mp.FieldProp("valueA", 1),
+		Empty.FieldProp("valueE", 5),
+	}, propOrder)
+	assert.Nil(t, err)
+}
+
 func TestFlattenMessage_SimpleMap(t *testing.T) {
 	message := &documentspb.SimpleMap{
 		Value: map[int32]string{
@@ -1232,6 +1277,69 @@ func TestCreateProof_standard_customEncoder(t *testing.T) {
 	valid, err = doctree.ValidateProof(&falseProof)
 	assert.False(t, valid)
 	assert.EqualError(t, err, "Hash does not match")
+}
+
+func TestCreateOneofProof(t *testing.T) {
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
+	err := doctree.AddLeavesFromDocument(&documentspb.ExampleOneofSampleDocument)
+	assert.Nil(t, err)
+	err = doctree.Generate()
+
+	_, err = doctree.CreateProof("valueC")
+	assert.EqualError(t, err, "No such field: valueC in obj")
+
+	proof, err := doctree.CreateProof("valueB")
+	assert.Nil(t, err)
+	assert.Equal(t, ReadableName("valueB"), proof.Property)
+	assert.Equal(t, strconv.Itoa(int(documentspb.ExampleOneofSampleDocument.OneofBlock.(*documentspb.OneofSample_ValueB).ValueB)), proof.Value)
+	assert.Equal(t, testSalt, proof.Salt)
+
+	fieldHash, err := CalculateHashForProofField(&proof, sha256Hash)
+	rootHash := []byte{0xee, 0xab, 0xf6, 0xc2, 0x82, 0x51, 0x20, 0xbd, 0xd7, 0xc6, 0xb3, 0x9e, 0xdb, 0xa7, 0x37, 0xd4, 0x97, 0xee, 0xc1, 0x0f, 0x2e, 0xe6, 0xf9, 0x64, 0x53, 0x8c, 0x16, 0x22, 0x84, 0xd9, 0x61, 0x1d}
+	assert.Equal(t, rootHash, doctree.rootHash)
+	valid, err := ValidateProofHashes(fieldHash, proof.Hashes, rootHash, doctree.hash)
+	assert.True(t, valid)
+
+	valid, err = doctree.ValidateProof(&proof)
+	assert.True(t, valid)
+	assert.Nil(t, err)
+
+	doctree = NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
+	err = doctree.AddLeavesFromDocument(&documentspb.OneofSample{
+		OneofBlock: &documentspb.OneofSample_ValueC{"bor"},
+	})
+	assert.Nil(t, err)
+	err = doctree.Generate()
+
+	_, err = doctree.CreateProof("valueB")
+	assert.EqualError(t, err, "No such field: valueB in obj")
+	_, err = doctree.CreateProof("valueC")
+	assert.Nil(t, err)
+
+	doctree = NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
+	err = doctree.AddLeavesFromDocument(&documentspb.OneofSample{
+		OneofBlock: &documentspb.OneofSample_ValueD{&documentspb.SimpleItem{ValueA: "testA"}},
+	})
+	assert.Nil(t, err)
+	err = doctree.Generate()
+
+	_, err = doctree.CreateProof("valueC")
+	assert.EqualError(t, err, "No such field: valueC in obj")
+	_, err = doctree.CreateProof("valueD.valueA")
+	assert.Nil(t, err)
+
+	doctree = NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
+	err = doctree.AddLeavesFromDocument(&documentspb.OneofSample{})
+	assert.Nil(t, err)
+	err = doctree.Generate()
+
+	_, err = doctree.CreateProof("valueB")
+	assert.EqualError(t, err, "No such field: valueB in obj")
+	_, err = doctree.CreateProof("valueD.valueA")
+	assert.EqualError(t, err, "No such field: valueD.valueA in obj")
+	_, err = doctree.CreateProof("valueC")
+	assert.EqualError(t, err, "No such field: valueC in obj")
+
 }
 
 func TestCreateProof_sorted(t *testing.T) {

@@ -138,6 +138,18 @@ message InvalidHashedFieldDocument {
   ];
 }
 
+message  oneofSample{
+  int32 valueA = 1;
+  oneof oneofBlock
+  {
+    int32 valueB = 2;
+    string valueC = 3;
+    SimpleItem valueD = 4;
+  }
+   int32 valueE = 5;
+}
+
+
 message LongDocument {
   int64 value0 = 16;
   int64 value1 = 1;
