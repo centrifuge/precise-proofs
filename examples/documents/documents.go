@@ -16,7 +16,6 @@ var FilledExampleDocument ExampleDocument = ExampleDocument{
 	ValueA: "Example",
 }
 
-
 var ExampleTimeString string = "2018-04-10T01:23:12.697116Z"
 
 func NewAllFieldTypes() *AllFieldTypes {

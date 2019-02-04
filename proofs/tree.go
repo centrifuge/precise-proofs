@@ -24,7 +24,7 @@ Fields can be treated as raw (already hashed values) by setting the option `proo
 		string value_b = 2 [
 			(proofs.exclude_from_tree) = true
 		];
-		bytes value_c = 3[
+		bytes value_c = 3 [
 			(proofs.hashed_field) = true
 		];
 	}
@@ -38,7 +38,7 @@ Nested, repeated, and map fields will be flattened following a dotted notation. 
 	  repeated Document fieldB = 2;
 	  repeated string fieldC = 3;
 	  map<string, Document> fieldD = 4 [
-	      proofs.key_length = 4
+	      (proofs.key_length) = 4
 	  ];
 	  map<uint64, string> fieldE = 5;
 	}
@@ -141,10 +141,9 @@ The respective JSON for the proof would be:
   }
 
 There are a few things to note:
-* When calculating the hash of the leaf, the dot notation of the property,
-  the value and salt should be concatenated to produce the hash.
-* The default proof expects values of documents to be salted to prevent rainbow table lookups.
-* The value is included in the file as a string value not a native type.
+    - When calculating the hash of the leaf, the dot notation of the property, the value and salt should be concatenated to produce the hash.
+    - The default proof expects values of documents to be salted to prevent rainbow table lookups.
+    - The value is included in the file as a string value not a native type.
 
 Compact Salt Slice
 When you do processing for a document, if you want to save the salts, you can provide
@@ -165,15 +164,15 @@ with the SaltsLengthSuffix option.
 
 Custom Document Prefix
 
-Library supports adding a prefix to the document path by setting up TreeOption.ParentPrefix to the desired value.
+Library supports adding a prefix to the document path by setting up `TreeOption.ParentPrefix` to the desired value.
 
 
 */
 package proofs
 
 import (
-	"crypto/rand"
 	"bytes"
+	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -205,9 +204,9 @@ type ValueEncoder interface {
 // TreeOptions allows customizing the generation of the tree
 type TreeOptions struct {
 	//	EnableHashSorting: Implement a merkle tree with sorted hashes
-  EnableHashSorting bool
-  GetSalt           GetSalt
-  Salts             *Salts
+	EnableHashSorting bool
+	GetSalt           GetSalt
+	Salts             *Salts
 	// SaltsLengthSuffix: As precise proofs support repeated fields, when generating the merkle tree we need to add a
 	// leaf that represents the length of the slice. The default suffix is `Length`, although it is customizable so it
 	// does not collide with potential field names of your own proto structs.
@@ -219,22 +218,23 @@ type TreeOptions struct {
 	CompactProperties bool
 }
 
-type Salt struct{
+type Salt struct {
 	Compact []byte
-	Value    []byte
+	Value   []byte
 }
-type Salts   []Salt
+type Salts []Salt
 type GetSalt func(compact []byte) []byte
-func defaultGetSalt(salts *Salts) func([]byte) ([]byte) {
-	return func(compact []byte) ([]byte){
-		for ii := range *salts{
-			if (bytes.Compare((*salts)[ii].Compact, compact) == 0){
+
+func defaultGetSalt(salts *Salts) func([]byte) []byte {
+	return func(compact []byte) []byte {
+		for ii := range *salts {
+			if bytes.Compare((*salts)[ii].Compact, compact) == 0 {
 				return (*salts)[ii].Value
 			}
 		}
 		randbytes := make([]byte, 32)
 		rand.Read(randbytes)
-		*salts = append(*salts, Salt{Compact:compact, Value:randbytes})
+		*salts = append(*salts, Salt{Compact: compact, Value: randbytes})
 		return randbytes
 	}
 }
@@ -273,13 +273,13 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 	if proofOpts.EnableHashSorting {
 		opts.EnableHashSorting = proofOpts.EnableHashSorting
 	}
-	var getSalt GetSalt;
+	var getSalt GetSalt
 	if proofOpts.GetSalt != nil {
-		getSalt = proofOpts.GetSalt;
+		getSalt = proofOpts.GetSalt
 	}
 	salts := &Salts{}
 	if proofOpts.Salts != nil {
-		salts = proofOpts.Salts;
+		salts = proofOpts.Salts
 	}
 	saltsLengthSuffix := DefaultSaltsLengthSuffix
 	if proofOpts.SaltsLengthSuffix != "" {
@@ -291,9 +291,9 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 	}
 	return DocumentTree{
 		propertyList:      []Property{},
-    merkleTree:        merkle.NewTreeWithOpts(opts),
-    getSalt:           getSalt,
-    salts:             salts,
+		merkleTree:        merkle.NewTreeWithOpts(opts),
+		getSalt:           getSalt,
+		salts:             salts,
 		saltsLengthSuffix: saltsLengthSuffix,
 		leaves:            []LeafNode{},
 		hash:              proofOpts.Hash,
@@ -333,9 +333,9 @@ func (doctree *DocumentTree) AddLeavesFromDocument(document proto.Message) (err 
 		return fmt.Errorf("hash is not set")
 	}
 	var getSalt GetSalt
-	if (doctree.getSalt != nil){
+	if doctree.getSalt != nil {
 		getSalt = doctree.getSalt
-	}else{
+	} else {
 		getSalt = defaultGetSalt(doctree.salts)
 	}
 	leaves, err := FlattenMessage(document, getSalt, doctree.saltsLengthSuffix, doctree.hash, doctree.valueEncoder, doctree.compactProperties, doctree.parentPrefix)
