@@ -289,13 +289,13 @@ func TestFlattenMessage_Oneof(t *testing.T) {
 	assert.Equal(t, []Property{
 		Empty.FieldProp("valueA", 1),
 		Empty.FieldProp("valueB", 2),
-		Empty.FieldProp("valueD", 4),
+		Empty.FieldProp("valueE", 5),
 	}, propOrder)
 
 	assert.Nil(t, err)
 
 	propOrder = []Property{}
-	message.OneofBlock = &documentspb.OneofSample_ValueC{"tere"}
+	message.OneofBlock = &documentspb.OneofSample_ValueC{"test"}
 	leaves, err = FlattenMessage(message, NewSaltForTest,  DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
 		for _, leaf := range leaves {
 		propOrder = append(propOrder, leaf.Property)
@@ -303,7 +303,21 @@ func TestFlattenMessage_Oneof(t *testing.T) {
 	assert.Equal(t, []Property{
 		Empty.FieldProp("valueA", 1),
 		Empty.FieldProp("valueC", 3),
-		Empty.FieldProp("valueD", 4),
+		Empty.FieldProp("valueE", 5),
+	}, propOrder)
+	assert.Nil(t, err)
+
+	propOrder = []Property{}
+	message.OneofBlock = &documentspb.OneofSample_ValueD{&documentspb.SimpleItem{ValueA: "testValA"}}
+	leaves, err = FlattenMessage(message, NewSaltForTest,  DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
+	for _, leaf := range leaves {
+		propOrder = append(propOrder, leaf.Property)
+	}
+	mp := Empty.FieldProp("valueD", 4)
+	assert.Equal(t, []Property{
+		Empty.FieldProp("valueA", 1),
+		mp.FieldProp("valueA", 1),
+		Empty.FieldProp("valueE", 5),
 	}, propOrder)
 	assert.Nil(t, err)
 }
@@ -1282,7 +1296,7 @@ func TestCreateOneofProof(t *testing.T) {
 	assert.Equal(t, testSalt, proof.Salt)
 
 	fieldHash, err := CalculateHashForProofField(&proof, sha256Hash)
-	rootHash := []byte{0xc1 ,0xca ,0xdd ,0x49 ,0x9 ,0xbc ,0x1d ,0x4a ,0x2b ,0x8e ,0xf1 ,0x67 ,0xb4 ,0x89 ,0x3 ,0x7a ,0x1b ,0xf4 ,0xeb ,0x9d ,0xe2 ,0xb6 ,0x4c ,0x5c ,0xc9 ,0x2e ,0xd0 ,0xc7 ,0x24 ,0x82 ,0xe9 ,0x39 }
+	rootHash := []byte{0xee, 0xab, 0xf6, 0xc2, 0x82, 0x51, 0x20, 0xbd, 0xd7, 0xc6, 0xb3, 0x9e, 0xdb, 0xa7, 0x37, 0xd4, 0x97, 0xee, 0xc1, 0x0f, 0x2e, 0xe6, 0xf9, 0x64, 0x53, 0x8c, 0x16, 0x22, 0x84, 0xd9, 0x61, 0x1d}
 	assert.Equal(t, rootHash, doctree.rootHash)
 	valid, err := ValidateProofHashes(fieldHash, proof.Hashes, rootHash, doctree.hash)
 	assert.True(t, valid)
@@ -1304,12 +1318,28 @@ func TestCreateOneofProof(t *testing.T) {
 	assert.Nil(t, err)
 
 	doctree = NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
+	err = doctree.AddLeavesFromDocument(&documentspb.OneofSample{
+		OneofBlock: &documentspb.OneofSample_ValueD{&documentspb.SimpleItem{ValueA: "testA"}} ,
+	})
+	assert.Nil(t, err)
+	err = doctree.Generate()
+
+	_, err = doctree.CreateProof("valueC")
+	assert.EqualError(t, err, "No such field: valueC in obj")
+	_, err = doctree.CreateProof("valueD.valueA")
+	assert.Nil(t, err)
+
+	doctree = NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
 	err = doctree.AddLeavesFromDocument(&documentspb.OneofSample{})
 	assert.Nil(t, err)
 	err = doctree.Generate()
 
 	_, err = doctree.CreateProof("valueB")
 	assert.EqualError(t, err, "No such field: valueB in obj")
+	_, err = doctree.CreateProof("valueD.valueA")
+	assert.EqualError(t, err, "No such field: valueD.valueA in obj")
+	_, err = doctree.CreateProof("valueC")
+	assert.EqualError(t, err, "No such field: valueC in obj")
 
 }
 

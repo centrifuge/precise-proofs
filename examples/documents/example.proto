@@ -144,8 +144,9 @@ message  oneofSample{
   {
     int32 valueB = 2;
     string valueC = 3;
+    SimpleItem valueD = 4;
   }
-   int32 valueD = 4;
+   int32 valueE = 5;
 }
 
 
