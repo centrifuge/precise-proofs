@@ -276,12 +276,11 @@ func TestFlattenMessage_HashedField(t *testing.T) {
 	assert.EqualError(t, err, "The option hashed_field is only supported for type `bytes`")
 }
 
-
 func TestFlattenMessage_Oneof(t *testing.T) {
 	message := &documentspb.OneofSample{
-	OneofBlock: &documentspb.OneofSample_ValueB{int32(1)} ,
+		OneofBlock: &documentspb.OneofSample_ValueB{int32(1)},
 	}
-	leaves, err := FlattenMessage(message, NewSaltForTest,  DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
+	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
 	var propOrder []Property
 	for _, leaf := range leaves {
 		propOrder = append(propOrder, leaf.Property)
@@ -296,8 +295,8 @@ func TestFlattenMessage_Oneof(t *testing.T) {
 
 	propOrder = []Property{}
 	message.OneofBlock = &documentspb.OneofSample_ValueC{"test"}
-	leaves, err = FlattenMessage(message, NewSaltForTest,  DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
-		for _, leaf := range leaves {
+	leaves, err = FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
+	for _, leaf := range leaves {
 		propOrder = append(propOrder, leaf.Property)
 	}
 	assert.Equal(t, []Property{
@@ -309,7 +308,7 @@ func TestFlattenMessage_Oneof(t *testing.T) {
 
 	propOrder = []Property{}
 	message.OneofBlock = &documentspb.OneofSample_ValueD{&documentspb.SimpleItem{ValueA: "testValA"}}
-	leaves, err = FlattenMessage(message, NewSaltForTest,  DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
+	leaves, err = FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
 	for _, leaf := range leaves {
 		propOrder = append(propOrder, leaf.Property)
 	}
@@ -1307,7 +1306,7 @@ func TestCreateOneofProof(t *testing.T) {
 
 	doctree = NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
 	err = doctree.AddLeavesFromDocument(&documentspb.OneofSample{
-	OneofBlock: &documentspb.OneofSample_ValueC{"bor"} ,
+		OneofBlock: &documentspb.OneofSample_ValueC{"bor"},
 	})
 	assert.Nil(t, err)
 	err = doctree.Generate()
@@ -1319,7 +1318,7 @@ func TestCreateOneofProof(t *testing.T) {
 
 	doctree = NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
 	err = doctree.AddLeavesFromDocument(&documentspb.OneofSample{
-		OneofBlock: &documentspb.OneofSample_ValueD{&documentspb.SimpleItem{ValueA: "testA"}} ,
+		OneofBlock: &documentspb.OneofSample_ValueD{&documentspb.SimpleItem{ValueA: "testA"}},
 	})
 	assert.Nil(t, err)
 	err = doctree.Generate()
