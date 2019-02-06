@@ -1,3 +1,4 @@
+// Package converter provides conversions between literal and binary properties of protocolbuffers' message types.
 package converter
 
 import (
@@ -22,6 +23,7 @@ func equalBinaryPath(bp1 []uint64, bp2 []uint64) bool {
 
 var prototypes = make(map[reflect.Type]*ProtoType)
 
+// GetBinaryProperty converts a literal property of a message type into the corresponding binary property.
 func GetBinaryProperty(messageTyp reflect.Type, literal string) ([]uint64, error) {
 	protoType := prototypes[messageTyp]
 
@@ -36,6 +38,7 @@ func GetBinaryProperty(messageTyp reflect.Type, literal string) ([]uint64, error
 	return protoType.getBinaryPath(literal)
 }
 
+// GetLiteralProperty converts a binary property of a message type into the corresponding literal property.
 func GetLiteralProperty(messageTyp reflect.Type, binary []uint64) (string, error) {
 	protoType := prototypes[messageTyp]
 
@@ -59,6 +62,7 @@ type ProtoType struct {
 	IsInitialized bool
 }
 
+// String shows the fields of a ProtoType instance.
 func (protoType ProtoType) String() string {
 	out := ""
 	out += fmt.Sprintf("MessageType: %v\n", protoType.MessageType)
