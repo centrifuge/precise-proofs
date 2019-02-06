@@ -185,3 +185,94 @@ message Integers {
   sfixed32 valueI = 9;
   sfixed64 valueJ = 10;
 }
+
+
+/*
+The following message types are for converter tests only
+*/
+
+message SimpleLeaves
+{
+  double a = 1;
+  float b = 2;
+  int32 c = 3;
+  int64 d = 4;
+  uint32 e = 5;
+  uint64 f = 6;
+  sint32 g = 7;
+  sint64 h = 8;
+  fixed32 i = 9;
+  fixed64 j = 10;
+  sfixed32 k = 11;
+  sfixed64 l = 12;
+  bool m = 13;
+  string n = 14;
+  bytes o = 15;
+}
+
+message ExampleOfVerySimpleStruct
+{
+  string VSstring = 1;
+  int32 VSint32 = 2;
+}
+
+message ExampleOfSimpleStruct
+{
+  string Sstring = 1;
+  int32 Sint32 = 2;
+  bytes Sbytes = 3;
+  ExampleOfVerySimpleStruct Sstruct = 4;
+}
+
+
+message ExampleOfCascadingStruct
+{
+  string CSstring = 1;
+  ExampleOfCascadingStructA CSstructA = 2;
+}
+
+message ExampleOfCascadingStructA
+{
+  string CSstring = 1;
+  ExampleOfCascadingStructB CSstructB = 2;
+}
+
+message ExampleOfCascadingStructB
+{
+  string CSstring = 1;
+  int32 CSint32 = 2;
+  bytes CSbytes = 3;
+}
+
+message ExampleOfRecursiveStruct
+{
+  string RSstring = 1;
+  ExampleOfRecursiveStruct RSstruct = 2;
+}
+
+
+message ExamplesOfSimpleMaps
+{
+  map<string, string> KstringVstring = 1;
+  map<string, int32> KstringVint32 = 2;
+  map<string, bytes> KstringVbytes = 3;
+  map<string, ExampleOfVerySimpleStruct> KstringVexampleOfVerySimpleStruct = 4;
+  map<int32, string> Kint32Vstring = 5;
+  map<int32, int32> Kint32Vint32 = 6;
+  map<int32, bytes> Kint32Vbytes = 7;
+  map<int32, ExampleOfVerySimpleStruct> Kint32VexampleOfVerySimpleStruct = 8;
+}
+
+message ExamplesOfRepeated
+{
+  repeated string Rstring = 1;
+  repeated int32 Rint32 = 2;
+  repeated bytes Rbytes = 3;
+  repeated ExampleOfVerySimpleStruct Rstruct = 4;
+}
+
+message ExampleOfRecursiveSlice
+{
+  repeated string RSstring = 1;
+  repeated ExampleOfRecursiveSlice RSslice = 2;
+}
