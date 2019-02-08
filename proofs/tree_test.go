@@ -35,30 +35,30 @@ func (valueEncoder *customEncoder) EncodeToString(value []byte) string {
 	return hex.EncodeToString(value)
 }
 
-func TestValueToString(t *testing.T) {
+func TestValueToBytesArray(t *testing.T) {
 	f := &messageFlattener{valueEncoder: &defaultValueEncoder{}}
-	v, err := f.valueToString(nil)
+	v, err := f.valueToBytesArray(nil)
 	assert.Equal(t, "", v)
 	assert.Nil(t, err)
 
-	v, err = f.valueToString(int64(0))
+	v, err = f.valueToBytesArray(int64(0))
 	assert.Equal(t, "0", v, "int64(0) to string failed")
 	assert.Nil(t, err)
 
-	v, err = f.valueToString(int64(42))
+	v, err = f.valueToBytesArray(int64(42))
 	assert.Equal(t, "42", v, "int64(42) to string failed")
 	assert.Nil(t, err)
 
-	v, err = f.valueToString("Hello World.")
+	v, err = f.valueToBytesArray("Hello World.")
 	assert.Equal(t, "Hello World.", v, "string(\"Hello World\".) to string failed")
 	assert.Nil(t, err)
 
-	v, err = f.valueToString([]byte("42"))
+	v, err = f.valueToBytesArray([]byte("42"))
 	expected := new(defaultValueEncoder).EncodeToString([]byte("42"))
 	assert.Equal(t, expected, v, "[]byte(\"42\") to string failed")
 	assert.Nil(t, err)
 
-	v, err = f.valueToString(UnsupportedType{false})
+	v, err = f.valueToBytesArray(UnsupportedType{false})
 	assert.Equal(t, "", v)
 	assert.Error(t, err)
 
@@ -66,23 +66,23 @@ func TestValueToString(t *testing.T) {
 	ts := time.Now()
 	ts.UnmarshalJSON([]byte(fmt.Sprintf("\"%s\"", documentspb.ExampleTimeString)))
 	pt, _ := ptypes.TimestampProto(ts)
-	v, err = f.valueToString(pt)
+	v, err = f.valueToBytesArray(pt)
 	assert.Equal(t, documentspb.ExampleTimeString, v)
 	assert.Nil(t, err)
 
 	// Test empty pointer (zero value)
 	var emptyTimestamp *timestamp.Timestamp
 	emptyTimestamp = nil
-	v, err = f.valueToString(emptyTimestamp)
+	v, err = f.valueToBytesArray(emptyTimestamp)
 	assert.Equal(t, "", v)
 	assert.Nil(t, err)
 }
 
 func TestConcatValues(t *testing.T) {
-	val, err := ConcatValues(ReadableName("prop"), strconv.FormatInt(int64(0), 10), testSalt)
+	val, err := ConcatValues(ReadableName("prop"), []byte(strconv.FormatInt(int64(0), 10)), testSalt)
 	assert.Nil(t, err)
 	f := &messageFlattener{valueEncoder: &defaultValueEncoder{}}
-	v, _ := f.valueToString(int64(0))
+	v, _ := f.valueToBytesArray(int64(0))
 	expectedPayload := append([]byte("prop"), v...)
 	expectedPayload = append(expectedPayload, testSalt...)
 	assert.Equal(t, expectedPayload, val)
@@ -92,7 +92,7 @@ func TestLeafNode_HashNode(t *testing.T) {
 	prop := NewProperty("fieldName", 42)
 	intLeaf := LeafNode{
 		Property: prop,
-		Value:    strconv.FormatInt(int64(42), 10),
+		Value:    []byte(strconv.FormatInt(int64(42), 10)),
 		Salt:     testSalt,
 	}
 
@@ -111,7 +111,7 @@ func TestLeafNode_HashNode(t *testing.T) {
 
 	invalidSaltLeaf := LeafNode{
 		Property: prop,
-		Value:    strconv.FormatInt(int64(42), 10),
+		Value:    []byte(strconv.FormatInt(int64(42), 10)),
 		Salt:     []byte{},
 	}
 	err = invalidSaltLeaf.HashNode(h, false)
@@ -148,7 +148,7 @@ func TestFlattenMessage(t *testing.T) {
 	}, propOrder)
 
 	f := &messageFlattener{valueEncoder: &defaultValueEncoder{}}
-	v, err := f.valueToString("Foo")
+	v, err := f.valueToBytesArray("Foo")
 	assert.NoError(t, err)
 
 	expectedPayload := append([]byte("valueA"), v...)
@@ -182,7 +182,7 @@ func TestFlattenMessage_compact(t *testing.T) {
 		Empty.FieldProp("enum_type", 10),
 	}, propOrder)
 	f := &messageFlattener{valueEncoder: &defaultValueEncoder{}}
-	v, _ := f.valueToString("Foo")
+	v, _ := f.valueToBytesArray("Foo")
 
 	expectedPayload := append([]byte{0, 0, 0, 1}, v...)
 	expectedPayload = append(expectedPayload, testSalt[:]...)
@@ -217,7 +217,7 @@ func TestFlattenMessageWithPrefix(t *testing.T) {
 		parentProp.FieldProp("value_not_ignored", 7),
 	}, propOrder)
 	f := &messageFlattener{valueEncoder: &defaultValueEncoder{}}
-	v, _ := f.valueToString("Foo")
+	v, _ := f.valueToBytesArray("Foo")
 
 	expectedPayload := append([]byte("doc.valueA"), v...)
 	expectedPayload = append(expectedPayload, testSalt[:]...)

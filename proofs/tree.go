@@ -507,7 +507,7 @@ func (doctree *DocumentTree) ValidateProof(proof *proofspb.Proof) (valid bool, e
 // LeafNode represents a field that can be hashed to create a merkle tree
 type LeafNode struct {
 	Property Property
-	Value    string
+	Value    []byte
 	Salt     []byte
 	// Hash contains either the hash that is calculated from Value, Salt & Property or a user defined hash
 	Hash []byte
@@ -537,7 +537,7 @@ func (n *LeafNode) HashNode(h hash.Hash, compact bool) error {
 }
 
 // ConcatValues concatenates property, value & salt into one byte slice.
-func ConcatValues(propName proofspb.PropertyName, value string, salt []byte) (payload []byte, err error) {
+func ConcatValues(propName proofspb.PropertyName, value []byte, salt []byte) (payload []byte, err error) {
 	payload = append(payload, AsBytes(propName)...)
 	payload = append(payload, []byte(value)...)
 	if len(salt) != 32 {
