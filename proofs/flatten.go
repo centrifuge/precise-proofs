@@ -206,7 +206,7 @@ func (f *messageFlattener) valueToBytesArray(value interface{}) (b []byte, err e
 			return []byte{}, nil
 		}
 
-		return t.MarshalText()
+		return toBytesArray(t.Unix()), nil
 	default:
 		// special case for enums
 		rv := reflect.ValueOf(value)
