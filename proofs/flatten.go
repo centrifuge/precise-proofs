@@ -26,7 +26,6 @@ type messageFlattener struct {
 	propOrder         []Property
 	saltsLengthSuffix string
 	hash              hash.Hash
-	valueEncoder      ValueEncoder
 	compactProperties bool
 }
 
@@ -247,11 +246,10 @@ func (f *messageFlattener) sortLeaves() (err error) {
 // of nodes.
 //
 // The fields are sorted lexicographically by their protobuf field names.
-func FlattenMessage(message proto.Message, getSalt GetSalt, saltsLengthSuffix string, hashFn hash.Hash, valueEncoder ValueEncoder, compact bool, parentProp Property) (leaves []LeafNode, err error) {
+func FlattenMessage(message proto.Message, getSalt GetSalt, saltsLengthSuffix string, hashFn hash.Hash, compact bool, parentProp Property) (leaves []LeafNode, err error) {
 	f := messageFlattener{
 		saltsLengthSuffix: saltsLengthSuffix,
 		hash:              hashFn,
-		valueEncoder:      valueEncoder,
 		compactProperties: compact,
 	}
 

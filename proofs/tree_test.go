@@ -3,7 +3,6 @@ package proofs
 import (
 	"crypto/md5"
 	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"github.com/centrifuge/precise-proofs/examples/documents"
@@ -30,12 +29,8 @@ type UnsupportedType struct {
 
 type customEncoder struct{}
 
-func (valueEncoder *customEncoder) EncodeToString(value []byte) string {
-	return hex.EncodeToString(value)
-}
-
 func TestValueToBytesArray(t *testing.T) {
-	f := &messageFlattener{valueEncoder: &defaultValueEncoder{}}
+	f := &messageFlattener{}
 	v, err := f.valueToBytesArray(nil)
 	assert.Equal(t, []byte{}, v)
 	assert.Nil(t, err)
@@ -77,7 +72,7 @@ func TestConcatValues(t *testing.T) {
 	b := []byte{1}
 	val, err := ConcatValues(ReadableName("prop"), b, testSalt)
 	assert.Nil(t, err)
-	f := &messageFlattener{valueEncoder: &defaultValueEncoder{}}
+	f := &messageFlattener{}
 	v, _ := f.valueToBytesArray(b)
 	expectedPayload := append([]byte("prop"), v...)
 	expectedPayload = append(expectedPayload, testSalt...)
@@ -122,7 +117,7 @@ func TestFlattenMessage(t *testing.T) {
 		ValueA: "Foo",
 	}
 
-	leaves, err := FlattenMessage(&message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
+	leaves, err := FlattenMessage(&message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
 	assert.NoError(t, err)
 	assert.Equal(t, 9, len(leaves))
 
@@ -143,7 +138,7 @@ func TestFlattenMessage(t *testing.T) {
 		Empty.FieldProp("value_not_ignored", 7),
 	}, propOrder)
 
-	f := &messageFlattener{valueEncoder: &defaultValueEncoder{}}
+	f := &messageFlattener{}
 	v, err := f.valueToBytesArray("Foo")
 	assert.NoError(t, err)
 
@@ -158,7 +153,7 @@ func TestFlattenMessage_compact(t *testing.T) {
 		ValueA: "Foo",
 	}
 
-	leaves, err := FlattenMessage(&message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, true, Empty)
+	leaves, err := FlattenMessage(&message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, true, Empty)
 	assert.NoError(t, err)
 	assert.Equal(t, 9, len(leaves))
 
@@ -177,7 +172,7 @@ func TestFlattenMessage_compact(t *testing.T) {
 		Empty.FieldProp("value_not_hashed", 9),
 		Empty.FieldProp("enum_type", 10),
 	}, propOrder)
-	f := &messageFlattener{valueEncoder: &defaultValueEncoder{}}
+	f := &messageFlattener{}
 	v, _ := f.valueToBytesArray("Foo")
 
 	expectedPayload := append([]byte{0, 0, 0, 1}, v...)
@@ -192,7 +187,7 @@ func TestFlattenMessageWithPrefix(t *testing.T) {
 	}
 
 	parentProp := NewProperty("doc", 42)
-	leaves, err := FlattenMessage(&message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, parentProp)
+	leaves, err := FlattenMessage(&message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, parentProp)
 	assert.NoError(t, err)
 	assert.Equal(t, 9, len(leaves))
 
@@ -212,7 +207,7 @@ func TestFlattenMessageWithPrefix(t *testing.T) {
 		parentProp.FieldProp("value_not_hashed", 9),
 		parentProp.FieldProp("value_not_ignored", 7),
 	}, propOrder)
-	f := &messageFlattener{valueEncoder: &defaultValueEncoder{}}
+	f := &messageFlattener{}
 	v, _ := f.valueToBytesArray("Foo")
 
 	expectedPayload := append([]byte("doc.valueA"), v...)
@@ -224,7 +219,7 @@ func TestFlattenMessageWithPrefix(t *testing.T) {
 func TestFlattenMessage_AllFieldTypes(t *testing.T) {
 	message := documentspb.NewAllFieldTypes()
 
-	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
+	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
 	propOrder := []Property{}
 	for _, leaf := range leaves {
 		propOrder = append(propOrder, leaf.Property)
@@ -244,7 +239,7 @@ func TestFlattenMessage_HashedField(t *testing.T) {
 		ValueNotHashed: foobarHash[:],
 	}
 
-	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
+	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
 	var propOrder []Property
 	for _, leaf := range leaves {
 		propOrder = append(propOrder, leaf.Property)
@@ -268,7 +263,7 @@ func TestFlattenMessage_HashedField(t *testing.T) {
 		Value: "foobar",
 	}
 
-	leaves, err = FlattenMessage(invalidMessage, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
+	leaves, err = FlattenMessage(invalidMessage, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
 	assert.EqualError(t, err, "The option hashed_field is only supported for type `bytes`")
 }
 
@@ -276,7 +271,7 @@ func TestFlattenMessage_Oneof(t *testing.T) {
 	message := &documentspb.OneofSample{
 		OneofBlock: &documentspb.OneofSample_ValueB{int32(1)},
 	}
-	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
+	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
 	var propOrder []Property
 	for _, leaf := range leaves {
 		propOrder = append(propOrder, leaf.Property)
@@ -291,7 +286,7 @@ func TestFlattenMessage_Oneof(t *testing.T) {
 
 	propOrder = []Property{}
 	message.OneofBlock = &documentspb.OneofSample_ValueC{"test"}
-	leaves, err = FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
+	leaves, err = FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
 	for _, leaf := range leaves {
 		propOrder = append(propOrder, leaf.Property)
 	}
@@ -304,7 +299,7 @@ func TestFlattenMessage_Oneof(t *testing.T) {
 
 	propOrder = []Property{}
 	message.OneofBlock = &documentspb.OneofSample_ValueD{&documentspb.SimpleItem{ValueA: "testValA"}}
-	leaves, err = FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
+	leaves, err = FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
 	for _, leaf := range leaves {
 		propOrder = append(propOrder, leaf.Property)
 	}
@@ -324,7 +319,7 @@ func TestFlattenMessage_SimpleMap(t *testing.T) {
 		},
 	}
 
-	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
+	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
 	assert.NoError(t, err)
 	propOrder := []Property{}
 	for _, leaf := range leaves {
@@ -347,7 +342,7 @@ func TestFlattenMessage_SimpleStringMap(t *testing.T) {
 		},
 	}
 
-	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
+	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
 	assert.NoError(t, err)
 	propOrder := []Property{}
 	for _, leaf := range leaves {
@@ -374,7 +369,7 @@ func TestFlattenMessage_NestedMap(t *testing.T) {
 		},
 	}
 
-	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
+	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
 	assert.NoError(t, err)
 	propOrder := []Property{}
 	for _, leaf := range leaves {
@@ -404,7 +399,7 @@ func TestFlattenMessage_SimpleEntries(t *testing.T) {
 		},
 	}
 
-	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
+	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
 	assert.NoError(t, err)
 	propOrder := []Property{}
 	for _, leaf := range leaves {
@@ -432,7 +427,7 @@ func TestFlattenMessage_Entries(t *testing.T) {
 		},
 	}
 
-	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
+	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
 	assert.NoError(t, err)
 	propOrder := []Property{}
 	for _, leaf := range leaves {
@@ -460,7 +455,7 @@ func TestFlattenMessage_BytesKeyEntries(t *testing.T) {
 		},
 	}
 
-	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
+	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
 	assert.NoError(t, err)
 	propOrder := []Property{}
 	for _, leaf := range leaves {
@@ -480,7 +475,7 @@ func TestFlattenMessageFromAutoFillSalts(t *testing.T) {
 	exampleFNDoc := &documentspb.ExampleFilledNestedRepeatedDocument
 
 	rootProp := NewProperty("doc", 42)
-	leaves, err := FlattenMessage(exampleFNDoc, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, rootProp)
+	leaves, err := FlattenMessage(exampleFNDoc, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, rootProp)
 	assert.Nil(t, err)
 	propOrder := []Property{}
 	for _, leaf := range leaves {
@@ -499,7 +494,7 @@ func TestFlattenMessageFromAutoFillSalts(t *testing.T) {
 
 func TestFlattenMessageFromAlreadyFilledSalts(t *testing.T) {
 	exampleDoc := &documentspb.ExampleFilledNestedRepeatedDocument
-	leaves, err := FlattenMessage(exampleDoc, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
+	leaves, err := FlattenMessage(exampleDoc, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
 	assert.Nil(t, err)
 	propOrder := []Property{}
 	for _, leaf := range leaves {
@@ -522,7 +517,7 @@ func TestTree_Generate(t *testing.T) {
 		ValueB: "Bar",
 	}
 
-	leaves, err := FlattenMessage(&protoMessage, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
+	leaves, err := FlattenMessage(&protoMessage, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
 	assert.NoError(t, err)
 	tree := merkle.NewTreeWithOpts(merkle.TreeOptions{DisableHashLeaves: true})
 	var hashes [][]byte
@@ -543,7 +538,7 @@ func TestSortedHashTree_Generate(t *testing.T) {
 		ValueB: "Bar",
 	}
 
-	leaves, err := FlattenMessage(&protoMessage, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, &defaultValueEncoder{}, false, Empty)
+	leaves, err := FlattenMessage(&protoMessage, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
 	assert.NoError(t, err)
 	tree := merkle.NewTreeWithOpts(merkle.TreeOptions{DisableHashLeaves: true, EnableHashSorting: true})
 	var hashes [][]byte
@@ -741,11 +736,6 @@ func BenchmarkCalculateProofNodeList(b *testing.B) {
 func TestDocumentTree_ToStringNilEncoder(t *testing.T) {
 	doctree := &DocumentTree{}
 	assert.Equal(t, "DocumentTree with Hash [] and [0] leaves", doctree.String())
-}
-
-func TestDocumentTree_ToStringDefaultEncoder(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash})
-	assert.Equal(t, "DocumentTree with Hash [0x] and [0] leaves", doctree.String())
 }
 
 func TestDocumentTree_Generate_twice(t *testing.T) {
@@ -1205,57 +1195,6 @@ func TestCreateProof_standard_compactProperties(t *testing.T) {
 
 	fieldHash, err := CalculateHashForProofField(&proof, sha256Hash)
 	rootHash := []byte{0x3c, 0x35, 0xe1, 0x7a, 0xfe, 0x6d, 0x1f, 0xea, 0x52, 0x10, 0xa3, 0x95, 0xe6, 0xb6, 0x26, 0xee, 0x44, 0x36, 0x10, 0x7a, 0xa5, 0x6f, 0xa3, 0xf9, 0x7c, 0x92, 0x4e, 0xa3, 0xa5, 0xf0, 0x5d, 0xec}
-	assert.Equal(t, rootHash, doctree.rootHash)
-	valid, err := ValidateProofHashes(fieldHash, proof.Hashes, rootHash, doctree.hash)
-	assert.True(t, valid)
-
-	valid, err = doctree.ValidateProof(&proof)
-	assert.True(t, valid)
-	assert.Nil(t, err)
-
-	valid, err = doctree.ValidateProof(&proofB)
-	assert.True(t, valid)
-	assert.Nil(t, err)
-
-	falseProof, err := doctree.CreateProof("valueA")
-	falseProof.Value = []byte{}
-	valid, err = doctree.ValidateProof(&falseProof)
-	assert.False(t, valid)
-	assert.EqualError(t, err, "Hash does not match")
-}
-
-func TestCreateProof_standard_customEncoder(t *testing.T) {
-	encoder := &customEncoder{}
-	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, ValueEncoder: encoder, GetSalt: NewSaltForTest})
-	doc := documentspb.FilledExampleDocument
-	doc.ValueNotHashed = sha256Hash.Sum([]byte("some hash"))
-	doc.ValueBytes1 = []byte("ValueBytes1")
-	err := doctree.AddLeavesFromDocument(&doc)
-	assert.Nil(t, err)
-
-	proof, err := doctree.CreateProof("valueA")
-	assert.EqualError(t, err, "Can't create proof before generating merkle root")
-
-	err = doctree.Generate()
-	assert.Nil(t, err)
-
-	_, err = doctree.CreateProof("InexistentField")
-	assert.EqualError(t, err, "No such field: InexistentField in obj")
-
-	proof, err = doctree.CreateProof("valueA")
-	assert.Nil(t, err)
-	assert.Equal(t, ReadableName("valueA"), proof.Property)
-	assert.Equal(t, []byte(documentspb.FilledExampleDocument.ValueA), proof.Value)
-	assert.Equal(t, testSalt, proof.Salt)
-
-	proofB, err := doctree.CreateProof("value_bytes1")
-	assert.Nil(t, err)
-	assert.Equal(t, ReadableName("value_bytes1"), proofB.Property)
-	assert.Equal(t, doc.ValueBytes1, proofB.Value)
-	assert.Equal(t, testSalt, proofB.Salt)
-
-	fieldHash, err := CalculateHashForProofField(&proof, sha256Hash)
-	rootHash := []byte{0x2a, 0xf5, 0x36, 0xea, 0x7f, 0xc6, 0xde, 0x5f, 0xf2, 0x37, 0xa8, 0x96, 0x5, 0xb0, 0x57, 0x81, 0xe7, 0x98, 0xf, 0x3e, 0x7b, 0x33, 0xab, 0x95, 0x54, 0xbe, 0xdd, 0xb, 0xa9, 0x69, 0x17, 0x5f}
 	assert.Equal(t, rootHash, doctree.rootHash)
 	valid, err := ValidateProofHashes(fieldHash, proof.Hashes, rootHash, doctree.hash)
 	assert.True(t, valid)
