@@ -10,12 +10,15 @@
   version = "v1.1.0"
 
 [[projects]]
-  digest = "1:b6192c4aa4f4d8764d1e00cf0bbf6ed04dee9a0318a3f367fb5fd82273eae4d9"
+  digest = "1:3664249e574cc3b804bd5a23bca2e6e9e53e563ff9e58fe6106fbb7cf67fa316"
   name = "github.com/golang/protobuf"
   packages = [
     "descriptor",
     "proto",
     "protoc-gen-go/descriptor",
+    "protoc-gen-go/generator",
+    "protoc-gen-go/generator/internal/remap",
+    "protoc-gen-go/plugin",
     "ptypes",
     "ptypes/any",
     "ptypes/duration",
@@ -50,12 +53,12 @@
   version = "v1.2.2"
 
 [[projects]]
-  branch = "master"
-  digest = "1:778500e3634377cb6660543afa4646c12a3a33aefadd3e1d269e24e57d75a3d7"
+  digest = "1:65f2553aabd1d6879691058ce20eac0f798a82d92c71f13cd56de3350fa06183"
   name = "github.com/xsleonard/go-merkle"
   packages = ["."]
   pruneopts = "UT"
-  revision = "fbb7cafc5ae411e13e718172f5af7917ad6c3ed7"
+  revision = "9a8290da4794e86e430f8e9494b9c11627bace21"
+  source = "github.com/mikiquantum/go-merkle"
 
 [solve-meta]
   analyzer-name = "dep"
@@ -64,6 +67,7 @@
     "github.com/golang/protobuf/descriptor",
     "github.com/golang/protobuf/proto",
     "github.com/golang/protobuf/protoc-gen-go/descriptor",
+    "github.com/golang/protobuf/protoc-gen-go/generator",
     "github.com/golang/protobuf/ptypes",
     "github.com/golang/protobuf/ptypes/timestamp",
     "github.com/pkg/errors",

@@ -1527,3 +1527,13 @@ func Test_CompactSaltPairs(t *testing.T) {
 	assert.Equal(t,salt1, salt3, "Two salts should be same")
 }
 
+func Test_EmptyLeaveFails(t *testing.T) {
+	salts := Salts{}
+	doc := &documentspb.SimpleItem{}
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: &salts})
+	err := doctree.AddLeavesFromDocument(doc)
+	assert.Nil(t, err)
+	err = doctree.Generate()
+	assert.Nil(t, err)
+}
+
