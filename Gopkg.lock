@@ -10,12 +10,15 @@
   version = "v1.1.0"
 
 [[projects]]
-  digest = "1:b6192c4aa4f4d8764d1e00cf0bbf6ed04dee9a0318a3f367fb5fd82273eae4d9"
+  digest = "1:3664249e574cc3b804bd5a23bca2e6e9e53e563ff9e58fe6106fbb7cf67fa316"
   name = "github.com/golang/protobuf"
   packages = [
     "descriptor",
     "proto",
     "protoc-gen-go/descriptor",
+    "protoc-gen-go/generator",
+    "protoc-gen-go/generator/internal/remap",
+    "protoc-gen-go/plugin",
     "ptypes",
     "ptypes/any",
     "ptypes/duration",
@@ -64,6 +67,7 @@
     "github.com/golang/protobuf/descriptor",
     "github.com/golang/protobuf/proto",
     "github.com/golang/protobuf/protoc-gen-go/descriptor",
+    "github.com/golang/protobuf/protoc-gen-go/generator",
     "github.com/golang/protobuf/ptypes",
     "github.com/golang/protobuf/ptypes/timestamp",
     "github.com/pkg/errors",

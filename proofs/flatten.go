@@ -1,11 +1,11 @@
 package proofs
 
 import (
-	"fmt"
+	"bytes"
+	"encoding/binary"
 	"hash"
 	"reflect"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/centrifuge/precise-proofs/proofs/proto"
@@ -26,7 +26,6 @@ type messageFlattener struct {
 	propOrder         []Property
 	saltsLengthSuffix string
 	hash              hash.Hash
-	valueEncoder      ValueEncoder
 	compactProperties bool
 }
 
@@ -34,11 +33,11 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 	// handle special cases
 	switch v := value.Interface().(type) {
 	case []byte, *timestamp.Timestamp:
-		valueString, err := f.valueToString(v)
+		valueBytesArray, err := f.valueToBytesArray(v)
 		if err != nil {
 			return errors.Wrap(err, "failed convert value to string")
 		}
-		f.appendLeaf(prop, valueString, getSalt(prop.CompactName()), saltsLengthSuffix, nil, false)
+		f.appendLeaf(prop, valueBytesArray, getSalt(prop.CompactName()), saltsLengthSuffix, nil, false)
 		return nil
 	}
 
@@ -103,7 +102,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 					return errors.New("The option hashed_field is only supported for type `bytes`")
 				}
 
-				f.appendLeaf(fieldProp, "", nil, saltsLengthSuffix, hashed, true)
+				f.appendLeaf(fieldProp, []byte{}, nil, saltsLengthSuffix, hashed, true)
 				continue
 			}
 			if oneOfField {
@@ -135,7 +134,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 
 		// Append length of slice as tree leaf
 		lengthProp := prop.LengthProp(saltsLengthSuffix)
-		f.appendLeaf(lengthProp, strconv.Itoa(value.Len()), getSalt(lengthProp.CompactName()), saltsLengthSuffix, []byte{}, false)
+		f.appendLeaf(lengthProp, toBytesArray(value.Len()), getSalt(lengthProp.CompactName()), saltsLengthSuffix, []byte{}, false)
 
 		// Handle each element of the slice
 		for i := 0; i < value.Len(); i++ {
@@ -148,7 +147,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 	case reflect.Map:
 		// Append size of map as tree leaf
 		lengthProp := prop.LengthProp(saltsLengthSuffix)
-		f.appendLeaf(lengthProp, strconv.Itoa(value.Len()), getSalt(lengthProp.CompactName()), saltsLengthSuffix, []byte{}, false)
+		f.appendLeaf(lengthProp, toBytesArray(value.Len()), getSalt(lengthProp.CompactName()), saltsLengthSuffix, []byte{}, false)
 
 		// Handle each value of the map
 		for _, k := range value.MapKeys() {
@@ -164,17 +163,17 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 			}
 		}
 	default:
-		valueString, err := f.valueToString(value.Interface())
+		valueBytesArray, err := f.valueToBytesArray(value.Interface())
 		if err != nil {
 			return err
 		}
-		f.appendLeaf(prop, valueString, getSalt(prop.CompactName()), saltsLengthSuffix, []byte{}, false)
+		f.appendLeaf(prop, valueBytesArray, getSalt(prop.CompactName()), saltsLengthSuffix, []byte{}, false)
 	}
 
 	return nil
 }
 
-func (f *messageFlattener) appendLeaf(prop Property, value string, salt []byte, saltsLengthSuffix string, hash []byte, hashed bool) {
+func (f *messageFlattener) appendLeaf(prop Property, value []byte, salt []byte, saltsLengthSuffix string, hash []byte, hashed bool) {
 	leaf := LeafNode{
 		Property: prop,
 		Value:    value,
@@ -185,29 +184,36 @@ func (f *messageFlattener) appendLeaf(prop Property, value string, salt []byte, 
 	f.leaves = append(f.leaves, leaf)
 }
 
-func (f *messageFlattener) valueToString(value interface{}) (s string, err error) {
+func (f *messageFlattener) valueToBytesArray(value interface{}) (b []byte, err error) {
 	switch v := value.(type) {
 	case nil:
-		return "", nil
+		return []byte{}, nil
 	case string:
-		return v, nil
+		return []byte(v), nil
 	case int8, int16, int32, int64, uint8, uint16, uint32, uint64:
-		return fmt.Sprint(value), nil
+		return toBytesArray(v), nil
 	case []byte:
-		return f.valueEncoder.EncodeToString(v), nil
+		return v, nil
 	case *timestamp.Timestamp:
 		if v == nil {
-			return "", nil
+			return []byte{}, nil
 		}
-		return ptypes.TimestampString(v), nil
+
+		// Validate `Timestamp`, if valid convert to `Time`
+		t, err := ptypes.Timestamp(v)
+		if err != nil {
+			return []byte{}, nil
+		}
+
+		return toBytesArray(t.Unix()), nil
 	default:
 		// special case for enums
 		rv := reflect.ValueOf(value)
 		if rv.Kind() == reflect.Int32 {
-			return strconv.FormatInt(rv.Int(), 10), nil
+			return toBytesArray(rv.Int()), nil
 		}
 
-		return "", errors.Errorf("Got unsupported value of type %T", v)
+		return []byte{}, errors.Errorf("Got unsupported value of type %T", v)
 	}
 }
 
@@ -240,11 +246,10 @@ func (f *messageFlattener) sortLeaves() (err error) {
 // of nodes.
 //
 // The fields are sorted lexicographically by their protobuf field names.
-func FlattenMessage(message proto.Message, getSalt GetSalt, saltsLengthSuffix string, hashFn hash.Hash, valueEncoder ValueEncoder, compact bool, parentProp Property) (leaves []LeafNode, err error) {
+func FlattenMessage(message proto.Message, getSalt GetSalt, saltsLengthSuffix string, hashFn hash.Hash, compact bool, parentProp Property) (leaves []LeafNode, err error) {
 	f := messageFlattener{
 		saltsLengthSuffix: saltsLengthSuffix,
 		hash:              hashFn,
-		valueEncoder:      valueEncoder,
 		compactProperties: compact,
 	}
 
@@ -344,4 +349,11 @@ func getMappingKeyFrom(fd *go_descriptor.FieldDescriptorProto) (mappingKey strin
 	}
 
 	return
+}
+
+// Utility function to convert data to `[]byte` representation using BigEndian encoding
+func toBytesArray(data interface{}) []byte {
+	buf := new(bytes.Buffer)
+	binary.Write(buf, binary.BigEndian, data)
+	return buf.Bytes()
 }
