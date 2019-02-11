@@ -57,7 +57,7 @@
   name = "github.com/xsleonard/go-merkle"
   packages = ["."]
   pruneopts = "UT"
-  revision = "9a8290da4794e86e430f8e9494b9c11627bace21"
+  revision = "a73b8999d89d80bdcd89d199f41ab7fcdfd12dde"
   source = "github.com/mikiquantum/go-merkle"
 
 [solve-meta]

@@ -34,7 +34,7 @@
   version = "1.2.1"
 
 [[constraint]]
-  revision = "9a8290da4794e86e430f8e9494b9c11627bace21"
+  revision = "a73b8999d89d80bdcd89d199f41ab7fcdfd12dde"
   name = "github.com/xsleonard/go-merkle"
   source = "github.com/mikiquantum/go-merkle"
 
