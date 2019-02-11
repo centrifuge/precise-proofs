@@ -16,7 +16,6 @@ var FilledExampleDocument ExampleDocument = ExampleDocument{
 	ValueA: "Example",
 }
 
-
 var ExampleTimeString string = "2018-04-10T01:23:12.697116Z"
 
 func NewAllFieldTypes() *AllFieldTypes {
@@ -61,3 +60,8 @@ var ExampleSimpleMapDocument = SimpleMapDocument{
 	},
 }
 
+var ExampleOneofSampleDocument = OneofSample{
+	ValueA:     2,
+	OneofBlock: &OneofSample_ValueB{int32(1)},
+	ValueE:     7,
+}

@@ -24,7 +24,7 @@ Fields can be treated as raw (already hashed values) by setting the option `proo
 		string value_b = 2 [
 			(proofs.exclude_from_tree) = true
 		];
-		bytes value_c = 3[
+		bytes value_c = 3 [
 			(proofs.hashed_field) = true
 		];
 	}
@@ -38,7 +38,7 @@ Nested, repeated, and map fields will be flattened following a dotted notation. 
 	  repeated Document fieldB = 2;
 	  repeated string fieldC = 3;
 	  map<string, Document> fieldD = 4 [
-	      proofs.key_length = 4
+	      (proofs.key_length) = 4
 	  ];
 	  map<uint64, string> fieldE = 5;
 	}
@@ -141,10 +141,9 @@ The respective JSON for the proof would be:
   }
 
 There are a few things to note:
-* When calculating the hash of the leaf, the dot notation of the property,
-  the value and salt should be concatenated to produce the hash.
-* The default proof expects values of documents to be salted to prevent rainbow table lookups.
-* The value is included in the file as a string value not a native type.
+    - When calculating the hash of the leaf, the dot notation of the property, the value and salt should be concatenated to produce the hash.
+    - The default proof expects values of documents to be salted to prevent rainbow table lookups.
+    - The value is included in the file as a string value not a native type.
 
 Compact Salt Slice
 When you do processing for a document, if you want to save the salts, you can provide
@@ -165,16 +164,15 @@ with the SaltsLengthSuffix option.
 
 Custom Document Prefix
 
-Library supports adding a prefix to the document path by setting up TreeOption.ParentPrefix to the desired value.
+Library supports adding a prefix to the document path by setting up `TreeOption.ParentPrefix` to the desired value.
 
 
 */
 package proofs
 
 import (
-	"crypto/rand"
 	"bytes"
-	"encoding/hex"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"hash"
@@ -190,51 +188,39 @@ import (
 // customized with the SaltsLenghtSuffix TreeOption
 const DefaultSaltsLengthSuffix = "length"
 
-type defaultValueEncoder struct{}
-
-// EncodeToString encodes the bytes to string with 0x prefix
-func (valueEncoder *defaultValueEncoder) EncodeToString(value []byte) string {
-	return "0x" + hex.EncodeToString(value)
-}
-
-// ValueEncoder can be implemented by a type that can encode bytes to string
-type ValueEncoder interface {
-	EncodeToString([]byte) string
-}
-
 // TreeOptions allows customizing the generation of the tree
 type TreeOptions struct {
 	//	EnableHashSorting: Implement a merkle tree with sorted hashes
-  EnableHashSorting bool
-  GetSalt           GetSalt
-  Salts             *Salts
+	EnableHashSorting bool
+	GetSalt           GetSalt
+	Salts             *Salts
 	// SaltsLengthSuffix: As precise proofs support repeated fields, when generating the merkle tree we need to add a
 	// leaf that represents the length of the slice. The default suffix is `Length`, although it is customizable so it
 	// does not collide with potential field names of your own proto structs.
 	SaltsLengthSuffix string
 	Hash              hash.Hash
-	ValueEncoder      ValueEncoder
 	// ParentPrefix defines an arbitrary prefix to prepend to the parent, so all fields are prepended with it
 	ParentPrefix      Property
 	CompactProperties bool
 }
 
-type Salt struct{
+type Salt struct {
 	Compact []byte
-	Value    []byte
+	Value   []byte
 }
-type Salts   []Salt
+type Salts []Salt
 type GetSalt func(compact []byte) []byte
-func defaultGetSalt(salts *Salts) func([]byte) ([]byte) {
-	return func(compact []byte) ([]byte){
-		for ii := range *salts{
-			if (bytes.Compare((*salts)[ii].Compact, compact) == 0){
+
+func defaultGetSalt(salts *Salts) func([]byte) []byte {
+	return func(compact []byte) []byte {
+		for ii := range *salts {
+			if bytes.Compare((*salts)[ii].Compact, compact) == 0 {
 				return (*salts)[ii].Value
 			}
 		}
 		randbytes := make([]byte, 32)
 		rand.Read(randbytes)
-		*salts = append(*salts, Salt{Compact:compact, Value:randbytes})
+		*salts = append(*salts, Salt{Compact: compact, Value: randbytes})
 		return randbytes
 	}
 }
@@ -253,16 +239,12 @@ type DocumentTree struct {
 	propertyList      []Property
 	hash              hash.Hash
 	saltsLengthSuffix string
-	valueEncoder      ValueEncoder
 	parentPrefix      Property
 	compactProperties bool
 }
 
 func (doctree *DocumentTree) String() string {
-	if doctree.valueEncoder == nil {
-		return fmt.Sprintf("DocumentTree with Hash [%x] and [%d] leaves", doctree.RootHash(), len(doctree.merkleTree.Leaves()))
-	}
-	return fmt.Sprintf("DocumentTree with Hash [%s] and [%d] leaves", doctree.valueEncoder.EncodeToString(doctree.RootHash()), len(doctree.merkleTree.Leaves()))
+	return fmt.Sprintf("DocumentTree with Hash [%x] and [%d] leaves", doctree.RootHash(), len(doctree.merkleTree.Leaves()))
 }
 
 // NewDocumentTree returns an empty DocumentTree
@@ -273,31 +255,26 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 	if proofOpts.EnableHashSorting {
 		opts.EnableHashSorting = proofOpts.EnableHashSorting
 	}
-	var getSalt GetSalt;
+	var getSalt GetSalt
 	if proofOpts.GetSalt != nil {
-		getSalt = proofOpts.GetSalt;
+		getSalt = proofOpts.GetSalt
 	}
 	salts := &Salts{}
 	if proofOpts.Salts != nil {
-		salts = proofOpts.Salts;
+		salts = proofOpts.Salts
 	}
 	saltsLengthSuffix := DefaultSaltsLengthSuffix
 	if proofOpts.SaltsLengthSuffix != "" {
 		saltsLengthSuffix = proofOpts.SaltsLengthSuffix
 	}
-	var valueEncoder ValueEncoder = new(defaultValueEncoder)
-	if proofOpts.ValueEncoder != nil {
-		valueEncoder = proofOpts.ValueEncoder
-	}
 	return DocumentTree{
 		propertyList:      []Property{},
-    merkleTree:        merkle.NewTreeWithOpts(opts),
-    getSalt:           getSalt,
-    salts:             salts,
+		merkleTree:        merkle.NewTreeWithOpts(opts),
+		getSalt:           getSalt,
+		salts:             salts,
 		saltsLengthSuffix: saltsLengthSuffix,
 		leaves:            []LeafNode{},
 		hash:              proofOpts.Hash,
-		valueEncoder:      valueEncoder,
 		parentPrefix:      proofOpts.ParentPrefix,
 		compactProperties: proofOpts.CompactProperties,
 	}
@@ -333,12 +310,12 @@ func (doctree *DocumentTree) AddLeavesFromDocument(document proto.Message) (err 
 		return fmt.Errorf("hash is not set")
 	}
 	var getSalt GetSalt
-	if (doctree.getSalt != nil){
+	if doctree.getSalt != nil {
 		getSalt = doctree.getSalt
-	}else{
+	} else {
 		getSalt = defaultGetSalt(doctree.salts)
 	}
-	leaves, err := FlattenMessage(document, getSalt, doctree.saltsLengthSuffix, doctree.hash, doctree.valueEncoder, doctree.compactProperties, doctree.parentPrefix)
+	leaves, err := FlattenMessage(document, getSalt, doctree.saltsLengthSuffix, doctree.hash, doctree.compactProperties, doctree.parentPrefix)
 	if err != nil {
 		return err
 	}
@@ -507,7 +484,7 @@ func (doctree *DocumentTree) ValidateProof(proof *proofspb.Proof) (valid bool, e
 // LeafNode represents a field that can be hashed to create a merkle tree
 type LeafNode struct {
 	Property Property
-	Value    string
+	Value    []byte
 	Salt     []byte
 	// Hash contains either the hash that is calculated from Value, Salt & Property or a user defined hash
 	Hash []byte
@@ -537,7 +514,7 @@ func (n *LeafNode) HashNode(h hash.Hash, compact bool) error {
 }
 
 // ConcatValues concatenates property, value & salt into one byte slice.
-func ConcatValues(propName proofspb.PropertyName, value string, salt []byte) (payload []byte, err error) {
+func ConcatValues(propName proofspb.PropertyName, value []byte, salt []byte) (payload []byte, err error) {
 	payload = append(payload, AsBytes(propName)...)
 	payload = append(payload, []byte(value)...)
 	if len(salt) != 32 {

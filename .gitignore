@@ -3,3 +3,4 @@
 vendor/
 .idea
 .env
+.DS_Store

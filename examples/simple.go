@@ -40,8 +40,8 @@ func main() {
 
 	fmt.Printf("Proof validated: %v\n", valid)
 	fmt.Println("Compacts -------> Salts")
-	for ii:= range salts{
-		fmt.Println(salts[ii].Compact, "------->" ,salts[ii].Value)
+	for ii := range salts {
+		fmt.Println(salts[ii].Compact, "------->", salts[ii].Value)
 	}
 }
 
