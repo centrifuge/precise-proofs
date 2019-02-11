@@ -1568,3 +1568,20 @@ func Test_CompactSaltPairs(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, salt1, salt3, "Two salts should be same")
 }
+
+func Test_GenerateSingleLeafTree(t *testing.T) {
+	foobarHash := sha256.Sum256([]byte("foobar"))
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
+	err := doctree.AddLeaf(
+		LeafNode{
+			Hash:     foobarHash[:],
+			Property: Property{Text: "Foobar1"},
+			Hashed:   true,
+		},
+	)
+	assert.Nil(t, err)
+	err = doctree.Generate()
+	assert.Nil(t, err)
+	assert.Len(t, doctree.leaves, 1)
+	assert.Equal(t, foobarHash[:], doctree.RootHash())
+}
