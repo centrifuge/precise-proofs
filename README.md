@@ -67,3 +67,10 @@ See below code sample (`examples/simple.go`) for a usage example. For detailed u
 	fmt.Printf("Proof validated: %v\n", valid)
 ```
 
+## Development
+### Building protobuf messages
+If the protobuf messages are ever changed, the recommended procedure is to build them using prototools. Use 
+prototools version 1.3.0 and execute the command `prototol generate` to udpate both the example and the proofs 
+messages.
+
+
