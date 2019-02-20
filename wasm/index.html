@@ -21,6 +21,15 @@
     <button onclick="generateProof(document.getElementById('json').value)"  id="generateProofButton">Generate Proof</button>
 
     <textarea id="proof"></textarea>
-    <button onclick="validateProof(document.getElementById('proof').value)"  id="validateProofButton">Validate Proof</button>
+    <input type="text" id="rootHash" />
+    <button
+        onclick="validateProof(
+            document.getElementById('proof').value,
+            document.getElementById('rootHash').value
+        )"
+        id="validateProofButton"
+    >
+        Validate Proof
+    </button>
 </body>
 </html>

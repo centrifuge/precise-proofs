@@ -280,6 +280,19 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 	}
 }
 
+// NewDocumentTree returns a DocumentTree with `rootHash`
+func NewDocumentTreeWithRootHash(rootHash []byte, hash hash.Hash) DocumentTree {
+	opts := merkle.TreeOptions{
+		DisableHashLeaves: true,
+	}
+
+	return DocumentTree{
+		merkleTree:			merkle.NewTreeWithOpts(opts),
+		hash:              	hash,
+		rootHash: 			rootHash,
+	}
+}
+
 // AddLeaves appends list of leaves to the tree's leaves.
 // This function can be called multiple times and leaves will be added from left to right. Note that the lexicographic
 // sorting doesn't get applied in this method but in the protobuf flattening. The order in which leaves are added in

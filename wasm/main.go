@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"syscall/js"
@@ -23,7 +24,6 @@ func generateProof(i []js.Value) {
 	fmt.Printf("JSON : %s\n", i[0].String())
 	err := jsonpb.Unmarshal(strings.NewReader(i[0].String()), &document)
 	checkErr(err)
-	fmt.Printf("Document : %s\n", document)
 
 	salts := proofs.Salts{}
 	doctree := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New(), Salts: &salts})
@@ -37,28 +37,36 @@ func generateProof(i []js.Value) {
 	checkErr(err)
 	m := jsonpb.Marshaler{}
 	proofJson, _ := m.MarshalToString(&proof)
-	fmt.Println("Proof:\n", string(proofJson))
-}
-
-func validateProof(i []js.Value) {
-	var proof proofspb.Proof
-	fmt.Printf("JSON : %s\n", i[0].String())
-	err := jsonpb.Unmarshal(strings.NewReader(i[0].String()), &proof)
-	checkErr(err)
-	fmt.Printf("Proof : %s\n", proof)
-
-	salts := proofs.Salts{}
-	doctree := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New(), Salts: &salts})
+	fmt.Println("Proof JSON:\n", string(proofJson))
 
 	// Validate the proof that was just generated
 	valid, err := doctree.ValidateProof(&proof)
 	checkErr(err)
 
 	fmt.Printf("Proof validated: %v\n", valid)
-	fmt.Println("Compacts -------> Salts")
-	for ii := range salts {
-		fmt.Println(salts[ii].Compact, "------->", salts[ii].Value)
+}
+
+func validateProof(i []js.Value) {
+	proof := &proofspb.Proof{
+		Property: proofs.ReadableName("enum_type"),
 	}
+	fmt.Printf("JSON : %s\n", i[0].String())
+	fmt.Printf("RootHash : %s\n", i[1].String())
+	err := jsonpb.Unmarshal(strings.NewReader(i[0].String()), proof)
+	checkErr(err)
+	fmt.Println("Proof: \n", proof)
+
+	rootHash, err := hex.DecodeString(i[1].String())
+	checkErr(err)
+
+	doctree := proofs.NewDocumentTreeWithRootHash(rootHash, sha256.New())
+	fmt.Printf("Generated tree: %s\n", doctree.String())
+
+	// Validate the proof that was just generated
+	valid, err := doctree.ValidateProof(proof)
+	checkErr(err)
+
+	fmt.Printf("Proof validated: %v\n", valid)
 }
 
 func registerCallbacks() {
