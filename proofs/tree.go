@@ -420,7 +420,7 @@ func (doctree *DocumentTree) RootHash() []byte {
 	return doctree.rootHash
 }
 
-// CreateProof takes a property in dot notation and returns a Proof object for the given field
+// CreateProof takes a property in dot notation or compact form wrapped in a PropParam and returns a Proof object for the given field
 func (doctree *DocumentTree) CreateProof(prop PropParam) (proof proofspb.Proof, err error) {
 	if doctree.IsEmpty() || !doctree.filled {
 		err = fmt.Errorf("Can't create proof before generating merkle root")
