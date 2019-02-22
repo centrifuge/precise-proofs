@@ -4,3 +4,7 @@ vendor/
 .idea
 .env
 .DS_Store
+
+# wasm
+examples/wasm/main.wasm
+examples/wasm/wasm_exec.js
