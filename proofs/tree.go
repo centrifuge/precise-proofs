@@ -283,36 +283,9 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 // NewDocumentTree returns a DocumentTree with that has a root hash set.
 // It can be used to validate proofs but not for creating any.
 func NewDocumentTreeWithRootHash(proofOpts TreeOptions, rootHash []byte) DocumentTree {
-	opts := merkle.TreeOptions{
-		DisableHashLeaves: true,
-	}
-	if proofOpts.EnableHashSorting {
-		opts.EnableHashSorting = proofOpts.EnableHashSorting
-	}
-	var getSalt GetSalt
-	if proofOpts.GetSalt != nil {
-		getSalt = proofOpts.GetSalt
-	}
-	salts := &Salts{}
-	if proofOpts.Salts != nil {
-		salts = proofOpts.Salts
-	}
-	saltsLengthSuffix := DefaultSaltsLengthSuffix
-	if proofOpts.SaltsLengthSuffix != "" {
-		saltsLengthSuffix = proofOpts.SaltsLengthSuffix
-	}
-	return DocumentTree{
-		propertyList:      []Property{},
-		merkleTree:        merkle.NewTreeWithOpts(opts),
-		getSalt:           getSalt,
-		salts:             salts,
-		saltsLengthSuffix: saltsLengthSuffix,
-		leaves:            []LeafNode{},
-		hash:              proofOpts.Hash,
-		parentPrefix:      proofOpts.ParentPrefix,
-		compactProperties: proofOpts.CompactProperties,
-		rootHash:          rootHash,
-	}
+	documentTree := NewDocumentTree(proofOpts)
+	documentTree.rootHash = rootHash
+	return documentTree
 }
 
 // AddLeaves appends list of leaves to the tree's leaves.
