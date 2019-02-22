@@ -280,6 +280,14 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 	}
 }
 
+// NewDocumentTree returns a DocumentTree with that has a root hash set.
+// It can be used to validate proofs but not for creating any.
+func NewDocumentTreeWithRootHash(proofOpts TreeOptions, rootHash []byte) DocumentTree {
+	documentTree := NewDocumentTree(proofOpts)
+	documentTree.rootHash = rootHash
+	return documentTree
+}
+
 // AddLeaves appends list of leaves to the tree's leaves.
 // This function can be called multiple times and leaves will be added from left to right. Note that the lexicographic
 // sorting doesn't get applied in this method but in the protobuf flattening. The order in which leaves are added in

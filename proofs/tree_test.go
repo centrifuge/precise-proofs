@@ -349,6 +349,34 @@ func TestDocumentTree_Generate_twice(t *testing.T) {
 	assert.EqualError(t, err, "tree already filled")
 }
 
+// Test DocumentTree sets rootHash correctly and validated the generated Proof
+func TestDocumentTree_WithRootHash(t *testing.T) {
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
+	err := doctree.AddLeavesFromDocument(&documentspb.ExampleFilledRepeatedDocument)
+	assert.NoError(t, err)
+
+	err = doctree.Generate()
+	assert.NoError(t, err)
+
+	expectedRootHash := []byte{0x6, 0xfe, 0x23, 0xfe, 0x7f, 0x5f, 0x27, 0x8c, 0xca, 0xc9, 0x25, 0x9c, 0x1a, 0xa8, 0x61, 0xd9, 0xd3, 0x25, 0xe9, 0xb3, 0xec, 0xd5, 0x9f, 0xd3, 0x4d, 0xdb, 0x3d, 0xd2, 0x5b, 0x9c, 0xaa, 0x57}
+	assert.Equal(t, expectedRootHash, doctree.RootHash())
+
+	proof, err := doctree.CreateProof("valueA")
+	assert.NoError(t, err)
+
+	valid, err := doctree.ValidateProof(&proof)
+	assert.Nil(t, err)
+	assert.True(t, valid)
+
+	// Generate doctree with RootHash set and validate the above generated Proof
+	doctreeWithRootHash := NewDocumentTreeWithRootHash(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest}, expectedRootHash)
+	assert.Equal(t, expectedRootHash, doctreeWithRootHash.rootHash)
+
+	valid, err = doctreeWithRootHash.ValidateProof(&proof)
+	assert.Nil(t, err)
+	assert.True(t, valid)
+}
+
 // TestTree_hash tests calculating hashes both with sha256 and md5
 func TestTree_hash(t *testing.T) {
 	// MD5
