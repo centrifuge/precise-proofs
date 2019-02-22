@@ -211,18 +211,18 @@ type Salt struct {
 type Salts []Salt
 type GetSalt func(compact []byte) []byte
 
-type FieldParam struct {
+type PropParam struct {
 	IsCompact bool
 	Compact []byte
 	Readable string
 }
 
-func CompactProp(compact []byte) FieldParam {
-	return FieldParam{true, compact, ""}
+func CompactProp(compact []byte) PropParam {
+	return PropParam{true, compact, ""}
 }
 
-func ReadableProp(readable string) FieldParam {
-	return FieldParam{IsCompact: false, Readable: readable}
+func ReadableProp(readable string) PropParam {
+	return PropParam{IsCompact: false, Readable: readable}
 }
 
 func defaultGetSalt(salts *Salts) func([]byte) []byte {
@@ -413,7 +413,7 @@ func (doctree *DocumentTree) RootHash() []byte {
 }
 
 // CreateProof takes a property in dot notation and returns a Proof object for the given field
-func (doctree *DocumentTree) CreateProof(prop FieldParam) (proof proofspb.Proof, err error) {
+func (doctree *DocumentTree) CreateProof(prop PropParam) (proof proofspb.Proof, err error) {
 	if doctree.IsEmpty() || !doctree.filled {
 		err = fmt.Errorf("Can't create proof before generating merkle root")
 		return
