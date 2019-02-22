@@ -1,13 +1,13 @@
-WebAssembly
-===========
-
-# Getting Started
+Using precise-proofs tree generation with WebAssembly
+=====================================================
 
 This page assumes a functional Go 1.11 or newer installation. For
 troubleshooting, see the https://github.com/golang/go/wiki/InstallTroubleshooting[Install Troubleshooting]
 page.
 
-To compile a Go package `wasm` for the web:
+The package `examples/wasm` is a simple demo that can be compiled for use in a web browser. It will generate a tree from some JSON input, calculate the roothash and validate a proof.
+
+## Compilation
 
 Set `GOOS=js` and `GOARCH=wasm` environment variables to compile
 for WebAssembly:
@@ -46,6 +46,3 @@ Finally, navigate to http://localhost:8080/index.html, open the
 JavaScript debug console, and you should see the output. You can
 modify the program, rebuild `main.wasm`, and refresh to see new
 output.
-
-##### Note: 
-Do not commit the `main.wasm` and `wasm_exec.js` as both of them are dependent on the installed version of Go in the user machine
