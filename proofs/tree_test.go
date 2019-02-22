@@ -748,6 +748,13 @@ func TestDocumentTree_Generate_twice(t *testing.T) {
 	assert.EqualError(t, err, "tree already filled")
 }
 
+// Test DocumentTree sets rootHash correctly
+func TestDocumentTree_WithRootHash(t *testing.T) {
+	testRootHash := []byte{0xea, 0xa2, 0x2c, 0xc4, 0x1b, 0x91, 0x96, 0x23, 0x66, 0xc6, 0xa0, 0x8f, 0xaa, 0x49, 0xc0, 0xe8}
+	doctree := NewDocumentTreeWithRootHash(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest}, testRootHash)
+	assert.Equal(t, testRootHash, doctree.rootHash)
+}
+
 // TestTree_hash tests calculating hashes both with sha256 and md5
 func TestTree_hash(t *testing.T) {
 	// MD5
