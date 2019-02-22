@@ -213,8 +213,8 @@ type GetSalt func(compact []byte) []byte
 
 type PropParam struct {
 	IsCompact bool
-	Compact []byte
-	Readable string
+	Compact   []byte
+	Readable  string
 }
 
 func CompactProp(compact []byte) PropParam {

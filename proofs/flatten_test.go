@@ -1,8 +1,8 @@
 package proofs
 
 import (
-	"testing"
 	"crypto/sha256"
+	"testing"
 
 	"github.com/centrifuge/precise-proofs/examples/documents"
 	"github.com/stretchr/testify/assert"
