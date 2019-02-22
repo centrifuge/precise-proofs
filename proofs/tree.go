@@ -211,6 +211,20 @@ type Salt struct {
 type Salts []Salt
 type GetSalt func(compact []byte) []byte
 
+type FieldParam struct {
+	IsCompact bool
+	Compact []byte
+	Readable string
+}
+
+func CompactProp(compact []byte) FieldParam {
+	return FieldParam{true, compact, ""}
+}
+
+func ReadableProp(readable string) FieldParam {
+	return FieldParam{IsCompact: false, Readable: readable}
+}
+
 func defaultGetSalt(salts *Salts) func([]byte) []byte {
 	return func(compact []byte) []byte {
 		for ii := range *salts {
@@ -360,8 +374,18 @@ func (doctree *DocumentTree) GetLeafByProperty(prop string) (int, *LeafNode) {
 	return 0, nil
 }
 
+// GetCompactPropByPropertyName returns a leaf compact name if it is found
+func (doctree *DocumentTree) GetCompactPropByPropertyName(prop string) []byte {
+	for _, leaf := range doctree.leaves {
+		if leaf.Property.ReadableName() == prop {
+			return leaf.Property.CompactName()
+		}
+	}
+	return []byte{}
+}
+
 // GetLeafByCompactProperty returns a leaf if it is found
-func (doctree *DocumentTree) GetLeafByCompactProperty(prop []FieldNum) (int, *LeafNode) {
+func (doctree *DocumentTree) GetLeafByCompactProperty(prop []byte) (int, *LeafNode) {
 	for index, leaf := range doctree.leaves {
 		if reflect.DeepEqual(leaf.Property.CompactName(), prop) {
 			return index, &leaf
@@ -389,15 +413,24 @@ func (doctree *DocumentTree) RootHash() []byte {
 }
 
 // CreateProof takes a property in dot notation and returns a Proof object for the given field
-func (doctree *DocumentTree) CreateProof(prop string) (proof proofspb.Proof, err error) {
+func (doctree *DocumentTree) CreateProof(prop FieldParam) (proof proofspb.Proof, err error) {
 	if doctree.IsEmpty() || !doctree.filled {
 		err = fmt.Errorf("Can't create proof before generating merkle root")
 		return
 	}
 
-	index, leaf := doctree.GetLeafByProperty(prop)
-	if leaf == nil {
-		return proofspb.Proof{}, fmt.Errorf("No such field: %s in obj", prop)
+	var index int
+	var leaf *LeafNode
+	if prop.IsCompact {
+		index, leaf = doctree.GetLeafByCompactProperty(prop.Compact)
+		if leaf == nil {
+			return proofspb.Proof{}, fmt.Errorf("No such field: %x in obj", prop.Compact)
+		}
+	} else {
+		index, leaf = doctree.GetLeafByProperty(prop.Readable)
+		if leaf == nil {
+			return proofspb.Proof{}, fmt.Errorf("No such field: %s in obj", prop.Readable)
+		}
 	}
 	propName := leaf.Property.Name(doctree.compactProperties)
 	proof = proofspb.Proof{
