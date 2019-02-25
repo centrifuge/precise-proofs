@@ -360,7 +360,7 @@ func TestDocumentTree_WithRootHash(t *testing.T) {
 	expectedRootHash := []byte{0x6, 0xfe, 0x23, 0xfe, 0x7f, 0x5f, 0x27, 0x8c, 0xca, 0xc9, 0x25, 0x9c, 0x1a, 0xa8, 0x61, 0xd9, 0xd3, 0x25, 0xe9, 0xb3, 0xec, 0xd5, 0x9f, 0xd3, 0x4d, 0xdb, 0x3d, 0xd2, 0x5b, 0x9c, 0xaa, 0x57}
 	assert.Equal(t, expectedRootHash, doctree.RootHash())
 
-	proof, err := doctree.CreateProof(ReadableProp("valueA"))
+	proof, err := doctree.CreateProof("valueA")
 	assert.NoError(t, err)
 
 	valid, err := doctree.ValidateProof(&proof)
@@ -539,7 +539,7 @@ func TestTree_GenerateNestedTreeCombinedStandardProof(t *testing.T) {
 	expectedRootHashB := []byte{0xc9, 0x98, 0x2f, 0x35, 0xbc, 0x9e, 0x84, 0xab, 0xdc, 0x70, 0x12, 0x31, 0xa0, 0x45, 0x55, 0xa0, 0xb, 0xa2, 0x13, 0x13, 0x2a, 0x90, 0xee, 0xde, 0xac, 0xbc, 0x8f, 0xcd, 0x80, 0xf9, 0x3a, 0x59}
 	assert.Equal(t, expectedRootHashB, doctreeB.RootHash())
 
-	fieldProofA, err := doctreeA.CreateProof(ReadableProp("valueA"))
+	fieldProofA, err := doctreeA.CreateProof("valueA")
 	assert.NoError(t, err)
 
 	fieldHash := doctreeA.merkleTree.Nodes[0].Hash
@@ -547,7 +547,7 @@ func TestTree_GenerateNestedTreeCombinedStandardProof(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, valid)
 
-	fieldProofB, err := doctreeB.CreateProof(ReadableProp("value_not_hashed"))
+	fieldProofB, err := doctreeB.CreateProof("value_not_hashed")
 	assert.NoError(t, err)
 
 	valid, err = ValidateProofHashes(docB.ValueNotHashed, fieldProofB.Hashes, doctreeB.rootHash, doctreeB.hash)
@@ -588,7 +588,7 @@ func TestTree_GenerateNestedTreeCombinedSortedHashesProof(t *testing.T) {
 	expectedRootHashB := []byte{0x1a, 0xab, 0xa0, 0x26, 0x3d, 0xba, 0x4c, 0x85, 0x30, 0xc4, 0x87, 0x2c, 0x16, 0xd9, 0x72, 0x68, 0x5a, 0xe5, 0x1f, 0x90, 0x81, 0xde, 0xb4, 0x1d, 0xb0, 0x7b, 0xf, 0x67, 0xed, 0xde, 0xdb, 0xeb}
 	assert.Equal(t, expectedRootHashB, doctreeB.RootHash())
 
-	fieldProofA, err := doctreeA.CreateProof(ReadableProp("valueA"))
+	fieldProofA, err := doctreeA.CreateProof("valueA")
 	assert.Nil(t, err)
 
 	fieldHash := doctreeA.merkleTree.Nodes[0].Hash
@@ -596,7 +596,7 @@ func TestTree_GenerateNestedTreeCombinedSortedHashesProof(t *testing.T) {
 	assert.Nil(t, err)
 	assert.True(t, valid)
 
-	fieldProofB, err := doctreeB.CreateProof(ReadableProp("value_not_hashed"))
+	fieldProofB, err := doctreeB.CreateProof("value_not_hashed")
 	assert.Nil(t, err)
 
 	valid, err = ValidateProofSortedHashes(docB.ValueNotHashed, fieldProofB.SortedHashes, doctreeB.rootHash, doctreeB.hash)
@@ -659,7 +659,7 @@ func TestTree_GenerateProofHashed(t *testing.T) {
 	assert.Nil(t, err)
 	assert.True(t, valid)
 
-	fieldProof, err := doctree.CreateProof(ReadableProp("A"))
+	fieldProof, err := doctree.CreateProof("A")
 	assert.Nil(t, err)
 	assert.Equal(t, fieldProof.Hash, doctree.leaves[0].Hash)
 	valid, err = ValidateProofHashes(hashA[:], fieldProof.Hashes, doctree.rootHash, doctree.hash)
@@ -751,22 +751,22 @@ func TestCreateProof_standard(t *testing.T) {
 	err := doctree.AddLeavesFromDocument(&doc)
 	assert.Nil(t, err)
 
-	proof, err := doctree.CreateProof(ReadableProp("valueA"))
+	proof, err := doctree.CreateProof("valueA")
 	assert.EqualError(t, err, "Can't create proof before generating merkle root")
 
 	err = doctree.Generate()
 	assert.Nil(t, err)
 
-	_, err = doctree.CreateProof(ReadableProp("InexistentField"))
+	_, err = doctree.CreateProof("InexistentField")
 	assert.EqualError(t, err, "No such field: InexistentField in obj")
 
-	proof, err = doctree.CreateProof(ReadableProp("valueA"))
+	proof, err = doctree.CreateProof("valueA")
 	assert.Nil(t, err)
 	assert.Equal(t, ReadableName("valueA"), proof.Property)
 	assert.Equal(t, []byte(documentspb.FilledExampleDocument.ValueA), proof.Value)
 	assert.Equal(t, testSalt, proof.Salt)
 
-	proofB, err := doctree.CreateProof(ReadableProp("value_bytes1"))
+	proofB, err := doctree.CreateProof("value_bytes1")
 	assert.Nil(t, err)
 	assert.Equal(t, ReadableName("value_bytes1"), proofB.Property)
 	assert.Equal(t, doc.ValueBytes1, proofB.Value)
@@ -786,7 +786,7 @@ func TestCreateProof_standard(t *testing.T) {
 	assert.True(t, valid)
 	assert.Nil(t, err)
 
-	falseProof, err := doctree.CreateProof(ReadableProp("valueA"))
+	falseProof, err := doctree.CreateProof("valueA")
 	falseProof.Value = []byte{}
 	valid, err = doctree.ValidateProof(&falseProof)
 	assert.False(t, valid)
@@ -801,22 +801,22 @@ func TestCreateProof_compact(t *testing.T) {
 	err := doctree.AddLeavesFromDocument(&doc)
 	assert.Nil(t, err)
 
-	proof, err := doctree.CreateProof(CompactProp(doctree.GetCompactPropByPropertyName("valueA")))
+	proof, err := doctree.CreateProofWithCompactProp(doctree.GetCompactPropByPropertyName("valueA"))
 	assert.EqualError(t, err, "Can't create proof before generating merkle root")
 
 	err = doctree.Generate()
 	assert.Nil(t, err)
 
-	_, err = doctree.CreateProof(CompactProp([]byte{1, 1, 1, 1}))
+	_, err = doctree.CreateProofWithCompactProp([]byte{1, 1, 1, 1})
 	assert.EqualError(t, err, "No such field: 01010101 in obj")
 
-	proof, err = doctree.CreateProof(CompactProp(doctree.GetCompactPropByPropertyName("valueA")))
+	proof, err = doctree.CreateProofWithCompactProp(doctree.GetCompactPropByPropertyName("valueA"))
 	assert.Nil(t, err)
 	assert.Equal(t, ReadableName("valueA"), proof.Property)
 	assert.Equal(t, []byte(documentspb.FilledExampleDocument.ValueA), proof.Value)
 	assert.Equal(t, testSalt, proof.Salt)
 
-	proofB, err := doctree.CreateProof(CompactProp(doctree.GetCompactPropByPropertyName("value_bytes1")))
+	proofB, err := doctree.CreateProofWithCompactProp(doctree.GetCompactPropByPropertyName("value_bytes1"))
 	assert.Nil(t, err)
 	assert.Equal(t, ReadableName("value_bytes1"), proofB.Property)
 	assert.Equal(t, doc.ValueBytes1, proofB.Value)
@@ -836,7 +836,7 @@ func TestCreateProof_compact(t *testing.T) {
 	assert.True(t, valid)
 	assert.Nil(t, err)
 
-	falseProof, err := doctree.CreateProof(CompactProp(doctree.GetCompactPropByPropertyName("valueA")))
+	falseProof, err := doctree.CreateProofWithCompactProp(doctree.GetCompactPropByPropertyName("valueA"))
 	falseProof.Value = []byte{}
 	valid, err = doctree.ValidateProof(&falseProof)
 	assert.False(t, valid)
@@ -850,7 +850,7 @@ func TestCreateProof_compact(t *testing.T) {
 	err = doctree.Generate()
 	assert.Nil(t, err)
 	s := doctree.GetCompactPropByPropertyName("valueD.valueB")
-	proof, err = doctree.CreateProof(CompactProp(s))
+	proof, err = doctree.CreateProofWithCompactProp(s)
 	assert.Nil(t, err)
 	assert.Equal(t, ReadableName("valueD.valueB"), proof.Property)
 	assert.Equal(t, []byte(documentspb.ExampleFilledNestedRepeatedDocument.ValueD.ValueB), proof.Value)
@@ -864,22 +864,22 @@ func TestCreateProof_standard_compactProperties(t *testing.T) {
 	err := doctree.AddLeavesFromDocument(&doc)
 	assert.Nil(t, err)
 
-	proof, err := doctree.CreateProof(ReadableProp("valueA"))
+	proof, err := doctree.CreateProof("valueA")
 	assert.EqualError(t, err, "Can't create proof before generating merkle root")
 
 	err = doctree.Generate()
 	assert.Nil(t, err)
 
-	_, err = doctree.CreateProof(ReadableProp("InexistentField"))
+	_, err = doctree.CreateProof("InexistentField")
 	assert.EqualError(t, err, "No such field: InexistentField in obj")
 
-	proof, err = doctree.CreateProof(ReadableProp("valueA"))
+	proof, err = doctree.CreateProof("valueA")
 	assert.Nil(t, err)
 	assert.Equal(t, CompactName(0, 0, 0, 1), proof.Property)
 	assert.Equal(t, []byte(documentspb.FilledExampleDocument.ValueA), proof.Value)
 	assert.Equal(t, testSalt, proof.Salt)
 
-	proofB, err := doctree.CreateProof(CompactProp(doctree.GetCompactPropByPropertyName("value_bytes1")))
+	proofB, err := doctree.CreateProofWithCompactProp(doctree.GetCompactPropByPropertyName("value_bytes1"))
 	assert.Nil(t, err)
 	assert.Equal(t, CompactName(0, 0, 0, 5), proofB.Property)
 	assert.Equal(t, doc.ValueBytes1, proofB.Value)
@@ -899,7 +899,7 @@ func TestCreateProof_standard_compactProperties(t *testing.T) {
 	assert.True(t, valid)
 	assert.Nil(t, err)
 
-	falseProof, err := doctree.CreateProof(ReadableProp("valueA"))
+	falseProof, err := doctree.CreateProof("valueA")
 	falseProof.Value = []byte{}
 	valid, err = doctree.ValidateProof(&falseProof)
 	assert.False(t, valid)
@@ -912,10 +912,10 @@ func TestCreateOneofProof(t *testing.T) {
 	assert.Nil(t, err)
 	err = doctree.Generate()
 
-	_, err = doctree.CreateProof(ReadableProp("valueC"))
+	_, err = doctree.CreateProof("valueC")
 	assert.EqualError(t, err, "No such field: valueC in obj")
 
-	proof, err := doctree.CreateProof(ReadableProp("valueB"))
+	proof, err := doctree.CreateProof("valueB")
 	assert.Nil(t, err)
 	assert.Equal(t, ReadableName("valueB"), proof.Property)
 	assert.Equal(t, toBytesArray(documentspb.ExampleOneofSampleDocument.OneofBlock.(*documentspb.OneofSample_ValueB).ValueB), proof.Value)
@@ -938,9 +938,9 @@ func TestCreateOneofProof(t *testing.T) {
 	assert.Nil(t, err)
 	err = doctree.Generate()
 
-	_, err = doctree.CreateProof(ReadableProp("valueB"))
+	_, err = doctree.CreateProof("valueB")
 	assert.EqualError(t, err, "No such field: valueB in obj")
-	_, err = doctree.CreateProof(ReadableProp("valueC"))
+	_, err = doctree.CreateProof("valueC")
 	assert.Nil(t, err)
 
 	doctree = NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
@@ -950,9 +950,9 @@ func TestCreateOneofProof(t *testing.T) {
 	assert.Nil(t, err)
 	err = doctree.Generate()
 
-	_, err = doctree.CreateProof(ReadableProp("valueC"))
+	_, err = doctree.CreateProof("valueC")
 	assert.EqualError(t, err, "No such field: valueC in obj")
-	_, err = doctree.CreateProof(ReadableProp("valueD.valueA"))
+	_, err = doctree.CreateProof("valueD.valueA")
 	assert.Nil(t, err)
 
 	doctree = NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
@@ -960,11 +960,11 @@ func TestCreateOneofProof(t *testing.T) {
 	assert.Nil(t, err)
 	err = doctree.Generate()
 
-	_, err = doctree.CreateProof(ReadableProp("valueB"))
+	_, err = doctree.CreateProof("valueB")
 	assert.EqualError(t, err, "No such field: valueB in obj")
-	_, err = doctree.CreateProof(ReadableProp("valueD.valueA"))
+	_, err = doctree.CreateProof("valueD.valueA")
 	assert.EqualError(t, err, "No such field: valueD.valueA in obj")
-	_, err = doctree.CreateProof(ReadableProp("valueC"))
+	_, err = doctree.CreateProof("valueC")
 	assert.EqualError(t, err, "No such field: valueC in obj")
 
 }
@@ -976,10 +976,10 @@ func TestCreateProof_sorted(t *testing.T) {
 	err = doctree.Generate()
 	assert.Nil(t, err)
 
-	_, err = doctree.CreateProof(ReadableProp("InexistentField"))
+	_, err = doctree.CreateProof("InexistentField")
 	assert.EqualError(t, err, "No such field: InexistentField in obj")
 
-	proof, err := doctree.CreateProof(ReadableProp("valueA"))
+	proof, err := doctree.CreateProof("valueA")
 	assert.Nil(t, err)
 	assert.Equal(t, ReadableName("valueA"), proof.Property)
 	assert.Equal(t, []byte(documentspb.FilledExampleDocument.ValueA), proof.Value)
@@ -995,7 +995,7 @@ func TestCreateProof_sorted(t *testing.T) {
 	assert.True(t, valid)
 	assert.Nil(t, err)
 
-	falseProof, err := doctree.CreateProof(ReadableProp("valueA"))
+	falseProof, err := doctree.CreateProof("valueA")
 	falseProof.Value = []byte{}
 	valid, err = doctree.ValidateProof(&falseProof)
 	assert.False(t, valid)
@@ -1008,10 +1008,10 @@ func TestCreateRepeatedSortedProof(t *testing.T) {
 	assert.Nil(t, err)
 	err = doctree.Generate()
 
-	_, err = doctree.CreateProof(ReadableProp("InexistentField"))
+	_, err = doctree.CreateProof("InexistentField")
 	assert.EqualError(t, err, "No such field: InexistentField in obj")
 
-	proof, err := doctree.CreateProof(ReadableProp("valueC[1]"))
+	proof, err := doctree.CreateProof("valueC[1]")
 	assert.Nil(t, err)
 	assert.Equal(t, ReadableName("valueC[1]"), proof.Property)
 	assert.Equal(t, []byte(documentspb.ExampleFilledRepeatedDocument.ValueC[1]), proof.Value)
@@ -1027,7 +1027,7 @@ func TestCreateRepeatedSortedProof(t *testing.T) {
 	assert.True(t, valid)
 	assert.Nil(t, err)
 
-	falseProof, err := doctree.CreateProof(ReadableProp("valueC[1]"))
+	falseProof, err := doctree.CreateProof("valueC[1]")
 	falseProof.Value = []byte{}
 	valid, err = doctree.ValidateProof(&falseProof)
 	assert.False(t, valid)
@@ -1042,10 +1042,10 @@ func TestCreateRepeatedSortedProofAutoSalts(t *testing.T) {
 	err = doctree.Generate()
 	assert.Nil(t, err)
 
-	_, err = doctree.CreateProof(ReadableProp("InexistentField"))
+	_, err = doctree.CreateProof("InexistentField")
 	assert.EqualError(t, err, "No such field: InexistentField in obj")
 
-	proof, err := doctree.CreateProof(ReadableProp("valueA"))
+	proof, err := doctree.CreateProof("valueA")
 	assert.Nil(t, err)
 	assert.Equal(t, ReadableName("valueA"), proof.Property)
 	assert.Equal(t, []byte(documentspb.ExampleFilledRepeatedDocument.ValueA), proof.Value)
@@ -1059,7 +1059,7 @@ func TestCreateRepeatedSortedProofAutoSalts(t *testing.T) {
 	assert.True(t, valid)
 	assert.Nil(t, err)
 
-	falseProof, err := doctree.CreateProof(ReadableProp("valueA"))
+	falseProof, err := doctree.CreateProof("valueA")
 	falseProof.Value = []byte{}
 	valid, err = doctree.ValidateProof(&falseProof)
 	assert.False(t, valid)
@@ -1074,7 +1074,7 @@ func TestCreateProofFromRepeatedField(t *testing.T) {
 	err = doctree.Generate()
 	assert.Nil(t, err)
 
-	proof, err := doctree.CreateProof(ReadableProp("valueC[1].valueA"))
+	proof, err := doctree.CreateProof("valueC[1].valueA")
 	assert.Nil(t, err)
 	assert.Equal(t, ReadableName("valueC[1].valueA"), proof.Property)
 	assert.Equal(t, []byte(documentspb.ExampleFilledNestedRepeatedDocument.ValueC[1].ValueA), proof.Value)
@@ -1089,7 +1089,7 @@ func TestCreateProofFromRepeatedFieldWithParentPrefix(t *testing.T) {
 	err = doctree.Generate()
 	assert.Nil(t, err)
 
-	proof, err := doctree.CreateProof(ReadableProp("doc.valueC[1].valueA"))
+	proof, err := doctree.CreateProof("doc.valueC[1].valueA")
 	assert.Nil(t, err)
 	assert.Equal(t, ReadableName("doc.valueC[1].valueA"), proof.Property)
 	assert.Equal(t, []byte(documentspb.ExampleFilledNestedRepeatedDocument.ValueC[1].ValueA), proof.Value)
@@ -1104,7 +1104,7 @@ func TestCreateProofFromNestedField(t *testing.T) {
 	err = doctree.Generate()
 	assert.Nil(t, err)
 
-	proof, err := doctree.CreateProof(ReadableProp("valueD.valueA.valueA"))
+	proof, err := doctree.CreateProof("valueD.valueA.valueA")
 	assert.Nil(t, err)
 	assert.Equal(t, ReadableName("valueD.valueA.valueA"), proof.Property)
 	assert.Equal(t, []byte(documentspb.ExampleFilledNestedRepeatedDocument.ValueD.ValueA.ValueA), proof.Value)
@@ -1119,7 +1119,7 @@ func TestCreateProofFromNestedFieldWithParentPrefix(t *testing.T) {
 	err = doctree.Generate()
 	assert.Nil(t, err)
 
-	proof, err := doctree.CreateProof(ReadableProp("doc.valueD.valueA.valueA"))
+	proof, err := doctree.CreateProof("doc.valueD.valueA.valueA")
 	assert.Nil(t, err)
 	assert.Equal(t, ReadableName("doc.valueD.valueA.valueA"), proof.Property)
 	assert.Equal(t, []byte(documentspb.ExampleFilledNestedRepeatedDocument.ValueD.ValueA.ValueA), proof.Value)
@@ -1188,7 +1188,7 @@ func Test_Enums(t *testing.T) {
 	fmt.Printf("Generated tree: %s\n", doctree.String())
 
 	for _, field := range []string{"valueA", "enum_type"} {
-		proof, err := doctree.CreateProof(ReadableProp(field))
+		proof, err := doctree.CreateProof(field)
 		assert.NoError(t, err)
 		proofJson, err := json.Marshal(proof)
 		assert.NoError(t, err)
@@ -1208,7 +1208,7 @@ func Test_integers(t *testing.T) {
 	fmt.Printf("Generated tree: %s\n", doctree.String())
 
 	for _, field := range []string{"valueA", "valueB", "valueG", "valueH", "valueJ"} {
-		proof, err := doctree.CreateProof(ReadableProp(field))
+		proof, err := doctree.CreateProof(field)
 		assert.NoError(t, err)
 		proofJson, err := json.Marshal(proof)
 		assert.NoError(t, err)
@@ -1227,7 +1227,7 @@ func Test_CompactSaltPairs(t *testing.T) {
 	err := doctree.AddLeavesFromDocument(&doc)
 	assert.Nil(t, err)
 	doctree.Generate()
-	proof, err := doctree.CreateProof(ReadableProp("valueA"))
+	proof, err := doctree.CreateProof("valueA")
 	salt1 := proof.Salt
 	assert.Nil(t, err)
 	valid, err := doctree.ValidateProof(&proof)
@@ -1238,7 +1238,7 @@ func Test_CompactSaltPairs(t *testing.T) {
 	err = doctree2.AddLeavesFromDocument(&doc)
 	assert.Nil(t, err)
 	doctree2.Generate()
-	proof2, err := doctree2.CreateProof(ReadableProp("valueB"))
+	proof2, err := doctree2.CreateProof("valueB")
 	salt2 := proof2.Salt
 	assert.Nil(t, err)
 	valid, err = doctree2.ValidateProof(&proof2)
@@ -1252,7 +1252,7 @@ func Test_CompactSaltPairs(t *testing.T) {
 	err = doctree3.AddLeavesFromDocument(&doc)
 	assert.Nil(t, err)
 	doctree3.Generate()
-	proof3, err := doctree3.CreateProof(ReadableProp("valueA"))
+	proof3, err := doctree3.CreateProof("valueA")
 	assert.Nil(t, err)
 	salt3 := proof3.Salt
 	valid, err = doctree3.ValidateProof(&proof3)
