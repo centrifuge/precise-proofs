@@ -406,6 +406,7 @@ func (doctree *DocumentTree) RootHash() []byte {
 	return doctree.rootHash
 }
 
+// CreateProof takes a property in dot notation and returns a Proof object for the given field
 func (doctree *DocumentTree) CreateProof(prop string) (proof proofspb.Proof, err error) {
 	if doctree.IsEmpty() || !doctree.filled {
 		err = fmt.Errorf("Can't create proof before generating merkle root")
@@ -420,6 +421,7 @@ func (doctree *DocumentTree) CreateProof(prop string) (proof proofspb.Proof, err
 	return doctree.createProof(index, leaf)
 }
 
+// CreateProofWithCompactProp takes a property in compact form and returns a Proof object for the given field
 func (doctree *DocumentTree) CreateProofWithCompactProp(prop []byte) (proof proofspb.Proof, err error) {
 	if doctree.IsEmpty() || !doctree.filled {
 		err = fmt.Errorf("Can't create proof before generating merkle root")
@@ -434,7 +436,6 @@ func (doctree *DocumentTree) CreateProofWithCompactProp(prop []byte) (proof proo
 	return doctree.createProof(index, leaf)
 }
 
-// createProof takes a property in dot notation or compact form wrapped in a PropParam and returns a Proof object for the given field
 func (doctree *DocumentTree) createProof(index int, leaf *LeafNode) (proof proofspb.Proof, err error) {
 	propName := leaf.Property.Name(doctree.compactProperties)
 	proof = proofspb.Proof{
