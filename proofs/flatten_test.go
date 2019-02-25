@@ -13,7 +13,7 @@ func TestFlattenMessage(t *testing.T) {
 		ValueA: "Foo",
 	}
 
-	leaves, err := FlattenMessage(&message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
+	leaves, err := FlattenMessage(&message, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty)
 	assert.NoError(t, err)
 	assert.Equal(t, 9, len(leaves))
 
@@ -49,7 +49,7 @@ func TestFlattenMessage_compact(t *testing.T) {
 		ValueA: "Foo",
 	}
 
-	leaves, err := FlattenMessage(&message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, true, Empty)
+	leaves, err := FlattenMessage(&message, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, true, Empty)
 	assert.NoError(t, err)
 	assert.Equal(t, 9, len(leaves))
 
@@ -83,7 +83,7 @@ func TestFlattenMessageWithPrefix(t *testing.T) {
 	}
 
 	parentProp := NewProperty("doc", 42)
-	leaves, err := FlattenMessage(&message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, parentProp)
+	leaves, err := FlattenMessage(&message, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, parentProp)
 	assert.NoError(t, err)
 	assert.Equal(t, 9, len(leaves))
 
@@ -115,7 +115,7 @@ func TestFlattenMessageWithPrefix(t *testing.T) {
 func TestFlattenMessage_AllFieldTypes(t *testing.T) {
 	message := documentspb.NewAllFieldTypes()
 
-	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
+	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty)
 	propOrder := []Property{}
 	for _, leaf := range leaves {
 		propOrder = append(propOrder, leaf.Property)
@@ -135,7 +135,7 @@ func TestFlattenMessage_HashedField(t *testing.T) {
 		ValueNotHashed: foobarHash[:],
 	}
 
-	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
+	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty)
 	var propOrder []Property
 	for _, leaf := range leaves {
 		propOrder = append(propOrder, leaf.Property)
@@ -159,7 +159,7 @@ func TestFlattenMessage_HashedField(t *testing.T) {
 		Value: "foobar",
 	}
 
-	leaves, err = FlattenMessage(invalidMessage, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
+	leaves, err = FlattenMessage(invalidMessage, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty)
 	assert.EqualError(t, err, "The option hashed_field is only supported for type `bytes`")
 }
 
@@ -167,7 +167,7 @@ func TestFlattenMessage_Oneof(t *testing.T) {
 	message := &documentspb.OneofSample{
 		OneofBlock: &documentspb.OneofSample_ValueB{int32(1)},
 	}
-	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
+	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty)
 	var propOrder []Property
 	for _, leaf := range leaves {
 		propOrder = append(propOrder, leaf.Property)
@@ -182,7 +182,7 @@ func TestFlattenMessage_Oneof(t *testing.T) {
 
 	propOrder = []Property{}
 	message.OneofBlock = &documentspb.OneofSample_ValueC{"test"}
-	leaves, err = FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
+	leaves, err = FlattenMessage(message, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty)
 	for _, leaf := range leaves {
 		propOrder = append(propOrder, leaf.Property)
 	}
@@ -195,7 +195,7 @@ func TestFlattenMessage_Oneof(t *testing.T) {
 
 	propOrder = []Property{}
 	message.OneofBlock = &documentspb.OneofSample_ValueD{&documentspb.SimpleItem{ValueA: "testValA"}}
-	leaves, err = FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
+	leaves, err = FlattenMessage(message, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty)
 	for _, leaf := range leaves {
 		propOrder = append(propOrder, leaf.Property)
 	}
@@ -215,7 +215,7 @@ func TestFlattenMessage_SimpleMap(t *testing.T) {
 		},
 	}
 
-	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
+	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty)
 	assert.NoError(t, err)
 	propOrder := []Property{}
 	for _, leaf := range leaves {
@@ -225,7 +225,7 @@ func TestFlattenMessage_SimpleMap(t *testing.T) {
 	mapElemProp, err := mapProp.MapElemProp(int32(42), 0)
 	assert.NoError(t, err)
 	assert.Equal(t, []Property{
-		mapProp.LengthProp(DefaultSaltsLengthSuffix),
+		mapProp.LengthProp(DefaultReadablePropertyLengthSuffix),
 		mapElemProp,
 	}, propOrder)
 
@@ -238,7 +238,7 @@ func TestFlattenMessage_SimpleStringMap(t *testing.T) {
 		},
 	}
 
-	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
+	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty)
 	assert.NoError(t, err)
 	propOrder := []Property{}
 	for _, leaf := range leaves {
@@ -248,7 +248,7 @@ func TestFlattenMessage_SimpleStringMap(t *testing.T) {
 	mapElemProp, err := mapProp.MapElemProp("key", 32)
 	assert.NoError(t, err)
 	assert.Equal(t, []Property{
-		mapProp.LengthProp(DefaultSaltsLengthSuffix),
+		mapProp.LengthProp(DefaultReadablePropertyLengthSuffix),
 		mapElemProp,
 	}, propOrder)
 
@@ -265,7 +265,7 @@ func TestFlattenMessage_NestedMap(t *testing.T) {
 		},
 	}
 
-	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
+	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty)
 	assert.NoError(t, err)
 	propOrder := []Property{}
 	for _, leaf := range leaves {
@@ -278,8 +278,8 @@ func TestFlattenMessage_NestedMap(t *testing.T) {
 	mapElemElemProp, err := mapElemProp.MapElemProp(int32(-42), 0)
 	assert.NoError(t, err)
 	assert.Equal(t, []Property{
-		mapProp.LengthProp(DefaultSaltsLengthSuffix),
-		mapElemProp.LengthProp(DefaultSaltsLengthSuffix),
+		mapProp.LengthProp(DefaultReadablePropertyLengthSuffix),
+		mapElemProp.LengthProp(DefaultReadablePropertyLengthSuffix),
 		mapElemElemProp,
 	}, propOrder)
 
@@ -295,7 +295,7 @@ func TestFlattenMessage_SimpleEntries(t *testing.T) {
 		},
 	}
 
-	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
+	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty)
 	assert.NoError(t, err)
 	propOrder := []Property{}
 	for _, leaf := range leaves {
@@ -305,7 +305,7 @@ func TestFlattenMessage_SimpleEntries(t *testing.T) {
 	mapElemProp, err := mapProp.MapElemProp("key", 32)
 	assert.NoError(t, err)
 	assert.Equal(t, []Property{
-		mapProp.LengthProp(DefaultSaltsLengthSuffix),
+		mapProp.LengthProp(DefaultReadablePropertyLengthSuffix),
 		mapElemProp,
 	}, propOrder)
 
@@ -323,7 +323,7 @@ func TestFlattenMessage_Entries(t *testing.T) {
 		},
 	}
 
-	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
+	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty)
 	assert.NoError(t, err)
 	propOrder := []Property{}
 	for _, leaf := range leaves {
@@ -333,7 +333,7 @@ func TestFlattenMessage_Entries(t *testing.T) {
 	mapElemProp, err := mapProp.MapElemProp("key", 32)
 	assert.NoError(t, err)
 	assert.Equal(t, []Property{
-		mapProp.LengthProp(DefaultSaltsLengthSuffix),
+		mapProp.LengthProp(DefaultReadablePropertyLengthSuffix),
 		mapElemProp.FieldProp("valueA", 2),
 		mapElemProp.FieldProp("valueB", 3),
 		mapElemProp.FieldProp("valueC", 4),
@@ -351,7 +351,7 @@ func TestFlattenMessage_BytesKeyEntries(t *testing.T) {
 		},
 	}
 
-	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
+	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty)
 	assert.NoError(t, err)
 	propOrder := []Property{}
 	for _, leaf := range leaves {
@@ -361,7 +361,7 @@ func TestFlattenMessage_BytesKeyEntries(t *testing.T) {
 	mapElemProp, err := mapProp.MapElemProp([]byte("abcdefghijklmnopqrst"), 20)
 	assert.NoError(t, err)
 	assert.Equal(t, []Property{
-		mapProp.LengthProp(DefaultSaltsLengthSuffix),
+		mapProp.LengthProp(DefaultReadablePropertyLengthSuffix),
 		mapElemProp,
 	}, propOrder)
 
@@ -371,7 +371,7 @@ func TestFlattenMessageFromAutoFillSalts(t *testing.T) {
 	exampleFNDoc := &documentspb.ExampleFilledNestedRepeatedDocument
 
 	rootProp := NewProperty("doc", 42)
-	leaves, err := FlattenMessage(exampleFNDoc, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, rootProp)
+	leaves, err := FlattenMessage(exampleFNDoc, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, rootProp)
 	assert.Nil(t, err)
 	propOrder := []Property{}
 	for _, leaf := range leaves {
@@ -380,7 +380,7 @@ func TestFlattenMessageFromAutoFillSalts(t *testing.T) {
 	assert.Equal(t, []Property{
 		rootProp.FieldProp("valueA", 1),
 		rootProp.FieldProp("valueB", 2),
-		rootProp.FieldProp("valueC", 3).LengthProp(DefaultSaltsLengthSuffix),
+		rootProp.FieldProp("valueC", 3).LengthProp(DefaultReadablePropertyLengthSuffix),
 		rootProp.FieldProp("valueC", 3).SliceElemProp(0).FieldProp("valueA", 1),
 		rootProp.FieldProp("valueC", 3).SliceElemProp(1).FieldProp("valueA", 1),
 		rootProp.FieldProp("valueD", 4).FieldProp("valueA", 1).FieldProp("valueA", 1),
@@ -390,7 +390,7 @@ func TestFlattenMessageFromAutoFillSalts(t *testing.T) {
 
 func TestFlattenMessageFromAlreadyFilledSalts(t *testing.T) {
 	exampleDoc := &documentspb.ExampleFilledNestedRepeatedDocument
-	leaves, err := FlattenMessage(exampleDoc, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
+	leaves, err := FlattenMessage(exampleDoc, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty)
 	assert.Nil(t, err)
 	propOrder := []Property{}
 	for _, leaf := range leaves {
@@ -399,7 +399,7 @@ func TestFlattenMessageFromAlreadyFilledSalts(t *testing.T) {
 	assert.Equal(t, []Property{
 		Empty.FieldProp("valueA", 1),
 		Empty.FieldProp("valueB", 2),
-		Empty.FieldProp("valueC", 3).LengthProp(DefaultSaltsLengthSuffix),
+		Empty.FieldProp("valueC", 3).LengthProp(DefaultReadablePropertyLengthSuffix),
 		Empty.FieldProp("valueC", 3).SliceElemProp(0).FieldProp("valueA", 1),
 		Empty.FieldProp("valueC", 3).SliceElemProp(1).FieldProp("valueA", 1),
 		Empty.FieldProp("valueD", 4).FieldProp("valueA", 1).FieldProp("valueA", 1),

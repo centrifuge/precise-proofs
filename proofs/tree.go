@@ -67,18 +67,18 @@ A tree will be created out of this document by flattening all the fields values
 as leaves. This would result in a tree with the following leaves:
 
     - "fieldA" aka [1]
-    - "fieldB.length" aka [2]
+    - "fieldB_length" aka [2]
     - "fieldB[0]" aka [2, 0]
     - "fieldB[1]" aka [2, 1]
-    - "fieldC.length" aka [3]
+    - "fieldC_length" aka [3]
     - "fieldC[0]" aka [3, 0]
     - "fieldC[1]" aka [3, 1]
     - "fieldC[2]" aka [3, 2]
-    - "fieldD.length" aka [4]
+    - "fieldD_length" aka [4]
     - "fieldD[a]" aka [4, 97]
     - "fieldD[b]" aka [4, 98]
     - "fieldD[c]" aka [4, 99]
-    - "fieldE.length" aka [5]
+    - "fieldE_length" aka [5]
     - "fieldE[0]" aka [5, 0]
     - "fieldE[1]" aka [5, 1]
     - "fieldE[2]" aka [5, 2]
@@ -154,8 +154,8 @@ in different proof generation sessions for the same document.
 Salt field for slice/map length
 
 We encode the length of a slice or map field in the tree as an additional leaf so a proof can
-be created about the size of a field. Default is "length". The new added length field can be customized
-with the SaltsLengthSuffix option.
+be created about the size of a field. Default is "_length". The new added length field can be customized
+with the ReadablePropertyLengthSuffix option.
 
 	message Document {
 	  repeated string fieldA = 1;
@@ -184,9 +184,9 @@ import (
 	"github.com/xsleonard/go-merkle"
 )
 
-// DefaultSaltsLengthSuffix is the suffix used to store the length of slices (repeated) fields in the tree. It can be
-// customized with the SaltsLenghtSuffix TreeOption
-const DefaultSaltsLengthSuffix = "length"
+// DefaultReadablePropertyLengthSuffix is the suffix used to store the length of slices (repeated) fields in the tree. It can be
+// customized with the ReadablePropertyLengthSuffix TreeOption
+const DefaultReadablePropertyLengthSuffix = "_length"
 
 // TreeOptions allows customizing the generation of the tree
 type TreeOptions struct {
@@ -194,10 +194,10 @@ type TreeOptions struct {
 	EnableHashSorting bool
 	GetSalt           GetSalt
 	Salts             *Salts
-	// SaltsLengthSuffix: As precise proofs support repeated fields, when generating the merkle tree we need to add a
-	// leaf that represents the length of the slice. The default suffix is `Length`, although it is customizable so it
+	// ReadablePropertyLengthSuffix: As precise proofs support repeated fields, when generating the merkle tree we need to add a
+	// leaf that represents the length of the slice. The default suffix is `_length`, although it is customizable so it
 	// does not collide with potential field names of your own proto structs.
-	SaltsLengthSuffix string
+	ReadablePropertyLengthSuffix string
 	Hash              hash.Hash
 	// ParentPrefix defines an arbitrary prefix to prepend to the parent, so all fields are prepended with it
 	ParentPrefix      Property
@@ -238,7 +238,7 @@ type DocumentTree struct {
 	salts             *Salts
 	propertyList      []Property
 	hash              hash.Hash
-	saltsLengthSuffix string
+	readablePropertyLengthSuffix string
 	parentPrefix      Property
 	compactProperties bool
 }
@@ -263,16 +263,16 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 	if proofOpts.Salts != nil {
 		salts = proofOpts.Salts
 	}
-	saltsLengthSuffix := DefaultSaltsLengthSuffix
-	if proofOpts.SaltsLengthSuffix != "" {
-		saltsLengthSuffix = proofOpts.SaltsLengthSuffix
+	readablePropertyLengthSuffix := DefaultReadablePropertyLengthSuffix
+	if proofOpts.ReadablePropertyLengthSuffix != "" {
+		readablePropertyLengthSuffix = proofOpts.ReadablePropertyLengthSuffix
 	}
 	return DocumentTree{
 		propertyList:      []Property{},
 		merkleTree:        merkle.NewTreeWithOpts(opts),
 		getSalt:           getSalt,
 		salts:             salts,
-		saltsLengthSuffix: saltsLengthSuffix,
+		readablePropertyLengthSuffix: readablePropertyLengthSuffix,
 		leaves:            []LeafNode{},
 		hash:              proofOpts.Hash,
 		parentPrefix:      proofOpts.ParentPrefix,
@@ -323,7 +323,7 @@ func (doctree *DocumentTree) AddLeavesFromDocument(document proto.Message) (err 
 	} else {
 		getSalt = defaultGetSalt(doctree.salts)
 	}
-	leaves, err := FlattenMessage(document, getSalt, doctree.saltsLengthSuffix, doctree.hash, doctree.compactProperties, doctree.parentPrefix)
+	leaves, err := FlattenMessage(document, getSalt, doctree.readablePropertyLengthSuffix, doctree.hash, doctree.compactProperties, doctree.parentPrefix)
 	if err != nil {
 		return err
 	}
