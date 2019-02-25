@@ -5,14 +5,15 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"testing"
+	"time"
+
 	"github.com/centrifuge/precise-proofs/examples/documents"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/assert"
 	"github.com/xsleonard/go-merkle"
-	"strconv"
-	"testing"
-	"time"
 )
 
 var testSalt = []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225}
@@ -26,8 +27,6 @@ var sha256Hash = sha256.New()
 type UnsupportedType struct {
 	supported bool
 }
-
-type customEncoder struct{}
 
 func TestValueToBytesArray(t *testing.T) {
 	f := &messageFlattener{}
@@ -794,6 +793,70 @@ func TestCreateProof_standard(t *testing.T) {
 	assert.EqualError(t, err, "Hash does not match")
 }
 
+func TestCreateProof_compact(t *testing.T) {
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doc := documentspb.FilledExampleDocument
+	doc.ValueNotHashed = sha256Hash.Sum([]byte("some hash"))
+	doc.ValueBytes1 = []byte("ValueBytes1")
+	err := doctree.AddLeavesFromDocument(&doc)
+	assert.Nil(t, err)
+
+	proof, err := doctree.CreateProofWithCompactProp(doctree.GetCompactPropByPropertyName("valueA"))
+	assert.EqualError(t, err, "Can't create proof before generating merkle root")
+
+	err = doctree.Generate()
+	assert.Nil(t, err)
+
+	_, err = doctree.CreateProofWithCompactProp([]byte{1, 1, 1, 1})
+	assert.EqualError(t, err, "No such field: 01010101 in obj")
+
+	proof, err = doctree.CreateProofWithCompactProp(doctree.GetCompactPropByPropertyName("valueA"))
+	assert.Nil(t, err)
+	assert.Equal(t, ReadableName("valueA"), proof.Property)
+	assert.Equal(t, []byte(documentspb.FilledExampleDocument.ValueA), proof.Value)
+	assert.Equal(t, testSalt, proof.Salt)
+
+	proofB, err := doctree.CreateProofWithCompactProp(doctree.GetCompactPropByPropertyName("value_bytes1"))
+	assert.Nil(t, err)
+	assert.Equal(t, ReadableName("value_bytes1"), proofB.Property)
+	assert.Equal(t, doc.ValueBytes1, proofB.Value)
+	assert.Equal(t, testSalt, proofB.Salt)
+
+	fieldHash, err := CalculateHashForProofField(&proof, sha256Hash)
+	rootHash := []byte{0x2a, 0xf5, 0x36, 0xea, 0x7f, 0xc6, 0xde, 0x5f, 0xf2, 0x37, 0xa8, 0x96, 0x5, 0xb0, 0x57, 0x81, 0xe7, 0x98, 0xf, 0x3e, 0x7b, 0x33, 0xab, 0x95, 0x54, 0xbe, 0xdd, 0xb, 0xa9, 0x69, 0x17, 0x5f}
+	assert.Equal(t, rootHash, doctree.rootHash)
+	valid, err := ValidateProofHashes(fieldHash, proof.Hashes, rootHash, doctree.hash)
+	assert.True(t, valid)
+
+	valid, err = doctree.ValidateProof(&proof)
+	assert.True(t, valid)
+	assert.Nil(t, err)
+
+	valid, err = doctree.ValidateProof(&proofB)
+	assert.True(t, valid)
+	assert.Nil(t, err)
+
+	falseProof, err := doctree.CreateProofWithCompactProp(doctree.GetCompactPropByPropertyName("valueA"))
+	falseProof.Value = []byte{}
+	valid, err = doctree.ValidateProof(&falseProof)
+	assert.False(t, valid)
+	assert.EqualError(t, err, "Hash does not match")
+
+	// nested
+	docNested := documentspb.ExampleFilledNestedRepeatedDocument
+	doctree = NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
+	err = doctree.AddLeavesFromDocument(&docNested)
+	assert.Nil(t, err)
+	err = doctree.Generate()
+	assert.Nil(t, err)
+	s := doctree.GetCompactPropByPropertyName("valueD.valueB")
+	proof, err = doctree.CreateProofWithCompactProp(s)
+	assert.Nil(t, err)
+	assert.Equal(t, ReadableName("valueD.valueB"), proof.Property)
+	assert.Equal(t, []byte(documentspb.ExampleFilledNestedRepeatedDocument.ValueD.ValueB), proof.Value)
+	assert.Equal(t, testSalt, proof.Salt)
+}
+
 func TestCreateProof_standard_compactProperties(t *testing.T) {
 	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, CompactProperties: true, GetSalt: NewSaltForTest})
 	doc := documentspb.FilledExampleDocument
@@ -816,7 +879,7 @@ func TestCreateProof_standard_compactProperties(t *testing.T) {
 	assert.Equal(t, []byte(documentspb.FilledExampleDocument.ValueA), proof.Value)
 	assert.Equal(t, testSalt, proof.Salt)
 
-	proofB, err := doctree.CreateProof("value_bytes1")
+	proofB, err := doctree.CreateProofWithCompactProp(doctree.GetCompactPropByPropertyName("value_bytes1"))
 	assert.Nil(t, err)
 	assert.Equal(t, CompactName(0, 0, 0, 5), proofB.Property)
 	assert.Equal(t, doc.ValueBytes1, proofB.Value)

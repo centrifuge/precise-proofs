@@ -71,7 +71,7 @@ func validateProof(i []js.Value) {
 
 	fmt.Printf("Proof validated: %v\n", valid)
 
-	js.Global().Get("document").Call("getElementById", "resultValidProof").Set("value", "Valid: " + fmt.Sprint(valid))
+	js.Global().Get("document").Call("getElementById", "resultValidProof").Set("value", "Valid: "+fmt.Sprint(valid))
 }
 
 func registerCallbacks() {
