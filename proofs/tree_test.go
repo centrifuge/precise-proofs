@@ -1367,4 +1367,7 @@ func TestTree_LengthProp_List(t *testing.T) {
 	el, err = toBytesArray(expectedLen)
 	assert.NoError(t, err)
 	assert.Equal(t, l.Value, el)
+
+	leaves := tree.GetLeaves()
+	assert.Len(t, leaves, 3)
 }
