@@ -358,6 +358,11 @@ func (doctree *DocumentTree) Generate() error {
 	return nil
 }
 
+// GetLeaves returns the leaves of the doc tree.
+func (doctree *DocumentTree) GetLeaves() LeafList {
+	return doctree.leaves
+}
+
 // GetLeafByProperty returns a leaf if it is found
 func (doctree *DocumentTree) GetLeafByProperty(prop string) (int, *LeafNode) {
 	for index, leaf := range doctree.leaves {

@@ -53,7 +53,8 @@ func TestValueToBytesArray(t *testing.T) {
 
 	// Timestamp
 	ts := time.Now()
-	expected := toBytesArray(ts.Unix())
+	expected, err := toBytesArray(ts.Unix())
+	assert.NoError(t, err)
 	pt, _ := ptypes.TimestampProto(ts)
 	v, err = f.valueToBytesArray(pt)
 	assert.Equal(t, expected, v)
@@ -918,7 +919,9 @@ func TestCreateOneofProof(t *testing.T) {
 	proof, err := doctree.CreateProof("valueB")
 	assert.Nil(t, err)
 	assert.Equal(t, ReadableName("valueB"), proof.Property)
-	assert.Equal(t, toBytesArray(documentspb.ExampleOneofSampleDocument.OneofBlock.(*documentspb.OneofSample_ValueB).ValueB), proof.Value)
+	ev, err := toBytesArray(documentspb.ExampleOneofSampleDocument.OneofBlock.(*documentspb.OneofSample_ValueB).ValueB)
+	assert.NoError(t, err)
+	assert.Equal(t, ev, proof.Value)
 	assert.Equal(t, testSalt, proof.Salt)
 
 	fieldHash, err := CalculateHashForProofField(&proof, sha256Hash)
@@ -1276,4 +1279,92 @@ func Test_GenerateSingleLeafTree(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Len(t, doctree.leaves, 1)
 	assert.Equal(t, foobarHash[:], doctree.RootHash())
+}
+
+func TestTree_LengthProp_ListMap(t *testing.T) {
+	// length is 0
+	salts := new(Salts)
+	doc := new(documentspb.SimpleEntries)
+	tree := NewDocumentTree(TreeOptions{CompactProperties: true, EnableHashSorting: true, Hash: sha256.New(), Salts: salts})
+	err := tree.AddLeavesFromDocument(doc)
+	assert.NoError(t, err)
+	_, l := tree.GetLeafByProperty("entries.length")
+	assert.Equal(t, l.Property.ReadableName(), "entries.length")
+	expectedLen := 0
+	el, err := toBytesArray(expectedLen)
+	assert.NoError(t, err)
+	assert.Equal(t, l.Value, el)
+
+	// length is 1
+	doc.Entries = append(doc.Entries, &documentspb.SimpleEntry{
+		EntryKey:   "some key",
+		EntryValue: "some value",
+	})
+
+	tree = NewDocumentTree(TreeOptions{CompactProperties: true, EnableHashSorting: true, Hash: sha256.New(), Salts: salts})
+	err = tree.AddLeavesFromDocument(doc)
+	assert.NoError(t, err)
+	_, l = tree.GetLeafByProperty("entries.length")
+	assert.Equal(t, l.Property.ReadableName(), "entries.length")
+	expectedLen = 1
+	el, err = toBytesArray(expectedLen)
+	assert.NoError(t, err)
+	assert.Equal(t, l.Value, el)
+}
+
+func TestTree_LengthProp_Map(t *testing.T) {
+	// length is 0
+	salts := new(Salts)
+	doc := new(documentspb.SimpleStringMap)
+	tree := NewDocumentTree(TreeOptions{CompactProperties: true, EnableHashSorting: true, Hash: sha256.New(), Salts: salts})
+	err := tree.AddLeavesFromDocument(doc)
+	assert.NoError(t, err)
+	_, l := tree.GetLeafByProperty("value.length")
+	assert.Equal(t, l.Property.ReadableName(), "value.length")
+	expectedLen := 0
+	el, err := toBytesArray(expectedLen)
+	assert.NoError(t, err)
+	assert.Equal(t, l.Value, el)
+
+	// length is 1
+	doc.Value = make(map[string]string)
+	doc.Value["some key"] = "some value"
+	tree = NewDocumentTree(TreeOptions{CompactProperties: true, EnableHashSorting: true, Hash: sha256.New(), Salts: salts})
+	err = tree.AddLeavesFromDocument(doc)
+	assert.NoError(t, err)
+	_, l = tree.GetLeafByProperty("value.length")
+	assert.Equal(t, l.Property.ReadableName(), "value.length")
+	expectedLen = 1
+	el, err = toBytesArray(expectedLen)
+	assert.NoError(t, err)
+	assert.Equal(t, l.Value, el)
+}
+
+func TestTree_LengthProp_List(t *testing.T) {
+	// length is 0
+	salts := new(Salts)
+	doc := new(documentspb.RepeatedItem)
+	tree := NewDocumentTree(TreeOptions{CompactProperties: true, EnableHashSorting: true, Hash: sha256.New(), Salts: salts})
+	err := tree.AddLeavesFromDocument(doc)
+	assert.NoError(t, err)
+	_, l := tree.GetLeafByProperty("valueA.length")
+	assert.Equal(t, l.Property.ReadableName(), "valueA.length")
+	expectedLen := 0
+	el, err := toBytesArray(expectedLen)
+	assert.NoError(t, err)
+	assert.Equal(t, l.Value, el)
+
+	// length is 1
+	doc.ValueA = append(doc.ValueA, &documentspb.SimpleItem{
+		ValueA: "some string",
+	})
+	tree = NewDocumentTree(TreeOptions{CompactProperties: true, EnableHashSorting: true, Hash: sha256.New(), Salts: salts})
+	err = tree.AddLeavesFromDocument(doc)
+	assert.NoError(t, err)
+	_, l = tree.GetLeafByProperty("valueA.length")
+	assert.Equal(t, l.Property.ReadableName(), "valueA.length")
+	expectedLen = 1
+	el, err = toBytesArray(expectedLen)
+	assert.NoError(t, err)
+	assert.Equal(t, l.Value, el)
 }
