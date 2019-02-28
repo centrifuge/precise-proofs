@@ -14,6 +14,7 @@ import (
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/assert"
 	"github.com/xsleonard/go-merkle"
+	"github.com/centrifuge/precise-proofs/proofs/proto"
 )
 
 var testSalt = []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225}
@@ -1257,4 +1258,28 @@ func Test_SaltMessage(t *testing.T) {
 	for _, leaf := range doctree2.leaves {
 		assert.NotNil(t, leaf.Salt)
 	}
+}
+
+func Example_complete() {
+	// ContainSalts is a protobuf message which contain salts message
+	document := documentspb.ContainSalts{
+		ValueA:     "valueAValue",
+		ValueB:     10,
+		Salts:      []*proofspb.Salt{{Compact: []byte{0,0,0,1}, Value: []byte{0x1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x2}},{Compact: []byte{0,0,0,2}, Value: []byte{0x3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x4}}},
+	}
+
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New()})
+	doctree.AddLeavesFromDocument(&document)
+	doctree.Generate()
+	fmt.Printf("Generated tree: %s\n", doctree.String())
+
+	// Generate the actual proof for a field. In this case the field called "valueA".
+	proof, _ := doctree.CreateProof("valueA")
+	proofJson, _ := json.Marshal(proof)
+	fmt.Println("Proof:\n", string(proofJson))
+
+	// Validate the proof that was just generated
+	valid, _ := doctree.ValidateProof(&proof)
+
+	fmt.Printf("Proof validated: %v\n", valid)
 }
