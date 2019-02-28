@@ -147,6 +147,8 @@ There are a few things to note:
 
 Salt Message
 
+slats field contained in a message is used to feed salts (for other fields) to Precise-Proofs library by client
+
 Field for slice/map length
 
 We encode the length of a slice or map field in the tree as an additional leaf so a proof can

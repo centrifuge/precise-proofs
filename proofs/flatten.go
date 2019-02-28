@@ -87,6 +87,8 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 			if err != nil {
 				return errors.Wrapf(err, "failed to extract protobuf tag info from %q", protoTag)
     	}
+
+      // if field's name is salts, then by pass flatten this node because it just contain salts
     	if name == "salts" {
     		if strings.Contains(protoTag, ",rep,"){
       		continue
