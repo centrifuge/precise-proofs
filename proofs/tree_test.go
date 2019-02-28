@@ -1243,6 +1243,18 @@ func Test_SaltMessage(t *testing.T) {
 	err = doctree.Generate()
 	assert.Nil(t, err)
 	assert.Len(t, doctree.leaves, 2)
-	assert.Equal(t,doctree.leaves[0].Salt, []byte{0x1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x2}, "Salt should Match")
-	assert.Equal(t,doctree.leaves[1].Salt, []byte{0x3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x4}, "Salt should Match")
+	assert.Equal(t,doctree.leaves[0].Salt, []byte{0x1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x2}, "Salt should Match with the one contained in salt message")
+	assert.Equal(t,doctree.leaves[1].Salt, []byte{0x3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x4}, "Salt should Match with the one contained in salt message")
+
+	doctree2 := NewDocumentTree(TreeOptions{Hash: sha256Hash})
+	document := &documentspb.ExampleContainSaltsDocument
+	document.Salts = nil
+	err = doctree2.AddLeavesFromDocument(document)
+	assert.Nil(t, err)
+	err = doctree2.Generate()
+	assert.Nil(t, err)
+	assert.Len(t, doctree2.leaves, 2)
+	for _, leaf := range doctree2.leaves {
+		assert.NotNil(t, leaf.Salt)
+	}
 }
