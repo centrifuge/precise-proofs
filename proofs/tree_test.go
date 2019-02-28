@@ -1219,48 +1219,6 @@ func Test_integers(t *testing.T) {
 	}
 }
 
-func Test_CompactSaltPairs(t *testing.T) {
-	salts := Salts{}
-	doc := documentspb.FilledExampleDocument
-
-	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: &salts})
-	err := doctree.AddLeavesFromDocument(&doc)
-	assert.Nil(t, err)
-	doctree.Generate()
-	proof, err := doctree.CreateProof("valueA")
-	salt1 := proof.Salt
-	assert.Nil(t, err)
-	valid, err := doctree.ValidateProof(&proof)
-	assert.True(t, valid)
-	assert.Nil(t, err)
-
-	doctree2 := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: &salts})
-	err = doctree2.AddLeavesFromDocument(&doc)
-	assert.Nil(t, err)
-	doctree2.Generate()
-	proof2, err := doctree2.CreateProof("valueB")
-	salt2 := proof2.Salt
-	assert.Nil(t, err)
-	valid, err = doctree2.ValidateProof(&proof2)
-	assert.True(t, valid)
-	assert.Nil(t, err)
-
-	assert.NotEqual(t, salt1, salt2, "Two salts should be different")
-	assert.Equal(t, doctree.RootHash(), doctree2.RootHash(), "Two rootHash should be same")
-
-	doctree3 := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: &salts})
-	err = doctree3.AddLeavesFromDocument(&doc)
-	assert.Nil(t, err)
-	doctree3.Generate()
-	proof3, err := doctree3.CreateProof("valueA")
-	assert.Nil(t, err)
-	salt3 := proof3.Salt
-	valid, err = doctree3.ValidateProof(&proof3)
-	assert.True(t, valid)
-	assert.Nil(t, err)
-	assert.Equal(t, salt1, salt3, "Two salts should be same")
-}
-
 func Test_GenerateSingleLeafTree(t *testing.T) {
 	foobarHash := sha256.Sum256([]byte("foobar"))
 	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
@@ -1276,4 +1234,15 @@ func Test_GenerateSingleLeafTree(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Len(t, doctree.leaves, 1)
 	assert.Equal(t, foobarHash[:], doctree.RootHash())
+}
+
+func Test_SaltMessage(t *testing.T) {
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash})
+	err := doctree.AddLeavesFromDocument(&documentspb.ExampleContainSaltsDocument)
+	assert.Nil(t, err)
+	err = doctree.Generate()
+	assert.Nil(t, err)
+	assert.Len(t, doctree.leaves, 2)
+	assert.Equal(t,doctree.leaves[0].Salt, []byte{0x1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x2}, "Salt should Match")
+	assert.Equal(t,doctree.leaves[1].Salt, []byte{0x3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x4}, "Salt should Match")
 }

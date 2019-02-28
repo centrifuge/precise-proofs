@@ -21,8 +21,7 @@ func main() {
 		EnumType:    documentspb.Enum_type_two,
 	}
 
-	salts := proofs.Salts{}
-	doctree := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New(), Salts: &salts})
+	doctree := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New()})
 
 	checkErr(doctree.AddLeavesFromDocument(&document))
 	checkErr(doctree.Generate())
@@ -39,10 +38,6 @@ func main() {
 	checkErr(err)
 
 	fmt.Printf("Proof validated: %v\n", valid)
-	fmt.Println("Compacts -------> Salts")
-	for ii := range salts {
-		fmt.Println(salts[ii].Compact, "------->", salts[ii].Value)
-	}
 }
 
 func checkErr(err error) {

@@ -86,8 +86,12 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 			name, num, err := ExtractFieldTags(protoTag)
 			if err != nil {
 				return errors.Wrapf(err, "failed to extract protobuf tag info from %q", protoTag)
-			}
-
+    	}
+    	if name == "salts" {
+    		if strings.Contains(protoTag, ",rep,"){
+      		continue
+    		}
+    	}
 			fieldProp := prop.FieldProp(name, num)
 
 			isHashed, err := proto.GetExtension(innerFieldDescriptor.Options, proofspb.E_HashedField)

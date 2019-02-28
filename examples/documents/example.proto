@@ -9,6 +9,7 @@ option java_package = "com.documents";
 
 import "google/protobuf/timestamp.proto";
 import "proofs/proto/proof.proto";
+import "proofs/proto/salt.proto";
 
 message ExampleDocument {
   string valueA = 1;
@@ -184,4 +185,10 @@ message Integers {
   fixed64 valueH = 8;
   sfixed32 valueI = 9;
   sfixed64 valueJ = 10;
+}
+
+message ContainSalts {
+  string valueA = 1;
+  int32  valueB = 2;
+  repeated proofs.Salt salts = 3;
 }
