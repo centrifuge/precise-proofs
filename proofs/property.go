@@ -32,8 +32,8 @@ func NewProperty(name string, bytes ...byte) Property {
 }
 
 // FieldNum is a compact, unique identifier for a Property, relative to its parent
-type FieldNum = uint32
-type FieldNumForSliceLength = uint64
+type FieldNum uint32
+type FieldNumForSliceLength uint64
 
 func encode(n FieldNum) []byte {
 	buf := new(bytes.Buffer)

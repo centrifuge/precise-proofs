@@ -280,6 +280,14 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 	}
 }
 
+// NewDocumentTree returns a DocumentTree with that has a root hash set.
+// It can be used to validate proofs but not for creating any.
+func NewDocumentTreeWithRootHash(proofOpts TreeOptions, rootHash []byte) DocumentTree {
+	documentTree := NewDocumentTree(proofOpts)
+	documentTree.rootHash = rootHash
+	return documentTree
+}
+
 // AddLeaves appends list of leaves to the tree's leaves.
 // This function can be called multiple times and leaves will be added from left to right. Note that the lexicographic
 // sorting doesn't get applied in this method but in the protobuf flattening. The order in which leaves are added in
@@ -360,8 +368,18 @@ func (doctree *DocumentTree) GetLeafByProperty(prop string) (int, *LeafNode) {
 	return 0, nil
 }
 
+// GetCompactPropByPropertyName returns a leaf compact name if it is found
+func (doctree *DocumentTree) GetCompactPropByPropertyName(prop string) []byte {
+	for _, leaf := range doctree.leaves {
+		if leaf.Property.ReadableName() == prop {
+			return leaf.Property.CompactName()
+		}
+	}
+	return []byte{}
+}
+
 // GetLeafByCompactProperty returns a leaf if it is found
-func (doctree *DocumentTree) GetLeafByCompactProperty(prop []FieldNum) (int, *LeafNode) {
+func (doctree *DocumentTree) GetLeafByCompactProperty(prop []byte) (int, *LeafNode) {
 	for index, leaf := range doctree.leaves {
 		if reflect.DeepEqual(leaf.Property.CompactName(), prop) {
 			return index, &leaf
@@ -399,6 +417,26 @@ func (doctree *DocumentTree) CreateProof(prop string) (proof proofspb.Proof, err
 	if leaf == nil {
 		return proofspb.Proof{}, fmt.Errorf("No such field: %s in obj", prop)
 	}
+
+	return doctree.createProof(index, leaf)
+}
+
+// CreateProofWithCompactProp takes a property in compact form and returns a Proof object for the given field
+func (doctree *DocumentTree) CreateProofWithCompactProp(prop []byte) (proof proofspb.Proof, err error) {
+	if doctree.IsEmpty() || !doctree.filled {
+		err = fmt.Errorf("Can't create proof before generating merkle root")
+		return
+	}
+
+	index, leaf := doctree.GetLeafByCompactProperty(prop)
+	if leaf == nil {
+		return proofspb.Proof{}, fmt.Errorf("No such field: %x in obj", prop)
+	}
+
+	return doctree.createProof(index, leaf)
+}
+
+func (doctree *DocumentTree) createProof(index int, leaf *LeafNode) (proof proofspb.Proof, err error) {
 	propName := leaf.Property.Name(doctree.compactProperties)
 	proof = proofspb.Proof{
 		Property: propName,

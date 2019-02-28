@@ -1,0 +1,111 @@
+<html>
+<head>
+    <title>WebAssembly | Precise Proofs | Centrifuge</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300italic,700,700italic">
+    <link rel="stylesheet" href="https://cdn.rawgit.com/necolas/normalize.css/master/normalize.css">
+    <link rel="stylesheet" href="https://cdn.rawgit.com/milligram/milligram/master/dist/milligram.min.css">
+
+    <style>
+        .container {
+            margin-top: 4rem;
+        }
+
+        textarea {
+            resize: vertical;
+        }
+    </style>
+
+    <script src="wasm_exec.js"></script>
+
+    <script>
+      const go = new Go();
+      WebAssembly.instantiateStreaming(
+        fetch("main.wasm"), go.importObject
+      ).then(async (result) => {
+        await go.run(result.instance);
+      });
+    </script>
+</head>
+<body>
+<div class="container">
+    <div class="row">
+        <div class="column">
+            <form>
+                <fieldset>
+                    <label for="json">Document</label>
+                    <textarea id="json">{ "valueA": "Foo", "valueB": "Bar" }</textarea>
+
+                    <label for="field">Proof Field</label>
+                    <input type="text" id="field" value="valueA"/>
+
+                    <button id="generateProofButton"
+                            type="button"
+                            onclick="generateProof(
+                              document.getElementById('json').value,
+                              document.getElementById('field').value
+                            )"
+                    >
+                        Calculate Tree & Proof
+                    </button>
+                </fieldset>
+            </form>
+
+            <form>
+                <fieldset>
+                    <label for="resultRootHash">Root Hash</label>
+                    <input type="text" id="resultRootHash"/>
+
+                    <label for="resultProof">Proof</label>
+                    <textarea id="resultProof"></textarea>
+                </fieldset>
+            </form>
+        </div>
+
+        <div class="column">
+            <form>
+                <fieldset>
+                    <label for="proof">Proof</label>
+                    <textarea id="proof"></textarea>
+
+                    <label for="rootHash">Root Hash</label>
+                    <input type="text" id="rootHash"/>
+
+                    <button id="validateProofButton"
+                            class="button button-outline"
+                            type="button"
+                            onclick="onclickValidate()"
+                    >
+                        Validate Proof
+                    </button>
+                </fieldset>
+            </form>
+
+            <form>
+                <fieldset>
+                    <label for="resultValidProof">Proof</label>
+                    <textarea id="resultValidProof"></textarea>
+                </fieldset>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    let onclickValidate = () => {
+      // Work-around to avoid failure in unmarshaling proof with `readableName` oneof property
+      const proof = JSON.parse(document.getElementById('proof').value);
+      const readableName = proof.readableName;
+      delete proof.readableName;
+
+      validateProof(
+        JSON.stringify(proof),
+        document.getElementById('rootHash').value,
+        readableName
+      )
+    }
+</script>
+</body>
+</html>

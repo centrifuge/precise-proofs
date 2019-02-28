@@ -10,10 +10,11 @@
   version = "v1.1.0"
 
 [[projects]]
-  digest = "1:3664249e574cc3b804bd5a23bca2e6e9e53e563ff9e58fe6106fbb7cf67fa316"
+  digest = "1:ce3f4c01068f4d02f8c308de4d70d50270f639ad2d366ed915b121eb8cb79f98"
   name = "github.com/golang/protobuf"
   packages = [
     "descriptor",
+    "jsonpb",
     "proto",
     "protoc-gen-go/descriptor",
     "protoc-gen-go/generator",
@@ -22,6 +23,7 @@
     "ptypes",
     "ptypes/any",
     "ptypes/duration",
+    "ptypes/struct",
     "ptypes/timestamp",
   ]
   pruneopts = "UT"
@@ -65,6 +67,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/golang/protobuf/descriptor",
+    "github.com/golang/protobuf/jsonpb",
     "github.com/golang/protobuf/proto",
     "github.com/golang/protobuf/protoc-gen-go/descriptor",
     "github.com/golang/protobuf/protoc-gen-go/generator",
