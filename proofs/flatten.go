@@ -20,16 +20,16 @@ import (
 
 // messageFlattener takes a proto.Message and flattens it to a list of ordered nodes.
 type messageFlattener struct {
-	message           proto.Message
-	leaves            LeafList
-	nodes             [][]byte
-	propOrder         []Property
-	saltsLengthSuffix string
-	hash              hash.Hash
-	compactProperties bool
+	message                      proto.Message
+	leaves                       LeafList
+	nodes                        [][]byte
+	propOrder                    []Property
+	readablePropertyLengthSuffix string
+	hash                         hash.Hash
+	compactProperties            bool
 }
 
-func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSalt GetSalt, saltsLengthSuffix string, outerFieldDescriptor *go_descriptor.FieldDescriptorProto) (err error) {
+func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSalt GetSalt, readablePropertyLengthSuffix string, outerFieldDescriptor *go_descriptor.FieldDescriptorProto) (err error) {
 	// handle special cases
 	switch v := value.Interface().(type) {
 	case []byte, *timestamp.Timestamp:
@@ -37,14 +37,14 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 		if err != nil {
 			return errors.Wrap(err, "failed convert value to string")
 		}
-		f.appendLeaf(prop, valueBytesArray, getSalt(prop.CompactName()), saltsLengthSuffix, nil, false)
+		f.appendLeaf(prop, valueBytesArray, getSalt(prop.CompactName()), readablePropertyLengthSuffix, nil, false)
 		return nil
 	}
 
 	// handle generic recursive cases
 	switch value.Kind() {
 	case reflect.Ptr:
-		return f.handleValue(prop, value.Elem(), getSalt, saltsLengthSuffix, outerFieldDescriptor)
+		return f.handleValue(prop, value.Elem(), getSalt, readablePropertyLengthSuffix, outerFieldDescriptor)
 	case reflect.Struct:
 
 		// lookup map key from field descriptor, if it exists
@@ -106,13 +106,13 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 					return errors.New("The option hashed_field is only supported for type `bytes`")
 				}
 
-				f.appendLeaf(fieldProp, []byte{}, nil, saltsLengthSuffix, hashed, true)
+				f.appendLeaf(fieldProp, []byte{}, nil, readablePropertyLengthSuffix, hashed, true)
 				continue
 			}
 			if oneOfField {
-				err = f.handleValue(fieldProp, value.Field(i).Elem().Elem().Field(0), getSalt, saltsLengthSuffix, innerFieldDescriptor)
+				err = f.handleValue(fieldProp, value.Field(i).Elem().Elem().Field(0), getSalt, readablePropertyLengthSuffix, innerFieldDescriptor)
 			} else {
-				err = f.handleValue(fieldProp, value.Field(i), getSalt, saltsLengthSuffix, innerFieldDescriptor)
+				err = f.handleValue(fieldProp, value.Field(i), getSalt, readablePropertyLengthSuffix, innerFieldDescriptor)
 			}
 
 			if err != nil {
@@ -133,25 +133,25 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 			if err != nil {
 				return errors.Wrapf(err, "failed to convert %s saltValue to map with mapping_key %q", value.Type(), mappingKey)
 			}
-			return f.handleValue(prop, mapValue, getSalt, saltsLengthSuffix, outerFieldDescriptor)
+			return f.handleValue(prop, mapValue, getSalt, readablePropertyLengthSuffix, outerFieldDescriptor)
 		}
 
 		// Append length of slice as tree leaf
-		lengthProp := prop.LengthProp(saltsLengthSuffix)
-		f.appendLeaf(lengthProp, toBytesArray(value.Len()), getSalt(lengthProp.CompactName()), saltsLengthSuffix, []byte{}, false)
+		lengthProp := prop.LengthProp(readablePropertyLengthSuffix)
+		f.appendLeaf(lengthProp, toBytesArray(value.Len()), getSalt(lengthProp.CompactName()), readablePropertyLengthSuffix, []byte{}, false)
 
 		// Handle each element of the slice
 		for i := 0; i < value.Len(); i++ {
 			elemProp := prop.SliceElemProp(FieldNumForSliceLength(i))
-			err := f.handleValue(elemProp, value.Index(i), getSalt, saltsLengthSuffix, nil)
+			err := f.handleValue(elemProp, value.Index(i), getSalt, readablePropertyLengthSuffix, nil)
 			if err != nil {
 				return errors.Wrapf(err, "error handling slice element %d", i)
 			}
 		}
 	case reflect.Map:
 		// Append size of map as tree leaf
-		lengthProp := prop.LengthProp(saltsLengthSuffix)
-		f.appendLeaf(lengthProp, toBytesArray(value.Len()), getSalt(lengthProp.CompactName()), saltsLengthSuffix, []byte{}, false)
+		lengthProp := prop.LengthProp(readablePropertyLengthSuffix)
+		f.appendLeaf(lengthProp, toBytesArray(value.Len()), getSalt(lengthProp.CompactName()), readablePropertyLengthSuffix, []byte{}, false)
 
 		// Handle each value of the map
 		for _, k := range value.MapKeys() {
@@ -161,7 +161,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 			if err != nil {
 				return errors.Wrapf(err, "failed to create elem prop for %q", k)
 			}
-			err = f.handleValue(elemProp, value.MapIndex(k), getSalt, saltsLengthSuffix, outerFieldDescriptor)
+			err = f.handleValue(elemProp, value.MapIndex(k), getSalt, readablePropertyLengthSuffix, outerFieldDescriptor)
 			if err != nil {
 				return errors.Wrapf(err, "error handling slice element %s", k)
 			}
@@ -171,13 +171,13 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 		if err != nil {
 			return err
 		}
-		f.appendLeaf(prop, valueBytesArray, getSalt(prop.CompactName()), saltsLengthSuffix, []byte{}, false)
+		f.appendLeaf(prop, valueBytesArray, getSalt(prop.CompactName()), readablePropertyLengthSuffix, []byte{}, false)
 	}
 
 	return nil
 }
 
-func (f *messageFlattener) appendLeaf(prop Property, value []byte, salt []byte, saltsLengthSuffix string, hash []byte, hashed bool) {
+func (f *messageFlattener) appendLeaf(prop Property, value []byte, salt []byte, readablePropertyLengthSuffix string, hash []byte, hashed bool) {
 	leaf := LeafNode{
 		Property: prop,
 		Value:    value,
@@ -250,14 +250,14 @@ func (f *messageFlattener) sortLeaves() (err error) {
 // of nodes.
 //
 // The fields are sorted lexicographically by their protobuf field names.
-func FlattenMessage(message proto.Message, getSalt GetSalt, saltsLengthSuffix string, hashFn hash.Hash, compact bool, parentProp Property) (leaves []LeafNode, err error) {
+func FlattenMessage(message proto.Message, getSalt GetSalt, readablePropertyLengthSuffix string, hashFn hash.Hash, compact bool, parentProp Property) (leaves []LeafNode, err error) {
 	f := messageFlattener{
-		saltsLengthSuffix: saltsLengthSuffix,
+		readablePropertyLengthSuffix: readablePropertyLengthSuffix,
 		hash:              hashFn,
 		compactProperties: compact,
 	}
 
-	err = f.handleValue(parentProp, reflect.ValueOf(message), getSalt, saltsLengthSuffix, nil)
+	err = f.handleValue(parentProp, reflect.ValueOf(message), getSalt, readablePropertyLengthSuffix, nil)
 	if err != nil {
 		return
 	}
