@@ -190,7 +190,7 @@ const DefaultReadablePropertyLengthSuffix = "_length"
 type TreeOptions struct {
 	//	EnableHashSorting: Implement a merkle tree with sorted hashes
 	EnableHashSorting bool
-	GetSalt           GetSalt
+	Salts             Salts
 	// ReadablePropertyLengthSuffix: As precise proofs support repeated fields, when generating the merkle tree we need to add a
 	// leaf that represents the length of the slice. The default suffix is `_length`, although it is customizable so it
 	// does not collide with potential field names of your own proto structs.
@@ -201,12 +201,12 @@ type TreeOptions struct {
 	CompactProperties bool
 }
 
-type Salt struct {
+type SaltPair struct {
 	Compact []byte
 	Value   []byte
 }
-type Salts []Salt
-type GetSalt func(compact []byte) []byte
+type SaltPairs []SaltPair
+type Salts func(compact []byte) []byte
 
 func defaultGetSalt(message proto.Message) func([]byte) []byte {
 	salts := getSaltsFromMessage(message)
@@ -231,7 +231,7 @@ type DocumentTree struct {
 	filled            bool
 	rootHash          []byte
 	document          proto.Message
-	getSalt           GetSalt
+	salts             Salts
 	propertyList      []Property
 	hash              hash.Hash
 	readablePropertyLengthSuffix string
@@ -251,9 +251,9 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 	if proofOpts.EnableHashSorting {
 		opts.EnableHashSorting = proofOpts.EnableHashSorting
 	}
-	var getSalt GetSalt
-	if proofOpts.GetSalt != nil {
-		getSalt = proofOpts.GetSalt
+	var salts Salts
+	if proofOpts.Salts != nil {
+		salts = proofOpts.Salts
 	}
 	readablePropertyLengthSuffix := DefaultReadablePropertyLengthSuffix
 	if proofOpts.ReadablePropertyLengthSuffix != "" {
@@ -262,7 +262,7 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 	return DocumentTree{
 		propertyList:      []Property{},
 		merkleTree:        merkle.NewTreeWithOpts(opts),
-		getSalt:           getSalt,
+		salts:             salts,
 		readablePropertyLengthSuffix: readablePropertyLengthSuffix,
 		leaves:            []LeafNode{},
 		hash:              proofOpts.Hash,
@@ -308,13 +308,13 @@ func (doctree *DocumentTree) AddLeavesFromDocument(document proto.Message) (err 
 	if doctree.hash == nil {
 		return fmt.Errorf("hash is not set")
 	}
-	var getSalt GetSalt
-	if doctree.getSalt != nil {
-		getSalt = doctree.getSalt
+	var salts Salts
+	if doctree.salts != nil {
+		salts = doctree.salts
 	} else {
-		getSalt = defaultGetSalt(document)
+		salts = defaultGetSalt(document)
 	}
-	leaves, err := FlattenMessage(document, getSalt, doctree.readablePropertyLengthSuffix, doctree.hash, doctree.compactProperties, doctree.parentPrefix)
+	leaves, err := FlattenMessage(document, salts, doctree.readablePropertyLengthSuffix, doctree.hash, doctree.compactProperties, doctree.parentPrefix)
 	if err != nil {
 		return err
 	}

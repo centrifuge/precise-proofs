@@ -29,7 +29,7 @@ type messageFlattener struct {
 	compactProperties            bool
 }
 
-func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSalt GetSalt, readablePropertyLengthSuffix string, outerFieldDescriptor *go_descriptor.FieldDescriptorProto) (err error) {
+func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts Salts, readablePropertyLengthSuffix string, outerFieldDescriptor *go_descriptor.FieldDescriptorProto) (err error) {
 	// handle special cases
 	switch v := value.Interface().(type) {
 	case []byte, *timestamp.Timestamp:
@@ -37,14 +37,14 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 		if err != nil {
 			return errors.Wrap(err, "failed convert value to string")
 		}
-		f.appendLeaf(prop, valueBytesArray, getSalt(prop.CompactName()), readablePropertyLengthSuffix, nil, false)
+		f.appendLeaf(prop, valueBytesArray, salts(prop.CompactName()), readablePropertyLengthSuffix, nil, false)
 		return nil
 	}
 
 	// handle generic recursive cases
 	switch value.Kind() {
 	case reflect.Ptr:
-		return f.handleValue(prop, value.Elem(), getSalt, readablePropertyLengthSuffix, outerFieldDescriptor)
+		return f.handleValue(prop, value.Elem(), salts, readablePropertyLengthSuffix, outerFieldDescriptor)
 	case reflect.Struct:
 
 		// lookup map key from field descriptor, if it exists
@@ -88,7 +88,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 				return errors.Wrapf(err, "failed to extract protobuf tag info from %q", protoTag)
     	}
 
-      // if field's name is salts, then by pass flatten this node because it just contain salts
+      // if field's name is salts, then bypass flatten this node because it just contain salts
     	if name == "salts" {
     		if strings.Contains(protoTag, ",rep,"){
       		continue
@@ -112,9 +112,9 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 				continue
 			}
 			if oneOfField {
-				err = f.handleValue(fieldProp, value.Field(i).Elem().Elem().Field(0), getSalt, readablePropertyLengthSuffix, innerFieldDescriptor)
+				err = f.handleValue(fieldProp, value.Field(i).Elem().Elem().Field(0), salts, readablePropertyLengthSuffix, innerFieldDescriptor)
 			} else {
-				err = f.handleValue(fieldProp, value.Field(i), getSalt, readablePropertyLengthSuffix, innerFieldDescriptor)
+				err = f.handleValue(fieldProp, value.Field(i), salts, readablePropertyLengthSuffix, innerFieldDescriptor)
 			}
 
 			if err != nil {
@@ -135,17 +135,17 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 			if err != nil {
 				return errors.Wrapf(err, "failed to convert %s saltValue to map with mapping_key %q", value.Type(), mappingKey)
 			}
-			return f.handleValue(prop, mapValue, getSalt, readablePropertyLengthSuffix, outerFieldDescriptor)
+			return f.handleValue(prop, mapValue, salts, readablePropertyLengthSuffix, outerFieldDescriptor)
 		}
 
 		// Append length of slice as tree leaf
 		lengthProp := prop.LengthProp(readablePropertyLengthSuffix)
-		f.appendLeaf(lengthProp, toBytesArray(value.Len()), getSalt(lengthProp.CompactName()), readablePropertyLengthSuffix, []byte{}, false)
+		f.appendLeaf(lengthProp, toBytesArray(value.Len()), salts(lengthProp.CompactName()), readablePropertyLengthSuffix, []byte{}, false)
 
 		// Handle each element of the slice
 		for i := 0; i < value.Len(); i++ {
 			elemProp := prop.SliceElemProp(FieldNumForSliceLength(i))
-			err := f.handleValue(elemProp, value.Index(i), getSalt, readablePropertyLengthSuffix, nil)
+			err := f.handleValue(elemProp, value.Index(i), salts, readablePropertyLengthSuffix, nil)
 			if err != nil {
 				return errors.Wrapf(err, "error handling slice element %d", i)
 			}
@@ -153,7 +153,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 	case reflect.Map:
 		// Append size of map as tree leaf
 		lengthProp := prop.LengthProp(readablePropertyLengthSuffix)
-		f.appendLeaf(lengthProp, toBytesArray(value.Len()), getSalt(lengthProp.CompactName()), readablePropertyLengthSuffix, []byte{}, false)
+		f.appendLeaf(lengthProp, toBytesArray(value.Len()), salts(lengthProp.CompactName()), readablePropertyLengthSuffix, []byte{}, false)
 
 		// Handle each value of the map
 		for _, k := range value.MapKeys() {
@@ -163,7 +163,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 			if err != nil {
 				return errors.Wrapf(err, "failed to create elem prop for %q", k)
 			}
-			err = f.handleValue(elemProp, value.MapIndex(k), getSalt, readablePropertyLengthSuffix, outerFieldDescriptor)
+			err = f.handleValue(elemProp, value.MapIndex(k), salts, readablePropertyLengthSuffix, outerFieldDescriptor)
 			if err != nil {
 				return errors.Wrapf(err, "error handling slice element %s", k)
 			}
@@ -173,7 +173,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 		if err != nil {
 			return err
 		}
-		f.appendLeaf(prop, valueBytesArray, getSalt(prop.CompactName()), readablePropertyLengthSuffix, []byte{}, false)
+		f.appendLeaf(prop, valueBytesArray, salts(prop.CompactName()), readablePropertyLengthSuffix, []byte{}, false)
 	}
 
 	return nil
@@ -252,14 +252,14 @@ func (f *messageFlattener) sortLeaves() (err error) {
 // of nodes.
 //
 // The fields are sorted lexicographically by their protobuf field names.
-func FlattenMessage(message proto.Message, getSalt GetSalt, readablePropertyLengthSuffix string, hashFn hash.Hash, compact bool, parentProp Property) (leaves []LeafNode, err error) {
+func FlattenMessage(message proto.Message, salts Salts, readablePropertyLengthSuffix string, hashFn hash.Hash, compact bool, parentProp Property) (leaves []LeafNode, err error) {
 	f := messageFlattener{
 		readablePropertyLengthSuffix: readablePropertyLengthSuffix,
 		hash:              hashFn,
 		compactProperties: compact,
 	}
 
-	err = f.handleValue(parentProp, reflect.ValueOf(message), getSalt, readablePropertyLengthSuffix, nil)
+	err = f.handleValue(parentProp, reflect.ValueOf(message), salts, readablePropertyLengthSuffix, nil)
 	if err != nil {
 		return
 	}
