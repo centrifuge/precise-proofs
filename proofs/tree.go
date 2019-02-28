@@ -201,11 +201,6 @@ type TreeOptions struct {
 	CompactProperties bool
 }
 
-type SaltPair struct {
-	Compact []byte
-	Value   []byte
-}
-type SaltPairs []SaltPair
 type Salts func(compact []byte) []byte
 
 func defaultGetSalt(message proto.Message) func([]byte) []byte {
