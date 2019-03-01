@@ -415,6 +415,7 @@ func TestDocumentTree_IgnoreExcludeFromTree(t *testing.T) {
 	leaves, err := FlattenMessage(doc, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, true, Empty)
 	assert.NoError(t, err)
 	assert.Equal(t, 10, len(leaves))
+	assert.Equal(t, leaves[7].Property.ReadableName(), "value_ignored")
 
 	leaves, err = FlattenMessage(doc, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, false, Empty)
 	assert.NoError(t, err)
