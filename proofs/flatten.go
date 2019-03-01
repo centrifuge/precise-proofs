@@ -134,7 +134,12 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 
 		// Append length of slice as tree leaf
 		lengthProp := prop.LengthProp(saltsLengthSuffix)
-		f.appendLeaf(lengthProp, toBytesArray(value.Len()), getSalt(lengthProp.CompactName()), saltsLengthSuffix, []byte{}, false)
+		lengthBytes, err := toBytesArray(value.Len())
+		if err != nil {
+			return err
+		}
+
+		f.appendLeaf(lengthProp, lengthBytes, getSalt(lengthProp.CompactName()), saltsLengthSuffix, []byte{}, false)
 
 		// Handle each element of the slice
 		for i := 0; i < value.Len(); i++ {
@@ -147,7 +152,11 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 	case reflect.Map:
 		// Append size of map as tree leaf
 		lengthProp := prop.LengthProp(saltsLengthSuffix)
-		f.appendLeaf(lengthProp, toBytesArray(value.Len()), getSalt(lengthProp.CompactName()), saltsLengthSuffix, []byte{}, false)
+		lengthBytes, err := toBytesArray(value.Len())
+		if err != nil {
+			return err
+		}
+		f.appendLeaf(lengthProp, lengthBytes, getSalt(lengthProp.CompactName()), saltsLengthSuffix, []byte{}, false)
 
 		// Handle each value of the map
 		for _, k := range value.MapKeys() {
@@ -191,7 +200,7 @@ func (f *messageFlattener) valueToBytesArray(value interface{}) (b []byte, err e
 	case string:
 		return []byte(v), nil
 	case int8, int16, int32, int64, uint8, uint16, uint32, uint64:
-		return toBytesArray(v), nil
+		return toBytesArray(v)
 	case []byte:
 		return v, nil
 	case *timestamp.Timestamp:
@@ -205,12 +214,12 @@ func (f *messageFlattener) valueToBytesArray(value interface{}) (b []byte, err e
 			return []byte{}, nil
 		}
 
-		return toBytesArray(t.Unix()), nil
+		return toBytesArray(t.Unix())
 	default:
 		// special case for enums
 		rv := reflect.ValueOf(value)
 		if rv.Kind() == reflect.Int32 {
-			return toBytesArray(rv.Int()), nil
+			return toBytesArray(rv.Int())
 		}
 
 		return []byte{}, errors.Errorf("Got unsupported value of type %T", v)
@@ -352,8 +361,21 @@ func getMappingKeyFrom(fd *go_descriptor.FieldDescriptorProto) (mappingKey strin
 }
 
 // Utility function to convert data to `[]byte` representation using BigEndian encoding
-func toBytesArray(data interface{}) []byte {
+func toBytesArray(data interface{}) ([]byte, error) {
+	v := reflect.ValueOf(data)
+	switch v.Kind() {
+	case reflect.Int:
+		// binary write doesn't support int
+		// as a special case, convert it into int64
+		// since the max value of int is int64, we shouldn't lose any data
+		data = v.Int()
+	}
+
 	buf := new(bytes.Buffer)
-	binary.Write(buf, binary.BigEndian, data)
-	return buf.Bytes()
+	err := binary.Write(buf, binary.BigEndian, data)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
 }
