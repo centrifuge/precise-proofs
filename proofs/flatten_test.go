@@ -437,7 +437,7 @@ func TestFlatten_AppendFields(t *testing.T) {
 
 	leaves, err := FlattenMessage(doc, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
 	assert.Nil(t, err)
-
+	assert.Len(t, leaves, 6)
 	assert.Equal(t, leaves[0].Property.ReadableName(), "name")
 	assert.Equal(t, leaves[0].Value, append([]byte("bob"), "barker"...))
 	assert.Equal(t, leaves[1].Property.ReadableName(), "names.length")
