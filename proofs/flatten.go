@@ -50,6 +50,10 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 		// lookup map key from field descriptor, if it exists
 		mappingKeyFieldName := generator.CamelCase(getMappingKeyFrom(outerFieldDescriptor))
 
+		// get append fields extension
+		appendFields := getAppendFieldsFrom(outerFieldDescriptor)
+		fieldMap := make(map[uint32][]byte)
+
 		_, messageDescriptor := descriptor.ForMessage(value.Addr().Interface().(descriptor.Message))
 
 		// Handle each field of the struct
@@ -102,19 +106,58 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 					return errors.New("The option hashed_field is only supported for type `bytes`")
 				}
 
+				// if append fields, add it to the fields
+				if appendFields {
+					fieldMap[uint32(num)] = hashed
+					continue
+				}
+
 				f.appendLeaf(fieldProp, []byte{}, nil, saltsLengthSuffix, hashed, true)
 				continue
 			}
+
+			var nextValue reflect.Value
 			if oneOfField {
-				err = f.handleValue(fieldProp, value.Field(i).Elem().Elem().Field(0), getSalt, saltsLengthSuffix, innerFieldDescriptor)
+				nextValue = value.Field(i).Elem().Elem().Field(0)
 			} else {
-				err = f.handleValue(fieldProp, value.Field(i), getSalt, saltsLengthSuffix, innerFieldDescriptor)
+				nextValue = value.Field(i)
 			}
 
+			// if append fields are enabled, check if we can append the field
+			if appendFields {
+				b, err := f.valueToBytesArray(nextValue.Interface())
+				if err != nil {
+					return errors.Wrapf(err, "failed to append the field %s", field.Name)
+				}
+
+				fieldMap[uint32(num)] = b
+				continue
+			}
+
+			err = f.handleValue(fieldProp, nextValue, getSalt, saltsLengthSuffix, innerFieldDescriptor)
 			if err != nil {
 				return errors.Wrapf(err, "error handling field %s", field.Name)
 			}
 		}
+
+		if !appendFields {
+			return nil
+		}
+
+		// if append fields enabled if so, then sort and add the field
+		var keys []int
+		for k := range fieldMap {
+			keys = append(keys, int(k))
+		}
+
+		sort.Ints(keys)
+		var finalValue []byte
+		for _, k := range keys {
+			finalValue = append(finalValue, fieldMap[uint32(k)]...)
+		}
+
+		f.appendLeaf(prop, finalValue, getSalt(prop.CompactName()), saltsLengthSuffix, nil, false)
+
 	case reflect.Slice:
 		mappingKey := generator.CamelCase(getMappingKeyFrom(outerFieldDescriptor))
 		if mappingKey != "" {
@@ -144,7 +187,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 		// Handle each element of the slice
 		for i := 0; i < value.Len(); i++ {
 			elemProp := prop.SliceElemProp(FieldNumForSliceLength(i))
-			err := f.handleValue(elemProp, value.Index(i), getSalt, saltsLengthSuffix, nil)
+			err := f.handleValue(elemProp, value.Index(i), getSalt, saltsLengthSuffix, outerFieldDescriptor)
 			if err != nil {
 				return errors.Wrapf(err, "error handling slice element %d", i)
 			}
@@ -358,6 +401,19 @@ func getMappingKeyFrom(fd *go_descriptor.FieldDescriptorProto) (mappingKey strin
 	}
 
 	return
+}
+
+func getAppendFieldsFrom(fd *go_descriptor.FieldDescriptorProto) bool {
+	if fd == nil {
+		return false
+	}
+
+	extVal, err := proto.GetExtension(fd.Options, proofspb.E_AppendFields)
+	if err == nil {
+		return *extVal.(*bool)
+	}
+
+	return false
 }
 
 // Utility function to convert data to `[]byte` representation using BigEndian encoding

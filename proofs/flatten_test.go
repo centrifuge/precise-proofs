@@ -406,3 +406,46 @@ func TestFlattenMessageFromAlreadyFilledSalts(t *testing.T) {
 		Empty.FieldProp("valueD", 4).FieldProp("valueB", 2),
 	}, propOrder)
 }
+
+func TestFlatten_AppendFields(t *testing.T) {
+	doc := &documentspb.AppendFieldDocument{
+		Name: &documentspb.Name{
+			First: "bob",
+			Last:  "barker",
+		},
+
+		Names: []*documentspb.Name{
+			{
+				First: "john",
+				Last:  "doe",
+			},
+
+			{
+				First: "alice",
+				Last:  "adelmann",
+			},
+		},
+
+		PhoneNumbers: []*documentspb.PhoneNumber{
+			{
+				Type:        "home",
+				Countrycode: "+1",
+				Number:      "123456789",
+			},
+		},
+	}
+
+	leaves, err := FlattenMessage(doc, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
+	assert.Nil(t, err)
+
+	assert.Equal(t, leaves[0].Property.ReadableName(), "name")
+	assert.Equal(t, leaves[0].Value, append([]byte("bob"), "barker"...))
+	assert.Equal(t, leaves[1].Property.ReadableName(), "names.length")
+	assert.Equal(t, leaves[2].Property.ReadableName(), "names[0]")
+	assert.Equal(t, leaves[2].Value, append([]byte("john"), "doe"...))
+	assert.Equal(t, leaves[3].Property.ReadableName(), "names[1]")
+	assert.Equal(t, leaves[3].Value, append([]byte("alice"), "adelmann"...))
+	assert.Equal(t, leaves[4].Property.ReadableName(), "phone_numbers.length")
+	assert.Equal(t, leaves[5].Property.ReadableName(), "phone_numbers[home]")
+	assert.Equal(t, leaves[5].Value, append([]byte("+1"), "123456789"...))
+}

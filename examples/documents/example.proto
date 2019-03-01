@@ -185,3 +185,24 @@ message Integers {
   sfixed32 valueI = 9;
   sfixed64 valueJ = 10;
 }
+
+message Name {
+  string first = 1;
+  string last = 2;
+}
+
+message PhoneNumber {
+  string type = 1;
+  string countrycode = 2;
+  string number = 3;
+}
+
+message AppendFieldDocument {
+  Name name = 1[ (proofs.append_fields) = true ];
+  repeated Name names = 2[ (proofs.append_fields) = true ];
+  repeated PhoneNumber phone_numbers = 3 [
+    (proofs.key_length) = 4,
+    (proofs.mapping_key) = "type",
+    (proofs.append_fields) = true
+  ];
+}
