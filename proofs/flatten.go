@@ -20,13 +20,14 @@ import (
 
 // messageFlattener takes a proto.Message and flattens it to a list of ordered nodes.
 type messageFlattener struct {
-	message           proto.Message
-	leaves            LeafList
-	nodes             [][]byte
-	propOrder         []Property
-	saltsLengthSuffix string
-	hash              hash.Hash
-	compactProperties bool
+	message               proto.Message
+	leaves                LeafList
+	nodes                 [][]byte
+	propOrder             []Property
+	saltsLengthSuffix     string
+	hash                  hash.Hash
+	compactProperties     bool
+	ignoreExcludeFromTree bool
 }
 
 func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSalt GetSalt, saltsLengthSuffix string, outerFieldDescriptor *go_descriptor.FieldDescriptorProto) (err error) {
@@ -76,9 +77,10 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 
 			innerFieldDescriptor := messageDescriptor.Field[i]
 
-			// Check if the field has an exclude_from_tree option and skip it
+			// Check if the field has an exclude_from_tree option
+			// if the exclude_from_tree is set and ignoreExcludeFromTree is false, skip the field
 			excludeFromTree, err := proto.GetExtension(innerFieldDescriptor.Options, proofspb.E_ExcludeFromTree)
-			if err == nil && *(excludeFromTree.(*bool)) {
+			if err == nil && *(excludeFromTree.(*bool)) && !f.ignoreExcludeFromTree {
 				continue
 			}
 
@@ -255,11 +257,19 @@ func (f *messageFlattener) sortLeaves() (err error) {
 // of nodes.
 //
 // The fields are sorted lexicographically by their protobuf field names.
-func FlattenMessage(message proto.Message, getSalt GetSalt, saltsLengthSuffix string, hashFn hash.Hash, compact bool, parentProp Property) (leaves []LeafNode, err error) {
+func FlattenMessage(
+	message proto.Message,
+	getSalt GetSalt,
+	saltsLengthSuffix string,
+	hashFn hash.Hash,
+	compact,
+	ignoreExcludeFromTree bool,
+	parentProp Property) (leaves []LeafNode, err error) {
 	f := messageFlattener{
-		saltsLengthSuffix: saltsLengthSuffix,
-		hash:              hashFn,
-		compactProperties: compact,
+		saltsLengthSuffix:     saltsLengthSuffix,
+		hash:                  hashFn,
+		compactProperties:     compact,
+		ignoreExcludeFromTree: ignoreExcludeFromTree,
 	}
 
 	err = f.handleValue(parentProp, reflect.ValueOf(message), getSalt, saltsLengthSuffix, nil)

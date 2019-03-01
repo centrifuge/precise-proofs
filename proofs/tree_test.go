@@ -118,7 +118,7 @@ func TestTree_Generate(t *testing.T) {
 		ValueB: "Bar",
 	}
 
-	leaves, err := FlattenMessage(&protoMessage, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
+	leaves, err := FlattenMessage(&protoMessage, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, false, Empty)
 	assert.NoError(t, err)
 	tree := merkle.NewTreeWithOpts(merkle.TreeOptions{DisableHashLeaves: true})
 	var hashes [][]byte
@@ -139,7 +139,7 @@ func TestSortedHashTree_Generate(t *testing.T) {
 		ValueB: "Bar",
 	}
 
-	leaves, err := FlattenMessage(&protoMessage, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
+	leaves, err := FlattenMessage(&protoMessage, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, false, Empty)
 	assert.NoError(t, err)
 	tree := merkle.NewTreeWithOpts(merkle.TreeOptions{DisableHashLeaves: true, EnableHashSorting: true})
 	var hashes [][]byte
