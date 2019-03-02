@@ -1383,7 +1383,17 @@ func TestTree_LengthProp_List(t *testing.T) {
 
 
 func Test_GetSalt_Error(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: NewSaltForErrorTest})
-	err := doctree.AddLeavesFromDocument(&documentspb.ExampleContainSaltsDocument)
+	tree := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: NewSaltForErrorTest})
+	err := tree.AddLeavesFromDocument(&documentspb.ExampleContainSaltsDocument)
+	assert.EqualError(t, err, "error handling field ValueA: Cannot get salt")
+
+	doc1 := new(documentspb.SimpleEntries)
+	tree = NewDocumentTree(TreeOptions{CompactProperties: true, EnableHashSorting: true, Hash: sha256.New(), Salts: NewSaltForErrorTest})
+	err = tree.AddLeavesFromDocument(doc1)
+	assert.EqualError(t, err, "error handling field Entries: Cannot get salt")
+
+	doc2 := new(documentspb.RepeatedItem)
+	tree = NewDocumentTree(TreeOptions{CompactProperties: true, EnableHashSorting: true, Hash: sha256.New(), Salts: NewSaltForErrorTest})
+	err = tree.AddLeavesFromDocument(doc2)
 	assert.EqualError(t, err, "error handling field ValueA: Cannot get salt")
 }
