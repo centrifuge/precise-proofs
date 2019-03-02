@@ -1286,7 +1286,7 @@ func Example_complete() {
 
 	fmt.Printf("Proof validated: %v\n", valid)
 }
-/*
+
 func TestTree_LengthProp_ListMap(t *testing.T) {
 	// length is 0
 	doc := new(documentspb.SimpleEntries)
@@ -1316,11 +1316,11 @@ func TestTree_LengthProp_ListMap(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, l.Value, el)
 }
-*/
+
 func TestTree_LengthProp_Map(t *testing.T) {
 	// length is 0
 	doc := new(documentspb.SimpleStringMap)
-	tree := NewDocumentTree(TreeOptions{CompactProperties: true, EnableHashSorting: true, Hash: sha256.New(), Salts: NewSaltForTest})
+	tree := NewDocumentTree(TreeOptions{CompactProperties: true, EnableHashSorting: true, Hash: sha256.New()})
 	err := tree.AddLeavesFromDocument(doc)
 	assert.NoError(t, err)
 	_, l := tree.GetLeafByProperty("value.length")
@@ -1333,7 +1333,7 @@ func TestTree_LengthProp_Map(t *testing.T) {
 	// length is 1
 	doc.Value = make(map[string]string)
 	doc.Value["some key"] = "some value"
-	tree = NewDocumentTree(TreeOptions{CompactProperties: true, EnableHashSorting: true, Hash: sha256.New(), Salts: NewSaltForTest})
+	tree = NewDocumentTree(TreeOptions{CompactProperties: true, EnableHashSorting: true, Hash: sha256.New()})
 	err = tree.AddLeavesFromDocument(doc)
 	assert.NoError(t, err)
 	_, l = tree.GetLeafByProperty("value.length")
@@ -1347,7 +1347,7 @@ func TestTree_LengthProp_Map(t *testing.T) {
 func TestTree_LengthProp_List(t *testing.T) {
 	// length is 0
 	doc := new(documentspb.RepeatedItem)
-	tree := NewDocumentTree(TreeOptions{CompactProperties: true, EnableHashSorting: true, Hash: sha256.New(), Salts: NewSaltForTest})
+	tree := NewDocumentTree(TreeOptions{CompactProperties: true, EnableHashSorting: true, Hash: sha256.New()})
 	err := tree.AddLeavesFromDocument(doc)
 	assert.NoError(t, err)
 	_, l := tree.GetLeafByProperty("valueA.length")
@@ -1361,7 +1361,7 @@ func TestTree_LengthProp_List(t *testing.T) {
 	doc.ValueA = append(doc.ValueA, &documentspb.SimpleItem{
 		ValueA: "some string",
 	})
-	tree = NewDocumentTree(TreeOptions{CompactProperties: true, EnableHashSorting: true, Hash: sha256.New(), Salts: NewSaltForTest})
+	tree = NewDocumentTree(TreeOptions{CompactProperties: true, EnableHashSorting: true, Hash: sha256.New()})
 	err = tree.AddLeavesFromDocument(doc)
 	assert.NoError(t, err)
 	_, l = tree.GetLeafByProperty("valueA.length")
