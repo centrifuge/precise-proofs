@@ -15,12 +15,17 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/xsleonard/go-merkle"
 	"github.com/centrifuge/precise-proofs/proofs/proto"
+	"github.com/pkg/errors"
 )
 
 var testSalt = []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225}
 
 func NewSaltForTest(compact []byte) (salt []byte, err error) {
 	return testSalt, nil
+}
+
+func NewSaltForErrorTest(compact []byte) (salt []byte, err error) {
+	return nil, errors.New("Cannot get salt")
 }
 
 var sha256Hash = sha256.New()
@@ -1374,4 +1379,11 @@ func TestTree_LengthProp_List(t *testing.T) {
 	leaves := tree.GetLeaves()
 	assert.Len(t, leaves, 3)
 
+}
+
+
+func Test_GetSalt_Error(t *testing.T) {
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: NewSaltForErrorTest})
+	err := doctree.AddLeavesFromDocument(&documentspb.ExampleContainSaltsDocument)
+	assert.EqualError(t, err, "error handling field ValueA: Cannot get salt")
 }
