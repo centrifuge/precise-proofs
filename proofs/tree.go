@@ -184,7 +184,7 @@ import (
 
 // DefaultReadablePropertyLengthSuffix is the suffix used to store the length of slices (repeated) fields in the tree. It can be
 // customized with the ReadablePropertyLengthSuffix TreeOption
-const DefaultReadablePropertyLengthSuffix = "_length"
+const DefaultReadablePropertyLengthSuffix = "length"
 
 // TreeOptions allows customizing the generation of the tree
 type TreeOptions struct {
@@ -318,7 +318,7 @@ func (doctree *DocumentTree) AddLeavesFromDocument(document proto.Message) (err 
 		var err error
 		salts, err = defaultGetSalt(document)
 		if (err != nil){
-			return nil
+			return err
 		}
 	}
 	leaves, err := FlattenMessage(document, salts, doctree.readablePropertyLengthSuffix, doctree.hash, doctree.compactProperties, doctree.parentPrefix)
@@ -333,6 +333,9 @@ func getSaltsFromMessage(message proto.Message) (salts []*proofspb.Salt, err err
 	msgStructValue := value.Elem()
 	for i := 0; i < msgStructValue.NumField(); i++ {
 		field := msgStructValue.Type().Field(i)
+		if strings.HasPrefix(field.Name, "XXX_") {
+			continue
+		}
 		protoTag := field.Tag.Get("protobuf")
 		name, _, err := ExtractFieldTags(protoTag)
 		if (err != nil) {
@@ -372,6 +375,11 @@ func (doctree *DocumentTree) Generate() error {
 	doctree.rootHash = doctree.merkleTree.Root().Hash
 	doctree.filled = true
 	return nil
+}
+
+// GetLeaves returns the leaves of the doc tree.
+func (doctree *DocumentTree) GetLeaves() LeafList {
+	return doctree.leaves
 }
 
 // GetLeafByProperty returns a leaf if it is found
