@@ -19,8 +19,8 @@ import (
 
 var testSalt = []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225}
 
-func NewSaltForTest(compact []byte) (salt []byte) {
-	return testSalt
+func NewSaltForTest(compact []byte) (salt []byte, err error) {
+	return testSalt, nil
 }
 
 var sha256Hash = sha256.New()

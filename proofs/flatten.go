@@ -37,7 +37,11 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 		if err != nil {
 			return errors.Wrap(err, "failed convert value to string")
 		}
-		f.appendLeaf(prop, valueBytesArray, salts(prop.CompactName()), readablePropertyLengthSuffix, nil, false)
+		salt, err := salts(prop.CompactName())
+		if (err != nil) {
+			return err
+		}
+		f.appendLeaf(prop, valueBytesArray, salt, readablePropertyLengthSuffix, nil, false)
 		return nil
 	}
 
@@ -86,14 +90,14 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 			name, num, err := ExtractFieldTags(protoTag)
 			if err != nil {
 				return errors.Wrapf(err, "failed to extract protobuf tag info from %q", protoTag)
-    	}
+			}
 
-      // if field's name is salts, then bypass flatten this node because it just contain salts
-    	if name == "salts" {
-    		if strings.Contains(protoTag, ",rep,"){
-      		continue
-    		}
-    	}
+			// if field's name is salts, then bypass flatten this node because it just contain salts
+			if name == "salts" {
+				if strings.Contains(protoTag, ",rep,"){
+					continue
+				}
+			}
 			fieldProp := prop.FieldProp(name, num)
 
 			isHashed, err := proto.GetExtension(innerFieldDescriptor.Options, proofspb.E_HashedField)
@@ -140,7 +144,11 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 
 		// Append length of slice as tree leaf
 		lengthProp := prop.LengthProp(readablePropertyLengthSuffix)
-		f.appendLeaf(lengthProp, toBytesArray(value.Len()), salts(lengthProp.CompactName()), readablePropertyLengthSuffix, []byte{}, false)
+		salt, err := salts(lengthProp.CompactName())
+		if (err != nil) {
+			return err
+		}
+		f.appendLeaf(lengthProp, toBytesArray(value.Len()), salt, readablePropertyLengthSuffix, []byte{}, false)
 
 		// Handle each element of the slice
 		for i := 0; i < value.Len(); i++ {
@@ -153,7 +161,11 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 	case reflect.Map:
 		// Append size of map as tree leaf
 		lengthProp := prop.LengthProp(readablePropertyLengthSuffix)
-		f.appendLeaf(lengthProp, toBytesArray(value.Len()), salts(lengthProp.CompactName()), readablePropertyLengthSuffix, []byte{}, false)
+		salt, err := salts(lengthProp.CompactName())
+		if (err != nil) {
+			return err
+		}
+		f.appendLeaf(lengthProp, toBytesArray(value.Len()), salt, readablePropertyLengthSuffix, []byte{}, false)
 
 		// Handle each value of the map
 		for _, k := range value.MapKeys() {
@@ -173,7 +185,11 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 		if err != nil {
 			return err
 		}
-		f.appendLeaf(prop, valueBytesArray, salts(prop.CompactName()), readablePropertyLengthSuffix, []byte{}, false)
+		salt, err := salts(prop.CompactName())
+		if (err != nil) {
+			return err
+		}
+		f.appendLeaf(prop, valueBytesArray, salt, readablePropertyLengthSuffix, []byte{}, false)
 	}
 
 	return nil

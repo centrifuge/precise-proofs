@@ -147,7 +147,7 @@ There are a few things to note:
 
 Salt Message
 
-slats field contained in a message is used to feed salts (for other fields) to Precise-Proofs library by client
+salts field contained in a message is used to feed salts (for other fields) to Precise-Proofs library by client
 
 Field for slice/map length
 
@@ -171,7 +171,6 @@ package proofs
 import (
 	"bytes"
 	"crypto/rand"
-	"errors"
 	"fmt"
 	"hash"
 	"reflect"
@@ -180,6 +179,7 @@ import (
 	"github.com/centrifuge/precise-proofs/proofs/proto"
 	"github.com/golang/protobuf/proto"
 	"github.com/xsleonard/go-merkle"
+	"github.com/pkg/errors"
 )
 
 // DefaultReadablePropertyLengthSuffix is the suffix used to store the length of slices (repeated) fields in the tree. It can be
@@ -201,20 +201,28 @@ type TreeOptions struct {
 	CompactProperties bool
 }
 
-type Salts func(compact []byte) []byte
+type Salts func(compact []byte) ([]byte, error)
 
-func defaultGetSalt(message proto.Message) func([]byte) []byte {
-	salts := getSaltsFromMessage(message)
-	return func(compact []byte) []byte {
+func defaultGetSalt(message proto.Message) (Salts, error) {
+	salts, err := getSaltsFromMessage(message)
+	if (err != nil) {
+		return nil, err
+	}
+	return func(compact []byte) ([]byte,error) {
 		for _, salt := range salts {
 			if bytes.Compare(salt.GetCompact(), compact) == 0 {
-				return salt.GetValue()
+				return salt.GetValue(), nil
 			}
 		}
 		randbytes := make([]byte, 32)
-		rand.Read(randbytes)
-		return randbytes
-	}
+		n, err := rand.Read(randbytes)
+		if (err != nil){
+			return nil, err
+		} else if (n != 32) {
+			return nil, errors.Wrapf(err, "Only read %d instead of 32 random bytes", n)
+		}
+		return randbytes, nil
+	}, nil
 }
 
 // DocumentTree is a helper object to create a merkleTree and proofs for fields in the document
@@ -307,7 +315,11 @@ func (doctree *DocumentTree) AddLeavesFromDocument(document proto.Message) (err 
 	if doctree.salts != nil {
 		salts = doctree.salts
 	} else {
-		salts = defaultGetSalt(document)
+		var err error
+		salts, err = defaultGetSalt(document)
+		if (err != nil){
+			return nil
+		}
 	}
 	leaves, err := FlattenMessage(document, salts, doctree.readablePropertyLengthSuffix, doctree.hash, doctree.compactProperties, doctree.parentPrefix)
 	if err != nil {
@@ -316,20 +328,23 @@ func (doctree *DocumentTree) AddLeavesFromDocument(document proto.Message) (err 
 	return doctree.AddLeaves(leaves)
 }
 
-func getSaltsFromMessage(message proto.Message) (salts []*proofspb.Salt){
+func getSaltsFromMessage(message proto.Message) (salts []*proofspb.Salt, err error){
 	value := reflect.ValueOf(message)
 	msgStructValue := value.Elem()
 	for i := 0; i < msgStructValue.NumField(); i++ {
 		field := msgStructValue.Type().Field(i)
 		protoTag := field.Tag.Get("protobuf")
-		name, _, _ := ExtractFieldTags(protoTag)
+		name, _, err := ExtractFieldTags(protoTag)
+		if (err != nil) {
+			return nil, err
+		}
 		if name == "salts" {
 			if strings.Contains(protoTag, ",rep,"){
-				return msgStructValue.Field(i).Interface().([]*proofspb.Salt)
+				return msgStructValue.Field(i).Interface().([]*proofspb.Salt), nil
 			}
 		}
 	}
-	return nil;
+	return nil, nil;
 }
 // Generate calculated the merkle root with all supplied leaves. This method can only be called once and makes
 // the tree immutable.
