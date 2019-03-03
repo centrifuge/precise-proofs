@@ -3,7 +3,6 @@ package proofs
 import (
 	"crypto/sha256"
 	"testing"
-
 	"github.com/centrifuge/precise-proofs/examples/documents"
 	"github.com/stretchr/testify/assert"
 )

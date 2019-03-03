@@ -6,8 +6,8 @@ package documentspb
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import "github.com/centrifuge/precise-proofs/proofs/proto"
 import timestamp "github.com/golang/protobuf/ptypes/timestamp"
+import proto1 "github.com/centrifuge/precise-proofs/proofs/proto"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -40,30 +40,31 @@ func (x Enum) String() string {
 	return proto.EnumName(Enum_name, int32(x))
 }
 func (Enum) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_example_4b54997bebb7e668, []int{0}
+	return fileDescriptor_example_35a4f6e615f3d72d, []int{0}
 }
 
 type ExampleDocument struct {
-	ValueA               string   `protobuf:"bytes,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
-	ValueB               string   `protobuf:"bytes,2,opt,name=valueB,proto3" json:"valueB,omitempty"`
-	Value1               int64    `protobuf:"varint,3,opt,name=value1,proto3" json:"value1,omitempty"`
-	Value2               int64    `protobuf:"varint,4,opt,name=value2,proto3" json:"value2,omitempty"`
-	ValueBytes1          []byte   `protobuf:"bytes,5,opt,name=value_bytes1,json=valueBytes1,proto3" json:"value_bytes1,omitempty"`
-	ValueCamelCased      []byte   `protobuf:"bytes,6,opt,name=ValueCamelCased,proto3" json:"ValueCamelCased,omitempty"`
-	ValueNotIgnored      []byte   `protobuf:"bytes,7,opt,name=value_not_ignored,json=valueNotIgnored,proto3" json:"value_not_ignored,omitempty"`
-	ValueIgnored         []byte   `protobuf:"bytes,8,opt,name=value_ignored,json=valueIgnored,proto3" json:"value_ignored,omitempty"`
-	ValueNotHashed       []byte   `protobuf:"bytes,9,opt,name=value_not_hashed,json=valueNotHashed,proto3" json:"value_not_hashed,omitempty"`
-	EnumType             Enum     `protobuf:"varint,10,opt,name=enum_type,json=enumType,proto3,enum=documents.Enum" json:"enum_type,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	ValueA               string         `protobuf:"bytes,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
+	ValueB               string         `protobuf:"bytes,2,opt,name=valueB,proto3" json:"valueB,omitempty"`
+	Value1               int64          `protobuf:"varint,3,opt,name=value1,proto3" json:"value1,omitempty"`
+	Value2               int64          `protobuf:"varint,4,opt,name=value2,proto3" json:"value2,omitempty"`
+	ValueBytes1          []byte         `protobuf:"bytes,5,opt,name=value_bytes1,json=valueBytes1,proto3" json:"value_bytes1,omitempty"`
+	ValueCamelCased      []byte         `protobuf:"bytes,6,opt,name=ValueCamelCased,proto3" json:"ValueCamelCased,omitempty"`
+	ValueNotIgnored      []byte         `protobuf:"bytes,7,opt,name=value_not_ignored,json=valueNotIgnored,proto3" json:"value_not_ignored,omitempty"`
+	ValueIgnored         []byte         `protobuf:"bytes,8,opt,name=value_ignored,json=valueIgnored,proto3" json:"value_ignored,omitempty"`
+	ValueNotHashed       []byte         `protobuf:"bytes,9,opt,name=value_not_hashed,json=valueNotHashed,proto3" json:"value_not_hashed,omitempty"`
+	EnumType             Enum           `protobuf:"varint,10,opt,name=enum_type,json=enumType,proto3,enum=documents.Enum" json:"enum_type,omitempty"`
+	Salts                []*proto1.Salt `protobuf:"bytes,11,rep,name=salts,proto3" json:"salts,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
 }
 
 func (m *ExampleDocument) Reset()         { *m = ExampleDocument{} }
 func (m *ExampleDocument) String() string { return proto.CompactTextString(m) }
 func (*ExampleDocument) ProtoMessage()    {}
 func (*ExampleDocument) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_4b54997bebb7e668, []int{0}
+	return fileDescriptor_example_35a4f6e615f3d72d, []int{0}
 }
 func (m *ExampleDocument) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ExampleDocument.Unmarshal(m, b)
@@ -153,9 +154,17 @@ func (m *ExampleDocument) GetEnumType() Enum {
 	return Enum_type_one
 }
 
+func (m *ExampleDocument) GetSalts() []*proto1.Salt {
+	if m != nil {
+		return m.Salts
+	}
+	return nil
+}
+
 type AllFieldTypes struct {
 	StringValue          string               `protobuf:"bytes,1,opt,name=string_value,json=stringValue,proto3" json:"string_value,omitempty"`
 	TimeStampValue       *timestamp.Timestamp `protobuf:"bytes,2,opt,name=time_stamp_value,json=timeStampValue,proto3" json:"time_stamp_value,omitempty"`
+	Salts                []*proto1.Salt       `protobuf:"bytes,3,rep,name=salts,proto3" json:"salts,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
 	XXX_unrecognized     []byte               `json:"-"`
 	XXX_sizecache        int32                `json:"-"`
@@ -165,7 +174,7 @@ func (m *AllFieldTypes) Reset()         { *m = AllFieldTypes{} }
 func (m *AllFieldTypes) String() string { return proto.CompactTextString(m) }
 func (*AllFieldTypes) ProtoMessage()    {}
 func (*AllFieldTypes) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_4b54997bebb7e668, []int{1}
+	return fileDescriptor_example_35a4f6e615f3d72d, []int{1}
 }
 func (m *AllFieldTypes) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AllFieldTypes.Unmarshal(m, b)
@@ -199,19 +208,27 @@ func (m *AllFieldTypes) GetTimeStampValue() *timestamp.Timestamp {
 	return nil
 }
 
+func (m *AllFieldTypes) GetSalts() []*proto1.Salt {
+	if m != nil {
+		return m.Salts
+	}
+	return nil
+}
+
 type AllFieldTypesSalts struct {
-	StringValue          []byte   `protobuf:"bytes,1,opt,name=string_value,json=stringValue,proto3" json:"string_value,omitempty"`
-	TimeStampValue       []byte   `protobuf:"bytes,2,opt,name=time_stamp_value,json=timeStampValue,proto3" json:"time_stamp_value,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	StringValue          []byte         `protobuf:"bytes,1,opt,name=string_value,json=stringValue,proto3" json:"string_value,omitempty"`
+	TimeStampValue       []byte         `protobuf:"bytes,2,opt,name=time_stamp_value,json=timeStampValue,proto3" json:"time_stamp_value,omitempty"`
+	Salts                []*proto1.Salt `protobuf:"bytes,3,rep,name=salts,proto3" json:"salts,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
 }
 
 func (m *AllFieldTypesSalts) Reset()         { *m = AllFieldTypesSalts{} }
 func (m *AllFieldTypesSalts) String() string { return proto.CompactTextString(m) }
 func (*AllFieldTypesSalts) ProtoMessage()    {}
 func (*AllFieldTypesSalts) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_4b54997bebb7e668, []int{2}
+	return fileDescriptor_example_35a4f6e615f3d72d, []int{2}
 }
 func (m *AllFieldTypesSalts) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AllFieldTypesSalts.Unmarshal(m, b)
@@ -245,18 +262,26 @@ func (m *AllFieldTypesSalts) GetTimeStampValue() []byte {
 	return nil
 }
 
+func (m *AllFieldTypesSalts) GetSalts() []*proto1.Salt {
+	if m != nil {
+		return m.Salts
+	}
+	return nil
+}
+
 type SimpleItem struct {
-	ValueA               string   `protobuf:"bytes,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	ValueA               string         `protobuf:"bytes,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
+	Salts                []*proto1.Salt `protobuf:"bytes,2,rep,name=salts,proto3" json:"salts,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
 }
 
 func (m *SimpleItem) Reset()         { *m = SimpleItem{} }
 func (m *SimpleItem) String() string { return proto.CompactTextString(m) }
 func (*SimpleItem) ProtoMessage()    {}
 func (*SimpleItem) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_4b54997bebb7e668, []int{3}
+	return fileDescriptor_example_35a4f6e615f3d72d, []int{3}
 }
 func (m *SimpleItem) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SimpleItem.Unmarshal(m, b)
@@ -283,19 +308,27 @@ func (m *SimpleItem) GetValueA() string {
 	return ""
 }
 
+func (m *SimpleItem) GetSalts() []*proto1.Salt {
+	if m != nil {
+		return m.Salts
+	}
+	return nil
+}
+
 type RepeatedItem struct {
-	ValueA               []*SimpleItem `protobuf:"bytes,1,rep,name=valueA,proto3" json:"valueA,omitempty"`
-	ValueB               string        `protobuf:"bytes,2,opt,name=valueB,proto3" json:"valueB,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
-	XXX_unrecognized     []byte        `json:"-"`
-	XXX_sizecache        int32         `json:"-"`
+	ValueA               []*SimpleItem  `protobuf:"bytes,1,rep,name=valueA,proto3" json:"valueA,omitempty"`
+	ValueB               string         `protobuf:"bytes,2,opt,name=valueB,proto3" json:"valueB,omitempty"`
+	Salts                []*proto1.Salt `protobuf:"bytes,3,rep,name=salts,proto3" json:"salts,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
 }
 
 func (m *RepeatedItem) Reset()         { *m = RepeatedItem{} }
 func (m *RepeatedItem) String() string { return proto.CompactTextString(m) }
 func (*RepeatedItem) ProtoMessage()    {}
 func (*RepeatedItem) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_4b54997bebb7e668, []int{4}
+	return fileDescriptor_example_35a4f6e615f3d72d, []int{4}
 }
 func (m *RepeatedItem) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_RepeatedItem.Unmarshal(m, b)
@@ -329,8 +362,16 @@ func (m *RepeatedItem) GetValueB() string {
 	return ""
 }
 
+func (m *RepeatedItem) GetSalts() []*proto1.Salt {
+	if m != nil {
+		return m.Salts
+	}
+	return nil
+}
+
 type SimpleMap struct {
 	Value                map[int32]string `protobuf:"bytes,1,rep,name=value,proto3" json:"value,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Salts                []*proto1.Salt   `protobuf:"bytes,2,rep,name=salts,proto3" json:"salts,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}         `json:"-"`
 	XXX_unrecognized     []byte           `json:"-"`
 	XXX_sizecache        int32            `json:"-"`
@@ -340,7 +381,7 @@ func (m *SimpleMap) Reset()         { *m = SimpleMap{} }
 func (m *SimpleMap) String() string { return proto.CompactTextString(m) }
 func (*SimpleMap) ProtoMessage()    {}
 func (*SimpleMap) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_4b54997bebb7e668, []int{5}
+	return fileDescriptor_example_35a4f6e615f3d72d, []int{5}
 }
 func (m *SimpleMap) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SimpleMap.Unmarshal(m, b)
@@ -367,8 +408,16 @@ func (m *SimpleMap) GetValue() map[int32]string {
 	return nil
 }
 
+func (m *SimpleMap) GetSalts() []*proto1.Salt {
+	if m != nil {
+		return m.Salts
+	}
+	return nil
+}
+
 type SimpleStringMap struct {
 	Value                map[string]string `protobuf:"bytes,1,rep,name=value,proto3" json:"value,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Salts                []*proto1.Salt    `protobuf:"bytes,2,rep,name=salts,proto3" json:"salts,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
 	XXX_unrecognized     []byte            `json:"-"`
 	XXX_sizecache        int32             `json:"-"`
@@ -378,7 +427,7 @@ func (m *SimpleStringMap) Reset()         { *m = SimpleStringMap{} }
 func (m *SimpleStringMap) String() string { return proto.CompactTextString(m) }
 func (*SimpleStringMap) ProtoMessage()    {}
 func (*SimpleStringMap) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_4b54997bebb7e668, []int{6}
+	return fileDescriptor_example_35a4f6e615f3d72d, []int{6}
 }
 func (m *SimpleStringMap) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SimpleStringMap.Unmarshal(m, b)
@@ -405,8 +454,16 @@ func (m *SimpleStringMap) GetValue() map[string]string {
 	return nil
 }
 
+func (m *SimpleStringMap) GetSalts() []*proto1.Salt {
+	if m != nil {
+		return m.Salts
+	}
+	return nil
+}
+
 type NestedMap struct {
 	Value                map[int32]*SimpleMap `protobuf:"bytes,1,rep,name=value,proto3" json:"value,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Salts                []*proto1.Salt       `protobuf:"bytes,2,rep,name=salts,proto3" json:"salts,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}             `json:"-"`
 	XXX_unrecognized     []byte               `json:"-"`
 	XXX_sizecache        int32                `json:"-"`
@@ -416,7 +473,7 @@ func (m *NestedMap) Reset()         { *m = NestedMap{} }
 func (m *NestedMap) String() string { return proto.CompactTextString(m) }
 func (*NestedMap) ProtoMessage()    {}
 func (*NestedMap) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_4b54997bebb7e668, []int{7}
+	return fileDescriptor_example_35a4f6e615f3d72d, []int{7}
 }
 func (m *NestedMap) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_NestedMap.Unmarshal(m, b)
@@ -443,19 +500,27 @@ func (m *NestedMap) GetValue() map[int32]*SimpleMap {
 	return nil
 }
 
+func (m *NestedMap) GetSalts() []*proto1.Salt {
+	if m != nil {
+		return m.Salts
+	}
+	return nil
+}
+
 type SimpleEntry struct {
-	EntryKey             string   `protobuf:"bytes,1,opt,name=entry_key,json=entryKey,proto3" json:"entry_key,omitempty"`
-	EntryValue           string   `protobuf:"bytes,2,opt,name=entry_value,json=entryValue,proto3" json:"entry_value,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	EntryKey             string         `protobuf:"bytes,1,opt,name=entry_key,json=entryKey,proto3" json:"entry_key,omitempty"`
+	EntryValue           string         `protobuf:"bytes,2,opt,name=entry_value,json=entryValue,proto3" json:"entry_value,omitempty"`
+	Salts                []*proto1.Salt `protobuf:"bytes,3,rep,name=salts,proto3" json:"salts,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
 }
 
 func (m *SimpleEntry) Reset()         { *m = SimpleEntry{} }
 func (m *SimpleEntry) String() string { return proto.CompactTextString(m) }
 func (*SimpleEntry) ProtoMessage()    {}
 func (*SimpleEntry) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_4b54997bebb7e668, []int{8}
+	return fileDescriptor_example_35a4f6e615f3d72d, []int{8}
 }
 func (m *SimpleEntry) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SimpleEntry.Unmarshal(m, b)
@@ -489,8 +554,16 @@ func (m *SimpleEntry) GetEntryValue() string {
 	return ""
 }
 
+func (m *SimpleEntry) GetSalts() []*proto1.Salt {
+	if m != nil {
+		return m.Salts
+	}
+	return nil
+}
+
 type SimpleEntries struct {
 	Entries              []*SimpleEntry `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
+	Salts                []*proto1.Salt `protobuf:"bytes,2,rep,name=salts,proto3" json:"salts,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
 	XXX_unrecognized     []byte         `json:"-"`
 	XXX_sizecache        int32          `json:"-"`
@@ -500,7 +573,7 @@ func (m *SimpleEntries) Reset()         { *m = SimpleEntries{} }
 func (m *SimpleEntries) String() string { return proto.CompactTextString(m) }
 func (*SimpleEntries) ProtoMessage()    {}
 func (*SimpleEntries) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_4b54997bebb7e668, []int{9}
+	return fileDescriptor_example_35a4f6e615f3d72d, []int{9}
 }
 func (m *SimpleEntries) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SimpleEntries.Unmarshal(m, b)
@@ -527,21 +600,29 @@ func (m *SimpleEntries) GetEntries() []*SimpleEntry {
 	return nil
 }
 
+func (m *SimpleEntries) GetSalts() []*proto1.Salt {
+	if m != nil {
+		return m.Salts
+	}
+	return nil
+}
+
 type Entry struct {
-	EntryKey             string   `protobuf:"bytes,1,opt,name=entry_key,json=entryKey,proto3" json:"entry_key,omitempty"`
-	ValueA               string   `protobuf:"bytes,2,opt,name=valueA,proto3" json:"valueA,omitempty"`
-	ValueB               []byte   `protobuf:"bytes,3,opt,name=valueB,proto3" json:"valueB,omitempty"`
-	ValueC               int64    `protobuf:"varint,4,opt,name=valueC,proto3" json:"valueC,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	EntryKey             string         `protobuf:"bytes,1,opt,name=entry_key,json=entryKey,proto3" json:"entry_key,omitempty"`
+	ValueA               string         `protobuf:"bytes,2,opt,name=valueA,proto3" json:"valueA,omitempty"`
+	ValueB               []byte         `protobuf:"bytes,3,opt,name=valueB,proto3" json:"valueB,omitempty"`
+	ValueC               int64          `protobuf:"varint,4,opt,name=valueC,proto3" json:"valueC,omitempty"`
+	Salts                []*proto1.Salt `protobuf:"bytes,5,rep,name=salts,proto3" json:"salts,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
 }
 
 func (m *Entry) Reset()         { *m = Entry{} }
 func (m *Entry) String() string { return proto.CompactTextString(m) }
 func (*Entry) ProtoMessage()    {}
 func (*Entry) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_4b54997bebb7e668, []int{10}
+	return fileDescriptor_example_35a4f6e615f3d72d, []int{10}
 }
 func (m *Entry) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Entry.Unmarshal(m, b)
@@ -589,18 +670,26 @@ func (m *Entry) GetValueC() int64 {
 	return 0
 }
 
+func (m *Entry) GetSalts() []*proto1.Salt {
+	if m != nil {
+		return m.Salts
+	}
+	return nil
+}
+
 type Entries struct {
-	Entries              []*Entry `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Entries              []*Entry       `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
+	Salts                []*proto1.Salt `protobuf:"bytes,2,rep,name=salts,proto3" json:"salts,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
 }
 
 func (m *Entries) Reset()         { *m = Entries{} }
 func (m *Entries) String() string { return proto.CompactTextString(m) }
 func (*Entries) ProtoMessage()    {}
 func (*Entries) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_4b54997bebb7e668, []int{11}
+	return fileDescriptor_example_35a4f6e615f3d72d, []int{11}
 }
 func (m *Entries) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Entries.Unmarshal(m, b)
@@ -627,19 +716,27 @@ func (m *Entries) GetEntries() []*Entry {
 	return nil
 }
 
+func (m *Entries) GetSalts() []*proto1.Salt {
+	if m != nil {
+		return m.Salts
+	}
+	return nil
+}
+
 type BytesKeyEntry struct {
-	Address              []byte   `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
-	Value                string   `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Address              []byte         `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
+	Value                string         `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	Salts                []*proto1.Salt `protobuf:"bytes,3,rep,name=salts,proto3" json:"salts,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
 }
 
 func (m *BytesKeyEntry) Reset()         { *m = BytesKeyEntry{} }
 func (m *BytesKeyEntry) String() string { return proto.CompactTextString(m) }
 func (*BytesKeyEntry) ProtoMessage()    {}
 func (*BytesKeyEntry) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_4b54997bebb7e668, []int{12}
+	return fileDescriptor_example_35a4f6e615f3d72d, []int{12}
 }
 func (m *BytesKeyEntry) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_BytesKeyEntry.Unmarshal(m, b)
@@ -673,8 +770,16 @@ func (m *BytesKeyEntry) GetValue() string {
 	return ""
 }
 
+func (m *BytesKeyEntry) GetSalts() []*proto1.Salt {
+	if m != nil {
+		return m.Salts
+	}
+	return nil
+}
+
 type BytesKeyEntries struct {
 	Entries              []*BytesKeyEntry `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
+	Salts                []*proto1.Salt   `protobuf:"bytes,2,rep,name=salts,proto3" json:"salts,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}         `json:"-"`
 	XXX_unrecognized     []byte           `json:"-"`
 	XXX_sizecache        int32            `json:"-"`
@@ -684,7 +789,7 @@ func (m *BytesKeyEntries) Reset()         { *m = BytesKeyEntries{} }
 func (m *BytesKeyEntries) String() string { return proto.CompactTextString(m) }
 func (*BytesKeyEntries) ProtoMessage()    {}
 func (*BytesKeyEntries) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_4b54997bebb7e668, []int{13}
+	return fileDescriptor_example_35a4f6e615f3d72d, []int{13}
 }
 func (m *BytesKeyEntries) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_BytesKeyEntries.Unmarshal(m, b)
@@ -711,9 +816,17 @@ func (m *BytesKeyEntries) GetEntries() []*BytesKeyEntry {
 	return nil
 }
 
+func (m *BytesKeyEntries) GetSalts() []*proto1.Salt {
+	if m != nil {
+		return m.Salts
+	}
+	return nil
+}
+
 type TwoLevelRepeatedDocument struct {
 	ValueA               string          `protobuf:"bytes,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
 	ValueB               []*RepeatedItem `protobuf:"bytes,2,rep,name=valueB,proto3" json:"valueB,omitempty"`
+	Salts                []*proto1.Salt  `protobuf:"bytes,3,rep,name=salts,proto3" json:"salts,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}        `json:"-"`
 	XXX_unrecognized     []byte          `json:"-"`
 	XXX_sizecache        int32           `json:"-"`
@@ -723,7 +836,7 @@ func (m *TwoLevelRepeatedDocument) Reset()         { *m = TwoLevelRepeatedDocume
 func (m *TwoLevelRepeatedDocument) String() string { return proto.CompactTextString(m) }
 func (*TwoLevelRepeatedDocument) ProtoMessage()    {}
 func (*TwoLevelRepeatedDocument) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_4b54997bebb7e668, []int{14}
+	return fileDescriptor_example_35a4f6e615f3d72d, []int{14}
 }
 func (m *TwoLevelRepeatedDocument) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TwoLevelRepeatedDocument.Unmarshal(m, b)
@@ -757,20 +870,28 @@ func (m *TwoLevelRepeatedDocument) GetValueB() []*RepeatedItem {
 	return nil
 }
 
+func (m *TwoLevelRepeatedDocument) GetSalts() []*proto1.Salt {
+	if m != nil {
+		return m.Salts
+	}
+	return nil
+}
+
 type SimpleRepeatedDocument struct {
-	ValueA               string   `protobuf:"bytes,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
-	ValueB               string   `protobuf:"bytes,2,opt,name=valueB,proto3" json:"valueB,omitempty"`
-	ValueC               []string `protobuf:"bytes,3,rep,name=valueC,proto3" json:"valueC,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	ValueA               string         `protobuf:"bytes,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
+	ValueB               string         `protobuf:"bytes,2,opt,name=valueB,proto3" json:"valueB,omitempty"`
+	ValueC               []string       `protobuf:"bytes,3,rep,name=valueC,proto3" json:"valueC,omitempty"`
+	Salts                []*proto1.Salt `protobuf:"bytes,4,rep,name=salts,proto3" json:"salts,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
 }
 
 func (m *SimpleRepeatedDocument) Reset()         { *m = SimpleRepeatedDocument{} }
 func (m *SimpleRepeatedDocument) String() string { return proto.CompactTextString(m) }
 func (*SimpleRepeatedDocument) ProtoMessage()    {}
 func (*SimpleRepeatedDocument) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_4b54997bebb7e668, []int{15}
+	return fileDescriptor_example_35a4f6e615f3d72d, []int{15}
 }
 func (m *SimpleRepeatedDocument) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SimpleRepeatedDocument.Unmarshal(m, b)
@@ -811,11 +932,19 @@ func (m *SimpleRepeatedDocument) GetValueC() []string {
 	return nil
 }
 
+func (m *SimpleRepeatedDocument) GetSalts() []*proto1.Salt {
+	if m != nil {
+		return m.Salts
+	}
+	return nil
+}
+
 type SimpleMapDocument struct {
 	ValueA               string            `protobuf:"bytes,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
 	ValueB               string            `protobuf:"bytes,2,opt,name=valueB,proto3" json:"valueB,omitempty"`
 	ValueC               map[string]string `protobuf:"bytes,3,rep,name=valueC,proto3" json:"valueC,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 	ValueD               map[int32]string  `protobuf:"bytes,4,rep,name=valueD,proto3" json:"valueD,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Salts                []*proto1.Salt    `protobuf:"bytes,5,rep,name=salts,proto3" json:"salts,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
 	XXX_unrecognized     []byte            `json:"-"`
 	XXX_sizecache        int32             `json:"-"`
@@ -825,7 +954,7 @@ func (m *SimpleMapDocument) Reset()         { *m = SimpleMapDocument{} }
 func (m *SimpleMapDocument) String() string { return proto.CompactTextString(m) }
 func (*SimpleMapDocument) ProtoMessage()    {}
 func (*SimpleMapDocument) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_4b54997bebb7e668, []int{16}
+	return fileDescriptor_example_35a4f6e615f3d72d, []int{16}
 }
 func (m *SimpleMapDocument) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SimpleMapDocument.Unmarshal(m, b)
@@ -873,19 +1002,27 @@ func (m *SimpleMapDocument) GetValueD() map[int32]string {
 	return nil
 }
 
+func (m *SimpleMapDocument) GetSalts() []*proto1.Salt {
+	if m != nil {
+		return m.Salts
+	}
+	return nil
+}
+
 type TwoLevelItem struct {
-	ValueA               *SimpleItem `protobuf:"bytes,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
-	ValueB               string      `protobuf:"bytes,2,opt,name=valueB,proto3" json:"valueB,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}    `json:"-"`
-	XXX_unrecognized     []byte      `json:"-"`
-	XXX_sizecache        int32       `json:"-"`
+	ValueA               *SimpleItem    `protobuf:"bytes,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
+	ValueB               string         `protobuf:"bytes,2,opt,name=valueB,proto3" json:"valueB,omitempty"`
+	Salts                []*proto1.Salt `protobuf:"bytes,3,rep,name=salts,proto3" json:"salts,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
 }
 
 func (m *TwoLevelItem) Reset()         { *m = TwoLevelItem{} }
 func (m *TwoLevelItem) String() string { return proto.CompactTextString(m) }
 func (*TwoLevelItem) ProtoMessage()    {}
 func (*TwoLevelItem) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_4b54997bebb7e668, []int{17}
+	return fileDescriptor_example_35a4f6e615f3d72d, []int{17}
 }
 func (m *TwoLevelItem) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TwoLevelItem.Unmarshal(m, b)
@@ -919,21 +1056,29 @@ func (m *TwoLevelItem) GetValueB() string {
 	return ""
 }
 
+func (m *TwoLevelItem) GetSalts() []*proto1.Salt {
+	if m != nil {
+		return m.Salts
+	}
+	return nil
+}
+
 type NestedRepeatedDocument struct {
-	ValueA               string        `protobuf:"bytes,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
-	ValueB               string        `protobuf:"bytes,2,opt,name=valueB,proto3" json:"valueB,omitempty"`
-	ValueC               []*SimpleItem `protobuf:"bytes,3,rep,name=valueC,proto3" json:"valueC,omitempty"`
-	ValueD               *TwoLevelItem `protobuf:"bytes,4,opt,name=valueD,proto3" json:"valueD,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}      `json:"-"`
-	XXX_unrecognized     []byte        `json:"-"`
-	XXX_sizecache        int32         `json:"-"`
+	ValueA               string         `protobuf:"bytes,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
+	ValueB               string         `protobuf:"bytes,2,opt,name=valueB,proto3" json:"valueB,omitempty"`
+	ValueC               []*SimpleItem  `protobuf:"bytes,3,rep,name=valueC,proto3" json:"valueC,omitempty"`
+	ValueD               *TwoLevelItem  `protobuf:"bytes,4,opt,name=valueD,proto3" json:"valueD,omitempty"`
+	Salts                []*proto1.Salt `protobuf:"bytes,5,rep,name=salts,proto3" json:"salts,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
 }
 
 func (m *NestedRepeatedDocument) Reset()         { *m = NestedRepeatedDocument{} }
 func (m *NestedRepeatedDocument) String() string { return proto.CompactTextString(m) }
 func (*NestedRepeatedDocument) ProtoMessage()    {}
 func (*NestedRepeatedDocument) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_4b54997bebb7e668, []int{18}
+	return fileDescriptor_example_35a4f6e615f3d72d, []int{18}
 }
 func (m *NestedRepeatedDocument) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_NestedRepeatedDocument.Unmarshal(m, b)
@@ -981,18 +1126,26 @@ func (m *NestedRepeatedDocument) GetValueD() *TwoLevelItem {
 	return nil
 }
 
+func (m *NestedRepeatedDocument) GetSalts() []*proto1.Salt {
+	if m != nil {
+		return m.Salts
+	}
+	return nil
+}
+
 type InvalidHashedFieldDocument struct {
-	Value                string   `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Value                string         `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
+	Salts                []*proto1.Salt `protobuf:"bytes,2,rep,name=salts,proto3" json:"salts,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
 }
 
 func (m *InvalidHashedFieldDocument) Reset()         { *m = InvalidHashedFieldDocument{} }
 func (m *InvalidHashedFieldDocument) String() string { return proto.CompactTextString(m) }
 func (*InvalidHashedFieldDocument) ProtoMessage()    {}
 func (*InvalidHashedFieldDocument) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_4b54997bebb7e668, []int{19}
+	return fileDescriptor_example_35a4f6e615f3d72d, []int{19}
 }
 func (m *InvalidHashedFieldDocument) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_InvalidHashedFieldDocument.Unmarshal(m, b)
@@ -1019,6 +1172,13 @@ func (m *InvalidHashedFieldDocument) GetValue() string {
 	return ""
 }
 
+func (m *InvalidHashedFieldDocument) GetSalts() []*proto1.Salt {
+	if m != nil {
+		return m.Salts
+	}
+	return nil
+}
+
 type OneofSample struct {
 	ValueA int32 `protobuf:"varint,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
 	// Types that are valid to be assigned to OneofBlock:
@@ -1027,6 +1187,7 @@ type OneofSample struct {
 	//	*OneofSample_ValueD
 	OneofBlock           isOneofSample_OneofBlock `protobuf_oneof:"oneofBlock"`
 	ValueE               int32                    `protobuf:"varint,5,opt,name=valueE,proto3" json:"valueE,omitempty"`
+	Salts                []*proto1.Salt           `protobuf:"bytes,6,rep,name=salts,proto3" json:"salts,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}                 `json:"-"`
 	XXX_unrecognized     []byte                   `json:"-"`
 	XXX_sizecache        int32                    `json:"-"`
@@ -1036,7 +1197,7 @@ func (m *OneofSample) Reset()         { *m = OneofSample{} }
 func (m *OneofSample) String() string { return proto.CompactTextString(m) }
 func (*OneofSample) ProtoMessage()    {}
 func (*OneofSample) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_4b54997bebb7e668, []int{20}
+	return fileDescriptor_example_35a4f6e615f3d72d, []int{20}
 }
 func (m *OneofSample) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OneofSample.Unmarshal(m, b)
@@ -1118,6 +1279,13 @@ func (m *OneofSample) GetValueE() int32 {
 		return m.ValueE
 	}
 	return 0
+}
+
+func (m *OneofSample) GetSalts() []*proto1.Salt {
+	if m != nil {
+		return m.Salts
+	}
+	return nil
 }
 
 // XXX_OneofFuncs is for the internal use of the proto package.
@@ -1205,31 +1373,32 @@ func _OneofSample_OneofSizer(msg proto.Message) (n int) {
 }
 
 type LongDocument struct {
-	Value0               int64    `protobuf:"varint,16,opt,name=value0,proto3" json:"value0,omitempty"`
-	Value1               int64    `protobuf:"varint,1,opt,name=value1,proto3" json:"value1,omitempty"`
-	Value2               int64    `protobuf:"varint,2,opt,name=value2,proto3" json:"value2,omitempty"`
-	Value3               int64    `protobuf:"varint,3,opt,name=value3,proto3" json:"value3,omitempty"`
-	Value4               int64    `protobuf:"varint,4,opt,name=value4,proto3" json:"value4,omitempty"`
-	Value5               int64    `protobuf:"varint,5,opt,name=value5,proto3" json:"value5,omitempty"`
-	Value6               int64    `protobuf:"varint,6,opt,name=value6,proto3" json:"value6,omitempty"`
-	Value7               int64    `protobuf:"varint,7,opt,name=value7,proto3" json:"value7,omitempty"`
-	Value8               int64    `protobuf:"varint,8,opt,name=value8,proto3" json:"value8,omitempty"`
-	Value9               int64    `protobuf:"varint,9,opt,name=value9,proto3" json:"value9,omitempty"`
-	ValueA               int64    `protobuf:"varint,10,opt,name=valueA,proto3" json:"valueA,omitempty"`
-	ValueB               int64    `protobuf:"varint,11,opt,name=valueB,proto3" json:"valueB,omitempty"`
-	ValueC               int64    `protobuf:"varint,12,opt,name=valueC,proto3" json:"valueC,omitempty"`
-	ValueD               int64    `protobuf:"varint,13,opt,name=valueD,proto3" json:"valueD,omitempty"`
-	ValueE               int64    `protobuf:"varint,14,opt,name=valueE,proto3" json:"valueE,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	Value0               int64          `protobuf:"varint,16,opt,name=value0,proto3" json:"value0,omitempty"`
+	Value1               int64          `protobuf:"varint,1,opt,name=value1,proto3" json:"value1,omitempty"`
+	Value2               int64          `protobuf:"varint,2,opt,name=value2,proto3" json:"value2,omitempty"`
+	Value3               int64          `protobuf:"varint,3,opt,name=value3,proto3" json:"value3,omitempty"`
+	Value4               int64          `protobuf:"varint,4,opt,name=value4,proto3" json:"value4,omitempty"`
+	Value5               int64          `protobuf:"varint,5,opt,name=value5,proto3" json:"value5,omitempty"`
+	Value6               int64          `protobuf:"varint,6,opt,name=value6,proto3" json:"value6,omitempty"`
+	Value7               int64          `protobuf:"varint,7,opt,name=value7,proto3" json:"value7,omitempty"`
+	Value8               int64          `protobuf:"varint,8,opt,name=value8,proto3" json:"value8,omitempty"`
+	Value9               int64          `protobuf:"varint,9,opt,name=value9,proto3" json:"value9,omitempty"`
+	ValueA               int64          `protobuf:"varint,10,opt,name=valueA,proto3" json:"valueA,omitempty"`
+	ValueB               int64          `protobuf:"varint,11,opt,name=valueB,proto3" json:"valueB,omitempty"`
+	ValueC               int64          `protobuf:"varint,12,opt,name=valueC,proto3" json:"valueC,omitempty"`
+	ValueD               int64          `protobuf:"varint,13,opt,name=valueD,proto3" json:"valueD,omitempty"`
+	ValueE               int64          `protobuf:"varint,14,opt,name=valueE,proto3" json:"valueE,omitempty"`
+	Salts                []*proto1.Salt `protobuf:"bytes,15,rep,name=salts,proto3" json:"salts,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
 }
 
 func (m *LongDocument) Reset()         { *m = LongDocument{} }
 func (m *LongDocument) String() string { return proto.CompactTextString(m) }
 func (*LongDocument) ProtoMessage()    {}
 func (*LongDocument) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_4b54997bebb7e668, []int{21}
+	return fileDescriptor_example_35a4f6e615f3d72d, []int{21}
 }
 func (m *LongDocument) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_LongDocument.Unmarshal(m, b)
@@ -1354,27 +1523,35 @@ func (m *LongDocument) GetValueE() int64 {
 	return 0
 }
 
+func (m *LongDocument) GetSalts() []*proto1.Salt {
+	if m != nil {
+		return m.Salts
+	}
+	return nil
+}
+
 type Integers struct {
-	ValueA               int32    `protobuf:"varint,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
-	ValueB               int64    `protobuf:"varint,2,opt,name=valueB,proto3" json:"valueB,omitempty"`
-	ValueC               uint32   `protobuf:"varint,3,opt,name=valueC,proto3" json:"valueC,omitempty"`
-	ValueD               uint64   `protobuf:"varint,4,opt,name=valueD,proto3" json:"valueD,omitempty"`
-	ValueE               int32    `protobuf:"zigzag32,5,opt,name=valueE,proto3" json:"valueE,omitempty"`
-	ValueF               int64    `protobuf:"zigzag64,6,opt,name=valueF,proto3" json:"valueF,omitempty"`
-	ValueG               uint32   `protobuf:"fixed32,7,opt,name=valueG,proto3" json:"valueG,omitempty"`
-	ValueH               uint64   `protobuf:"fixed64,8,opt,name=valueH,proto3" json:"valueH,omitempty"`
-	ValueI               int32    `protobuf:"fixed32,9,opt,name=valueI,proto3" json:"valueI,omitempty"`
-	ValueJ               int64    `protobuf:"fixed64,10,opt,name=valueJ,proto3" json:"valueJ,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
+	ValueA               int32          `protobuf:"varint,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
+	ValueB               int64          `protobuf:"varint,2,opt,name=valueB,proto3" json:"valueB,omitempty"`
+	ValueC               uint32         `protobuf:"varint,3,opt,name=valueC,proto3" json:"valueC,omitempty"`
+	ValueD               uint64         `protobuf:"varint,4,opt,name=valueD,proto3" json:"valueD,omitempty"`
+	ValueE               int32          `protobuf:"zigzag32,5,opt,name=valueE,proto3" json:"valueE,omitempty"`
+	ValueF               int64          `protobuf:"zigzag64,6,opt,name=valueF,proto3" json:"valueF,omitempty"`
+	ValueG               uint32         `protobuf:"fixed32,7,opt,name=valueG,proto3" json:"valueG,omitempty"`
+	ValueH               uint64         `protobuf:"fixed64,8,opt,name=valueH,proto3" json:"valueH,omitempty"`
+	ValueI               int32          `protobuf:"fixed32,9,opt,name=valueI,proto3" json:"valueI,omitempty"`
+	ValueJ               int64          `protobuf:"fixed64,10,opt,name=valueJ,proto3" json:"valueJ,omitempty"`
+	Salts                []*proto1.Salt `protobuf:"bytes,11,rep,name=salts,proto3" json:"salts,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
 }
 
 func (m *Integers) Reset()         { *m = Integers{} }
 func (m *Integers) String() string { return proto.CompactTextString(m) }
 func (*Integers) ProtoMessage()    {}
 func (*Integers) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_4b54997bebb7e668, []int{22}
+	return fileDescriptor_example_35a4f6e615f3d72d, []int{22}
 }
 func (m *Integers) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Integers.Unmarshal(m, b)
@@ -1464,10 +1641,17 @@ func (m *Integers) GetValueJ() int64 {
 	return 0
 }
 
+func (m *Integers) GetSalts() []*proto1.Salt {
+	if m != nil {
+		return m.Salts
+	}
+	return nil
+}
+
 type ContainSalts struct {
 	ValueA               string         `protobuf:"bytes,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
 	ValueB               int32          `protobuf:"varint,2,opt,name=valueB,proto3" json:"valueB,omitempty"`
-	Salts                []*proofspb.Salt `protobuf:"bytes,3,rep,name=salts,proto3" json:"salts,omitempty"`
+	Salts                []*proto1.Salt `protobuf:"bytes,3,rep,name=salts,proto3" json:"salts,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
 	XXX_unrecognized     []byte         `json:"-"`
 	XXX_sizecache        int32          `json:"-"`
@@ -1477,7 +1661,7 @@ func (m *ContainSalts) Reset()         { *m = ContainSalts{} }
 func (m *ContainSalts) String() string { return proto.CompactTextString(m) }
 func (*ContainSalts) ProtoMessage()    {}
 func (*ContainSalts) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_4b54997bebb7e668, []int{23}
+	return fileDescriptor_example_35a4f6e615f3d72d, []int{23}
 }
 func (m *ContainSalts) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ContainSalts.Unmarshal(m, b)
@@ -1511,7 +1695,7 @@ func (m *ContainSalts) GetValueB() int32 {
 	return 0
 }
 
-func (m *ContainSalts) GetSalts() []*proofspb.Salt {
+func (m *ContainSalts) GetSalts() []*proto1.Salt {
 	if m != nil {
 		return m.Salts
 	}
@@ -1551,83 +1735,87 @@ func init() {
 	proto.RegisterEnum("documents.Enum", Enum_name, Enum_value)
 }
 
-func init() { proto.RegisterFile("example.proto", fileDescriptor_example_4b54997bebb7e668) }
+func init() { proto.RegisterFile("example.proto", fileDescriptor_example_35a4f6e615f3d72d) }
 
-var fileDescriptor_example_4b54997bebb7e668 = []byte{
-	// 1195 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x57, 0xcd, 0x6e, 0xdb, 0x46,
-	0x10, 0x36, 0x25, 0xd3, 0xb6, 0x86, 0x94, 0x25, 0xb3, 0xae, 0x43, 0x28, 0x07, 0xab, 0x44, 0x0b,
-	0x10, 0x46, 0x22, 0xc7, 0x72, 0x9c, 0xd8, 0xbd, 0xa4, 0xa1, 0x24, 0xdb, 0xb2, 0x13, 0x23, 0xa0,
-	0x9d, 0xa0, 0xe8, 0x45, 0xa5, 0xcd, 0xb5, 0x22, 0x84, 0x22, 0x09, 0x91, 0x76, 0x22, 0xa0, 0xef,
-	0x50, 0xa0, 0x4f, 0xd0, 0x63, 0x8e, 0x39, 0xf7, 0x66, 0xa0, 0xaf, 0xe4, 0x1e, 0x8a, 0x1e, 0x8a,
-	0xdd, 0xe5, 0x2e, 0x97, 0xfa, 0xa9, 0x9c, 0xf4, 0xc6, 0xfd, 0x76, 0x76, 0xe6, 0x9b, 0xd9, 0x99,
-	0xd9, 0x21, 0x14, 0xd1, 0x07, 0xa7, 0x1f, 0x7a, 0xa8, 0x16, 0x0e, 0x82, 0x38, 0xd0, 0x0a, 0x6e,
-	0x70, 0x71, 0xd5, 0x47, 0x7e, 0x1c, 0x55, 0xd6, 0xbb, 0x41, 0xd0, 0xf5, 0xd0, 0x26, 0xd9, 0x38,
-	0xbf, 0xba, 0xdc, 0x8c, 0x7b, 0x7d, 0x14, 0xc5, 0x4e, 0x3f, 0xa4, 0xb2, 0x15, 0x3d, 0x1c, 0x04,
-	0xc1, 0x65, 0x44, 0x05, 0x36, 0xc9, 0x22, 0xd9, 0xb9, 0x97, 0xd9, 0x89, 0x1c, 0x2f, 0xa6, 0x1b,
-	0xc6, 0x3f, 0x39, 0x28, 0xb5, 0xa8, 0xc1, 0x66, 0x62, 0x48, 0x5b, 0x83, 0x85, 0x6b, 0xc7, 0xbb,
-	0x42, 0xcf, 0x75, 0xa9, 0x2a, 0x99, 0x05, 0x3b, 0x59, 0x71, 0xdc, 0xd2, 0x73, 0x02, 0x6e, 0x71,
-	0x7c, 0x4b, 0xcf, 0x57, 0x25, 0x33, 0x9f, 0xe0, 0x5b, 0x1c, 0xaf, 0xeb, 0xf3, 0x02, 0x5e, 0xd7,
-	0xbe, 0x01, 0x95, 0x7c, 0x75, 0xce, 0x87, 0x31, 0x8a, 0xb6, 0x74, 0xb9, 0x2a, 0x99, 0xaa, 0xad,
-	0x50, 0x6d, 0x04, 0xd2, 0x4c, 0x28, 0xbd, 0xc1, 0xcb, 0x86, 0xd3, 0x47, 0x5e, 0xc3, 0x89, 0x90,
-	0xab, 0x2f, 0x10, 0xa9, 0x51, 0x58, 0xdb, 0x82, 0x15, 0xaa, 0xcc, 0x0f, 0xe2, 0x4e, 0xaf, 0xeb,
-	0x07, 0x03, 0xe4, 0xea, 0x8b, 0x58, 0xd6, 0x92, 0x7f, 0xbf, 0xb9, 0x85, 0x39, 0xbb, 0x44, 0xf6,
-	0x4f, 0x82, 0xb8, 0x4d, 0x77, 0xb5, 0x0d, 0x28, 0xd2, 0x23, 0x4c, 0x7c, 0x29, 0x15, 0x97, 0x6c,
-	0xca, 0x8d, 0xc9, 0x6e, 0x42, 0x39, 0x55, 0xff, 0xd6, 0x89, 0xde, 0x22, 0x57, 0x2f, 0x50, 0xf1,
-	0x8f, 0x44, 0x7c, 0x99, 0x69, 0x3f, 0x24, 0x9b, 0xda, 0x03, 0x28, 0x20, 0xff, 0xaa, 0xdf, 0x89,
-	0x87, 0x21, 0xd2, 0xa1, 0x2a, 0x99, 0xcb, 0xf5, 0x52, 0x8d, 0xdf, 0x61, 0xad, 0xe5, 0x5f, 0xf5,
-	0xed, 0x25, 0x2c, 0x71, 0x36, 0x0c, 0x91, 0xf1, 0x01, 0x8a, 0xcf, 0x3d, 0x6f, 0xbf, 0x87, 0x3c,
-	0x17, 0xaf, 0x23, 0x1c, 0x9b, 0x28, 0x1e, 0xf4, 0xfc, 0x6e, 0x87, 0xe8, 0x4d, 0x6e, 0x40, 0xa1,
-	0x18, 0xf1, 0x5d, 0x6b, 0x42, 0x19, 0x5f, 0x7c, 0x87, 0xdc, 0x7c, 0x22, 0x86, 0x2f, 0x44, 0xa9,
-	0x57, 0x6a, 0x34, 0x43, 0x6a, 0x2c, 0x43, 0x6a, 0x67, 0x2c, 0x43, 0xec, 0x65, 0x7c, 0xe6, 0x14,
-	0x7f, 0x12, 0x2d, 0x86, 0x03, 0x5a, 0xc6, 0xf2, 0xa9, 0xe3, 0xc5, 0x93, 0xcd, 0xab, 0x59, 0xf3,
-	0xe6, 0x14, 0xf3, 0xea, 0x98, 0x89, 0x6f, 0x01, 0x4e, 0x7b, 0x38, 0xb3, 0xda, 0x31, 0xea, 0x4f,
-	0xcb, 0x2a, 0xe3, 0x35, 0xa8, 0x36, 0x0a, 0x91, 0x13, 0x23, 0x97, 0xc8, 0x3d, 0x14, 0xe4, 0xf2,
-	0xa6, 0x52, 0xff, 0x5a, 0x88, 0x5e, 0xaa, 0x6e, 0x56, 0x52, 0x1a, 0xbf, 0x40, 0x81, 0x4a, 0xbf,
-	0x74, 0x42, 0x6d, 0x07, 0x64, 0xe6, 0x0f, 0x56, 0xb9, 0x3e, 0xa6, 0xf2, 0xa5, 0x13, 0xd6, 0x08,
-	0xe9, 0x96, 0x1f, 0x0f, 0x86, 0x36, 0x95, 0xae, 0xec, 0x02, 0xa4, 0xa0, 0x56, 0x86, 0xfc, 0x3b,
-	0x34, 0x24, 0xec, 0x65, 0x1b, 0x7f, 0x6a, 0xab, 0x4c, 0x2d, 0x35, 0x4d, 0x17, 0xdf, 0xe7, 0x76,
-	0x25, 0xe3, 0x57, 0x09, 0x4a, 0x54, 0xf3, 0x29, 0x09, 0x1d, 0x26, 0x61, 0x65, 0x49, 0x7c, 0x37,
-	0x46, 0x82, 0x8b, 0x0a, 0x54, 0x2c, 0xf9, 0xd3, 0xcd, 0x2d, 0x54, 0x67, 0x32, 0x2a, 0xcc, 0x62,
-	0xf4, 0x9b, 0x04, 0x85, 0x13, 0x14, 0xc5, 0xc8, 0x9d, 0x11, 0x10, 0x2e, 0x34, 0x21, 0x20, 0x27,
-	0x33, 0x02, 0xb2, 0x21, 0x9a, 0x57, 0xea, 0xab, 0x93, 0xe2, 0x2c, 0x92, 0x3a, 0x06, 0x85, 0xe2,
-	0x54, 0xe1, 0x7d, 0x5c, 0x3b, 0xf1, 0x60, 0xd8, 0x49, 0xbd, 0x5a, 0x22, 0xc0, 0x31, 0x1a, 0x6a,
-	0xeb, 0xa0, 0xd0, 0x4d, 0xd1, 0x41, 0x20, 0x10, 0x4d, 0xb7, 0x37, 0x50, 0x4c, 0x95, 0xf5, 0x50,
-	0xa4, 0xb5, 0x60, 0x11, 0xd1, 0xcf, 0xc4, 0xcd, 0xb5, 0x31, 0x3e, 0x34, 0xc6, 0x5f, 0x91, 0x18,
-	0xff, 0x71, 0x73, 0x2b, 0xd8, 0xb7, 0xd9, 0x59, 0xc3, 0x03, 0xf9, 0x0e, 0xf4, 0xd2, 0xf4, 0xce,
-	0x4d, 0x69, 0x9a, 0x79, 0x52, 0x24, 0xa3, 0x4d, 0xb3, 0x91, 0x69, 0x8e, 0x0d, 0xe3, 0x08, 0x16,
-	0x19, 0xff, 0x67, 0xa3, 0xfc, 0xcb, 0x99, 0x46, 0x32, 0x9b, 0xf9, 0x33, 0x28, 0x92, 0x7e, 0x7a,
-	0x8c, 0x86, 0xd4, 0x03, 0x1d, 0x16, 0x1d, 0xd7, 0x1d, 0xa0, 0x28, 0x4a, 0x2a, 0x9b, 0x2d, 0x27,
-	0x27, 0x8e, 0xf1, 0x23, 0x94, 0x44, 0x05, 0x13, 0x83, 0xaa, 0x0b, 0xa4, 0x32, 0xd6, 0xac, 0x15,
-	0x4c, 0x6e, 0x15, 0x93, 0x63, 0x66, 0x52, 0x6a, 0x17, 0xa0, 0x9f, 0xbd, 0x0f, 0x5e, 0xa0, 0x6b,
-	0xe4, 0xb1, 0xea, 0x9f, 0xf9, 0xfe, 0x6c, 0x0a, 0xa5, 0x8e, 0x2d, 0xdf, 0x13, 0x2c, 0x8b, 0x2d,
-	0x84, 0xf7, 0x80, 0x9f, 0x61, 0x8d, 0x5e, 0xf3, 0x9d, 0x4d, 0xcc, 0x7a, 0xe2, 0x1a, 0x7a, 0xbe,
-	0x9a, 0xe7, 0x78, 0xc3, 0xf8, 0x33, 0x07, 0x2b, 0x3c, 0xb3, 0xbf, 0x58, 0xfb, 0x41, 0x46, 0xbb,
-	0x52, 0x37, 0x27, 0xd5, 0x0d, 0xd3, 0x4e, 0xcb, 0xb2, 0x91, 0xe9, 0x0e, 0xc9, 0x71, 0xed, 0x87,
-	0x44, 0x51, 0x53, 0x9f, 0xbf, 0xab, 0xa2, 0x26, 0x2d, 0xf0, 0xe4, 0x5c, 0x65, 0x0f, 0x14, 0x41,
-	0xff, 0xe7, 0x74, 0x18, 0x7e, 0xb4, 0xf9, 0xf9, 0xed, 0xf2, 0x35, 0xa8, 0x2c, 0x1b, 0xc6, 0xde,
-	0x00, 0xe9, 0xcb, 0xdf, 0x80, 0x8f, 0x12, 0xac, 0xd1, 0x76, 0xf6, 0xbf, 0x13, 0xe0, 0xe1, 0xc8,
-	0x15, 0xfd, 0x27, 0xa3, 0x06, 0x4f, 0xd5, 0x26, 0xa9, 0xee, 0x6c, 0xaa, 0x8a, 0x9e, 0xb2, 0xb8,
-	0x1b, 0x7b, 0x50, 0x69, 0xfb, 0xd7, 0x8e, 0xd7, 0x73, 0xe9, 0x1c, 0x41, 0x1e, 0x66, 0xce, 0xf6,
-	0x7e, 0xda, 0xae, 0x25, 0xb3, 0xc0, 0x46, 0x8f, 0xa4, 0x48, 0x3f, 0x49, 0xa0, 0x04, 0x3e, 0x0a,
-	0x2e, 0x4f, 0xc9, 0x18, 0x37, 0xe2, 0x9a, 0xcc, 0x5d, 0xd3, 0x33, 0xae, 0xc9, 0x87, 0x73, 0xdc,
-	0x39, 0x5d, 0x70, 0x4e, 0x32, 0x0b, 0x7c, 0x67, 0xdc, 0x8f, 0xc9, 0x6e, 0xf3, 0x03, 0x4d, 0x6e,
-	0xbc, 0x45, 0xa6, 0x3a, 0x66, 0xbc, 0x65, 0xa9, 0x00, 0x84, 0xa3, 0xe5, 0x05, 0x17, 0xef, 0x8c,
-	0xbf, 0x72, 0xa0, 0xbe, 0x08, 0xfc, 0xee, 0xd8, 0x75, 0x3c, 0xd2, 0xcb, 0x42, 0x37, 0x7c, 0x24,
-	0x8c, 0x96, 0xd2, 0x94, 0xd1, 0x32, 0x97, 0x19, 0x2d, 0x19, 0xbe, 0x9d, 0x19, 0x45, 0xb7, 0x39,
-	0xfe, 0x38, 0xd3, 0x6d, 0x1f, 0x73, 0x7c, 0x87, 0xd0, 0x65, 0xf8, 0x0e, 0xc7, 0x9f, 0x90, 0xb1,
-	0x93, 0xe1, 0x4f, 0x38, 0xfe, 0x94, 0x8c, 0x98, 0x0c, 0x7f, 0xca, 0xf1, 0x5d, 0x32, 0x4b, 0x32,
-	0x7c, 0x97, 0xe3, 0x7b, 0x64, 0x68, 0x64, 0xf8, 0x9e, 0x70, 0x47, 0x20, 0xe0, 0x62, 0xfa, 0x29,
-	0x02, 0x2e, 0xf6, 0x1f, 0x55, 0x7c, 0x2d, 0x38, 0xde, 0xd4, 0x8b, 0x02, 0x2e, 0x5e, 0xc3, 0xb2,
-	0x80, 0xb7, 0x8c, 0xbf, 0x25, 0x58, 0x6a, 0xfb, 0x31, 0xea, 0xa2, 0x41, 0x34, 0x35, 0x51, 0xb2,
-	0x35, 0x90, 0x9f, 0xd8, 0x04, 0x25, 0xb3, 0x38, 0x81, 0x04, 0x0e, 0xee, 0xfc, 0x94, 0x5c, 0x58,
-	0x61, 0x24, 0x38, 0xbe, 0x4f, 0x82, 0xab, 0x25, 0xf8, 0x3e, 0xc7, 0x0f, 0x48, 0x70, 0x17, 0x13,
-	0xfc, 0x80, 0xe3, 0x87, 0x24, 0xb8, 0x0b, 0x09, 0x7e, 0xc8, 0xf1, 0x36, 0x09, 0x6e, 0x29, 0xc1,
-	0xdb, 0x1c, 0x3f, 0x22, 0xc1, 0x2d, 0x27, 0xf8, 0x91, 0x71, 0x0e, 0x6a, 0x23, 0xf0, 0x63, 0xa7,
-	0xe7, 0xd3, 0x61, 0xf7, 0x6e, 0x3d, 0x40, 0xe6, 0xfe, 0x1b, 0x20, 0xe3, 0x3f, 0xa7, 0x28, 0x69,
-	0x01, 0x6a, 0x8d, 0xfe, 0x54, 0xd5, 0xb0, 0x36, 0x9b, 0x6e, 0x6d, 0x18, 0x30, 0x8f, 0x47, 0x7c,
-	0x4d, 0x85, 0x25, 0xfc, 0x07, 0xd0, 0x09, 0x7c, 0x54, 0x9e, 0xe3, 0xab, 0xf8, 0x7d, 0x50, 0x96,
-	0xac, 0x07, 0x50, 0xbc, 0x08, 0xfa, 0x69, 0x25, 0x59, 0x6a, 0xf2, 0x07, 0xf6, 0x0a, 0x8f, 0xed,
-	0xaf, 0xa4, 0x9f, 0x14, 0xbe, 0x15, 0x9e, 0x9f, 0x2f, 0x90, 0x61, 0x7e, 0xfb, 0xdf, 0x00, 0x00,
-	0x00, 0xff, 0xff, 0x1b, 0xa8, 0x14, 0x3d, 0x18, 0x0e, 0x00, 0x00,
+var fileDescriptor_example_35a4f6e615f3d72d = []byte{
+	// 1259 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x58, 0xcd, 0x4f, 0xe3, 0x46,
+	0x14, 0x67, 0x12, 0x02, 0xe4, 0xd9, 0x21, 0xc1, 0xa5, 0xac, 0x95, 0x3d, 0x90, 0x46, 0xaa, 0x64,
+	0xa1, 0xdd, 0xb0, 0x84, 0x65, 0x17, 0x7a, 0x69, 0x37, 0x1f, 0x40, 0xf6, 0x03, 0xad, 0x0c, 0xea,
+	0xa1, 0x52, 0x15, 0x19, 0x32, 0x64, 0xa3, 0x75, 0xec, 0x28, 0x36, 0x6c, 0x53, 0xf5, 0xd8, 0xaa,
+	0xd7, 0x9e, 0xab, 0xaa, 0xe2, 0xd8, 0x63, 0xa5, 0x4a, 0x3d, 0xf4, 0xc6, 0xbd, 0xc7, 0xfe, 0x11,
+	0xfd, 0x07, 0xb8, 0x57, 0x33, 0xe3, 0x19, 0x8f, 0x49, 0xdc, 0x38, 0x74, 0x7b, 0xcb, 0xfc, 0xe6,
+	0xcd, 0x9b, 0xdf, 0xfb, 0x98, 0xf7, 0xfc, 0x02, 0x39, 0xfc, 0x95, 0xd5, 0x1f, 0xd8, 0xb8, 0x32,
+	0x18, 0xba, 0xbe, 0xab, 0x65, 0x3b, 0xee, 0xd9, 0x45, 0x1f, 0x3b, 0xbe, 0x57, 0x5c, 0xef, 0xba,
+	0x6e, 0xd7, 0xc6, 0x9b, 0x74, 0xe3, 0xf4, 0xe2, 0x7c, 0xd3, 0xef, 0xf5, 0xb1, 0xe7, 0x5b, 0xfd,
+	0x01, 0x93, 0x2d, 0xea, 0x83, 0xa1, 0xeb, 0x9e, 0x7b, 0x4c, 0x60, 0x93, 0x2e, 0x82, 0x9d, 0x7b,
+	0x91, 0x1d, 0xcf, 0xb2, 0x7d, 0xb6, 0x51, 0xbe, 0x4a, 0x43, 0xbe, 0xc9, 0x2e, 0x6c, 0x04, 0x17,
+	0x69, 0x6b, 0xb0, 0x70, 0x69, 0xd9, 0x17, 0xf8, 0x99, 0x8e, 0x4a, 0xc8, 0xc8, 0x9a, 0xc1, 0x4a,
+	0xe0, 0x35, 0x3d, 0x25, 0xe1, 0x35, 0x81, 0x6f, 0xe9, 0xe9, 0x12, 0x32, 0xd2, 0x01, 0xbe, 0x25,
+	0xf0, 0xaa, 0x3e, 0x2f, 0xe1, 0x55, 0xed, 0x23, 0x50, 0xe9, 0xaf, 0xf6, 0xe9, 0xc8, 0xc7, 0xde,
+	0x96, 0x9e, 0x29, 0x21, 0x43, 0x35, 0x15, 0xa6, 0x8d, 0x42, 0x9a, 0x01, 0xf9, 0xcf, 0xc9, 0xb2,
+	0x6e, 0xf5, 0xb1, 0x5d, 0xb7, 0x3c, 0xdc, 0xd1, 0x17, 0xa8, 0xd4, 0x6d, 0x58, 0xdb, 0x82, 0x15,
+	0xa6, 0xcc, 0x71, 0xfd, 0x76, 0xaf, 0xeb, 0xb8, 0x43, 0xdc, 0xd1, 0x17, 0x89, 0x6c, 0x2d, 0x73,
+	0x75, 0x7d, 0x03, 0x73, 0x66, 0x9e, 0xee, 0x1f, 0xb9, 0x7e, 0x8b, 0xed, 0x6a, 0x1b, 0x90, 0x63,
+	0x47, 0xb8, 0xf8, 0x52, 0x28, 0x8e, 0x4c, 0xc6, 0x8d, 0xcb, 0x6e, 0x42, 0x21, 0x54, 0xff, 0xc6,
+	0xf2, 0xde, 0xe0, 0x8e, 0x9e, 0x65, 0xe2, 0xbf, 0x50, 0xf1, 0x65, 0xae, 0xfd, 0x90, 0x6e, 0x6a,
+	0x0f, 0x20, 0x8b, 0x9d, 0x8b, 0x7e, 0xdb, 0x1f, 0x0d, 0xb0, 0x0e, 0x25, 0x64, 0x2c, 0x57, 0xf3,
+	0x15, 0x11, 0xc3, 0x4a, 0xd3, 0xb9, 0xe8, 0x9b, 0x4b, 0x44, 0xe2, 0x64, 0x34, 0xc0, 0x5a, 0x19,
+	0x32, 0x24, 0x18, 0x9e, 0xae, 0x94, 0xd2, 0x86, 0x52, 0x55, 0x2b, 0x2c, 0x4e, 0x95, 0x63, 0xcb,
+	0xf6, 0x4d, 0xb6, 0x55, 0xfe, 0x09, 0x41, 0xee, 0x99, 0x6d, 0xef, 0xf7, 0xb0, 0xdd, 0x21, 0x87,
+	0x3c, 0xe2, 0x40, 0xcf, 0x1f, 0xf6, 0x9c, 0x6e, 0x9b, 0x5e, 0x1e, 0x84, 0x49, 0x61, 0x18, 0x75,
+	0x90, 0xd6, 0x80, 0x02, 0xc9, 0x8e, 0x36, 0x4d, 0x8f, 0x40, 0x8c, 0x44, 0x4d, 0xa9, 0x16, 0x2b,
+	0x2c, 0x8d, 0x2a, 0x3c, 0x8d, 0x2a, 0x27, 0x3c, 0x8d, 0xcc, 0x65, 0x72, 0xe6, 0x98, 0xfc, 0x64,
+	0x5a, 0x04, 0xbd, 0x74, 0x3c, 0xbd, 0xef, 0x10, 0x68, 0x11, 0x7a, 0x64, 0x73, 0x32, 0x47, 0x35,
+	0xca, 0xd1, 0x88, 0xe1, 0xa8, 0xde, 0x89, 0xc7, 0x21, 0xc0, 0x71, 0x8f, 0xe4, 0x71, 0xcb, 0xc7,
+	0xfd, 0xd8, 0x1c, 0x16, 0x9a, 0x52, 0xf1, 0x9a, 0x46, 0xa0, 0x9a, 0x78, 0x80, 0x2d, 0x1f, 0x77,
+	0xa8, 0xae, 0x87, 0x92, 0x2e, 0x72, 0xe8, 0x43, 0x29, 0x9e, 0xe1, 0x95, 0x53, 0x9f, 0x49, 0x12,
+	0x23, 0xae, 0x10, 0x64, 0x99, 0xca, 0x57, 0xd6, 0x40, 0xdb, 0x81, 0x0c, 0x77, 0x1e, 0x39, 0xb1,
+	0x3e, 0x76, 0xef, 0x2b, 0x6b, 0x50, 0xa1, 0x1e, 0x6a, 0x3a, 0xfe, 0x70, 0x64, 0x32, 0xe9, 0x24,
+	0x36, 0x16, 0x77, 0x01, 0xc2, 0x83, 0x5a, 0x01, 0xd2, 0x6f, 0xf1, 0x88, 0xba, 0x2a, 0x63, 0x92,
+	0x9f, 0xda, 0x2a, 0xbf, 0x9a, 0xd9, 0xc0, 0x16, 0x9f, 0xa4, 0x76, 0x51, 0xf9, 0x37, 0x04, 0x79,
+	0x76, 0xfb, 0x31, 0x8d, 0x25, 0x21, 0x5a, 0x8b, 0x12, 0xfd, 0x78, 0x8c, 0xa8, 0x10, 0x95, 0xe8,
+	0xd6, 0x32, 0xbf, 0x5e, 0xdf, 0x40, 0xe9, 0xbd, 0xb0, 0xce, 0x4e, 0x63, 0xfd, 0x3b, 0x82, 0xec,
+	0x11, 0xf6, 0x7c, 0xdc, 0x99, 0xe2, 0x58, 0x21, 0x74, 0x47, 0xc7, 0x1e, 0x4d, 0x71, 0xec, 0x86,
+	0x4c, 0x51, 0xa9, 0xae, 0x4e, 0x8a, 0xa9, 0x4c, 0xdc, 0x05, 0x85, 0xe1, 0x4c, 0xe1, 0x7d, 0x52,
+	0x5e, 0xfc, 0xe1, 0xa8, 0x1d, 0x5a, 0xbe, 0x44, 0x81, 0x17, 0x78, 0xa4, 0xad, 0x83, 0xc2, 0x36,
+	0x65, 0x27, 0x00, 0x85, 0x92, 0xbf, 0xa3, 0xaf, 0x21, 0x17, 0x5e, 0xd8, 0xc3, 0x9e, 0xd6, 0x84,
+	0x45, 0xcc, 0x7e, 0x06, 0xee, 0x5a, 0x1b, 0xe3, 0xcc, 0xe2, 0xf9, 0x01, 0x8d, 0xe7, 0x1f, 0xd7,
+	0x37, 0x12, 0x47, 0x93, 0x9f, 0x4d, 0xf4, 0xf2, 0x7e, 0x40, 0x90, 0x49, 0x60, 0x67, 0xf8, 0xb8,
+	0x53, 0x31, 0x0d, 0x2a, 0x4d, 0xcb, 0xc8, 0xed, 0x06, 0x55, 0x8f, 0x34, 0xa2, 0x7a, 0x48, 0x29,
+	0x13, 0x4f, 0xc9, 0x81, 0x45, 0xee, 0x88, 0x4f, 0x6f, 0x3b, 0xa2, 0x10, 0x29, 0xec, 0xef, 0xc7,
+	0x05, 0x67, 0x90, 0xa3, 0x3d, 0xf0, 0x05, 0x1e, 0x31, 0x4f, 0xe8, 0xb0, 0x68, 0x75, 0x3a, 0x43,
+	0xec, 0x79, 0x41, 0x0d, 0xe5, 0xcb, 0xc9, 0xd9, 0x9e, 0x28, 0xc6, 0xdf, 0x40, 0x5e, 0xbe, 0x64,
+	0x62, 0x94, 0x75, 0xc9, 0xb8, 0x08, 0xa3, 0xda, 0x0a, 0x31, 0x72, 0x95, 0x18, 0xc9, 0xa9, 0xcc,
+	0x66, 0xe2, 0xf7, 0x08, 0xf4, 0x93, 0x77, 0xee, 0x4b, 0x7c, 0x89, 0x6d, 0x5e, 0x68, 0xa7, 0x7e,
+	0x7c, 0x6c, 0x4a, 0x55, 0x95, 0x68, 0xbe, 0x27, 0xd1, 0x93, 0xab, 0xf5, 0x4c, 0xe5, 0xf6, 0x5b,
+	0x04, 0x6b, 0x2c, 0x83, 0x13, 0xf3, 0x98, 0xf6, 0x11, 0x54, 0xa7, 0xf7, 0x65, 0xc7, 0x73, 0x6c,
+	0x3e, 0x9e, 0xc6, 0xdf, 0x29, 0x58, 0x11, 0x8f, 0xff, 0xce, 0x0c, 0x0e, 0x22, 0x0c, 0x94, 0xaa,
+	0x31, 0xa9, 0xb4, 0x70, 0xed, 0xac, 0xba, 0xd5, 0x23, 0x85, 0x98, 0x53, 0xfe, 0x2c, 0x50, 0xd4,
+	0x08, 0x38, 0x27, 0x50, 0xd4, 0x60, 0x75, 0x32, 0x38, 0x97, 0xe4, 0x61, 0x15, 0xf7, 0x40, 0x91,
+	0x38, 0xcc, 0x52, 0xcc, 0xc5, 0xd1, 0xc6, 0xec, 0xdd, 0x6b, 0x04, 0x2a, 0x4f, 0xbd, 0xb1, 0xde,
+	0x8e, 0xfe, 0xdf, 0xde, 0xfe, 0x27, 0x82, 0x35, 0xd6, 0x5d, 0xfe, 0x73, 0xb2, 0x3d, 0xbc, 0x15,
+	0xea, 0x7f, 0x65, 0x5d, 0x17, 0x6f, 0xa7, 0x41, 0xeb, 0x5f, 0xf4, 0xed, 0xc8, 0xde, 0x98, 0x25,
+	0x7e, 0xe5, 0x2f, 0xa1, 0xd8, 0x72, 0x2e, 0x2d, 0xbb, 0xd7, 0x61, 0x5f, 0xbe, 0xf4, 0x03, 0x50,
+	0x58, 0x74, 0x3f, 0xec, 0xb0, 0xc8, 0xc8, 0xf2, 0x8f, 0xe5, 0xe4, 0x7d, 0xb4, 0xfc, 0x17, 0x02,
+	0xc5, 0x75, 0xb0, 0x7b, 0x7e, 0x4c, 0x87, 0x93, 0x5b, 0x2e, 0xca, 0x08, 0x17, 0xe9, 0x11, 0x17,
+	0x65, 0x0e, 0xe7, 0x84, 0x93, 0x74, 0xc9, 0x49, 0xc8, 0xc8, 0x8a, 0x9d, 0x71, 0x7f, 0x4c, 0x76,
+	0x9f, 0x38, 0xd0, 0x10, 0x97, 0x37, 0xe9, 0xac, 0xc2, 0x2f, 0x6f, 0x86, 0x86, 0x2c, 0xc4, 0x1a,
+	0x52, 0x53, 0x01, 0xa8, 0x1d, 0x35, 0xdb, 0x3d, 0x7b, 0x5b, 0xfe, 0x31, 0x0d, 0xea, 0x4b, 0xd7,
+	0xe9, 0x8e, 0x85, 0xfe, 0x91, 0x5e, 0x90, 0x7a, 0xd3, 0x23, 0x69, 0xa8, 0x42, 0x31, 0x43, 0x55,
+	0x2a, 0x32, 0x54, 0x71, 0x7c, 0x3b, 0x32, 0x84, 0x6d, 0x0b, 0xfc, 0x71, 0xa4, 0xf7, 0x3d, 0x16,
+	0xf8, 0x0e, 0x35, 0x89, 0xe3, 0x3b, 0x02, 0x7f, 0x42, 0x07, 0x2e, 0x8e, 0x3f, 0x11, 0xf8, 0x53,
+	0x3a, 0x5c, 0x71, 0xfc, 0xa9, 0xc0, 0x77, 0xe9, 0x14, 0xc5, 0xf1, 0x5d, 0x81, 0xef, 0xd1, 0x71,
+	0x89, 0xe3, 0x7b, 0x52, 0x1c, 0x41, 0xc2, 0xe5, 0x54, 0x57, 0x24, 0x5c, 0xae, 0xab, 0x6a, 0xa4,
+	0x77, 0xaf, 0x89, 0x18, 0xe6, 0x24, 0x5c, 0x0e, 0xd5, 0xb2, 0x84, 0x4b, 0xa1, 0xca, 0xc7, 0xe7,
+	0xdc, 0xcf, 0x29, 0x58, 0x6a, 0x39, 0x3e, 0xee, 0xe2, 0xa1, 0x17, 0x9b, 0x70, 0xd1, 0x37, 0x99,
+	0x9e, 0xd8, 0x00, 0x90, 0x91, 0x9b, 0x40, 0x94, 0x04, 0x60, 0x3e, 0x26, 0xa7, 0x56, 0x04, 0x51,
+	0x8e, 0xef, 0xd3, 0x00, 0x68, 0x01, 0xbe, 0x2f, 0xf0, 0x03, 0x1a, 0x80, 0xc5, 0x00, 0x3f, 0x10,
+	0xf8, 0x21, 0x0d, 0xc0, 0x42, 0x80, 0x1f, 0x0a, 0xbc, 0x45, 0x03, 0x90, 0x0f, 0xf0, 0x96, 0xc0,
+	0x9f, 0xd3, 0x00, 0x14, 0x02, 0xfc, 0x79, 0xa2, 0x51, 0xf4, 0x14, 0xd4, 0xba, 0xeb, 0xf8, 0x56,
+	0xcf, 0x61, 0x43, 0x5e, 0xb2, 0xba, 0x95, 0x99, 0xa5, 0x4c, 0x6e, 0x94, 0x61, 0x9e, 0x0c, 0xc9,
+	0x9a, 0x0a, 0x4b, 0x64, 0x86, 0x6e, 0xbb, 0x0e, 0x2e, 0xcc, 0x89, 0x95, 0xff, 0xce, 0x2d, 0xa0,
+	0xda, 0x03, 0xc8, 0x9d, 0xb9, 0xfd, 0xf0, 0xd5, 0xd6, 0xd4, 0xe0, 0x3f, 0x8c, 0xd7, 0x64, 0xa6,
+	0x7d, 0x8d, 0xbe, 0x50, 0xc4, 0xd6, 0xe0, 0xf4, 0x74, 0x81, 0x4e, 0xba, 0xdb, 0xff, 0x04, 0x00,
+	0x00, 0xff, 0xff, 0xca, 0xd5, 0x3f, 0x63, 0x5a, 0x11, 0x00, 0x00,
 }

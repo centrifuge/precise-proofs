@@ -1381,7 +1381,6 @@ func TestTree_LengthProp_List(t *testing.T) {
 
 }
 
-
 func Test_GetSalt_Error(t *testing.T) {
 	tree := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: NewSaltForErrorTest})
 	err := tree.AddLeavesFromDocument(&documentspb.ExampleContainSaltsDocument)
@@ -1396,4 +1395,33 @@ func Test_GetSalt_Error(t *testing.T) {
 	tree = NewDocumentTree(TreeOptions{CompactProperties: true, EnableHashSorting: true, Hash: sha256.New(), Salts: NewSaltForErrorTest})
 	err = tree.AddLeavesFromDocument(doc2)
 	assert.EqualError(t, err, "error handling field ValueA: Cannot get salt")
+}
+
+func Test_ReturnGeneratedSalts(t *testing.T) {
+	doc := new (documentspb.ContainSalts)
+	doc.ValueA = "TestA"
+	doc.ValueB = 5
+	assert.Nil(t, doc.Salts)
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash})
+	err := doctree.AddLeavesFromDocument(doc)
+	assert.Nil(t, err)
+	assert.Equal(t, len(doc.Salts), 2)
+	err = doctree.Generate()
+	assert.Nil(t, err)
+	assert.Len(t, doctree.leaves, 2)
+	hash1 := doctree.hash
+
+	doctree2 := NewDocumentTree(TreeOptions{Hash: sha256Hash})
+	doc2 := new (documentspb.ContainSalts)
+	doc2.ValueA = "TestA"
+	doc2.ValueB = 5
+	assert.Nil(t, doc2.Salts)
+	doc2.Salts = doc.Salts
+	err = doctree2.AddLeavesFromDocument(doc2)
+	assert.Nil(t, err)
+	err = doctree2.Generate()
+	assert.Nil(t, err)
+	hash2 := doctree2.hash
+
+	assert.Equal(t, hash1, hash2)
 }

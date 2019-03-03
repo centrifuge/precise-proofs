@@ -28,44 +28,53 @@ message ExampleDocument {
     (proofs.hashed_field) = true
   ];
   Enum enum_type = 10;
+  repeated proofs.Salt salts = 11;
 }
 
 message AllFieldTypes {
   string string_value = 1;
   google.protobuf.Timestamp time_stamp_value = 2;
+  repeated proofs.Salt salts = 3;
 }
 
 message AllFieldTypesSalts {
   bytes string_value = 1;
   bytes time_stamp_value = 2;
+  repeated proofs.Salt salts = 3;
 }
 
 message SimpleItem {
   string valueA = 1;
+  repeated proofs.Salt salts = 2;
 }
 
 message RepeatedItem {
   repeated SimpleItem valueA = 1;
   string valueB = 2;
+  repeated proofs.Salt salts = 3;
 }
 
 message SimpleMap {
   map<int32,string> value = 1;
+  repeated proofs.Salt salts = 2;
 }
 
 message SimpleStringMap {
   map<string,string> value = 1 [
     (proofs.key_length) = 32
   ];
+  repeated proofs.Salt salts = 2;
 }
 
 message NestedMap {
   map<int32,SimpleMap> value = 1;
+  repeated proofs.Salt salts = 2;
 }
 
 message SimpleEntry {
   string entry_key = 1;
   string entry_value = 2;
+  repeated proofs.Salt salts = 3;
 }
 
 message SimpleEntries {
@@ -73,6 +82,7 @@ message SimpleEntries {
     (proofs.key_length) = 32,
     (proofs.mapping_key) = "entry_key"
   ];
+  repeated proofs.Salt salts = 2;
 }
 
 message Entry {
@@ -80,6 +90,7 @@ message Entry {
     string valueA = 2;
     bytes valueB = 3;
     int64 valueC = 4;
+    repeated proofs.Salt salts = 5;
 }
 
 message Entries {
@@ -87,11 +98,13 @@ message Entries {
     (proofs.key_length) = 32,
     (proofs.mapping_key) = "entry_key"
   ];
+  repeated proofs.Salt salts = 2;
 }
 
 message BytesKeyEntry {
     bytes address = 1;
     string value = 2;
+    repeated proofs.Salt salts = 3;
 }
 
 message BytesKeyEntries {
@@ -99,17 +112,20 @@ message BytesKeyEntries {
     (proofs.key_length) = 20,
     (proofs.mapping_key) = "address"
   ];
+  repeated proofs.Salt salts = 2;
 }
 
 message TwoLevelRepeatedDocument {
   string valueA = 1;
   repeated RepeatedItem valueB = 2;
+  repeated proofs.Salt salts = 3;
 }
 
 message SimpleRepeatedDocument {
   string valueA = 1;
   string valueB = 2;
   repeated string valueC = 3;
+  repeated proofs.Salt salts = 4;
 }
 
 message SimpleMapDocument {
@@ -119,11 +135,13 @@ message SimpleMapDocument {
     (proofs.key_length) = 32
   ];
   map<int32, string> valueD = 4;
+  repeated proofs.Salt salts = 5;
 }
 
 message TwoLevelItem {
   SimpleItem valueA = 1;
   string valueB = 2;
+  repeated proofs.Salt salts = 3;
 }
 
 message NestedRepeatedDocument {
@@ -131,12 +149,14 @@ message NestedRepeatedDocument {
   string valueB = 2;
   repeated SimpleItem valueC = 3;
   TwoLevelItem valueD = 4;
+  repeated proofs.Salt salts = 5;
 }
 
 message InvalidHashedFieldDocument {
   string value = 1 [
     (proofs.hashed_field) = true
   ];
+  repeated proofs.Salt salts = 2;
 }
 
 message  oneofSample{
@@ -147,7 +167,8 @@ message  oneofSample{
     string valueC = 3;
     SimpleItem valueD = 4;
   }
-   int32 valueE = 5;
+  int32 valueE = 5;
+  repeated proofs.Salt salts = 6;
 }
 
 
@@ -167,6 +188,7 @@ message LongDocument {
   int64 valueC = 12;
   int64 valueD = 13;
   int64 valueE = 14;
+  repeated proofs.Salt salts = 15;
 }
 
 enum Enum {
@@ -185,6 +207,7 @@ message Integers {
   fixed64 valueH = 8;
   sfixed32 valueI = 9;
   sfixed64 valueJ = 10;
+  repeated proofs.Salt salts = 11;
 }
 
 message ContainSalts {

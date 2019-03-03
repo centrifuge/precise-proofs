@@ -185,7 +185,7 @@ import (
 // DefaultReadablePropertyLengthSuffix is the suffix used to store the length of slices (repeated) fields in the tree. It can be
 // customized with the ReadablePropertyLengthSuffix TreeOption
 const DefaultReadablePropertyLengthSuffix = "length"
-
+const SaltsFieldName = "Salts"
 // TreeOptions allows customizing the generation of the tree
 type TreeOptions struct {
 	//	EnableHashSorting: Implement a merkle tree with sorted hashes
@@ -325,29 +325,35 @@ func (doctree *DocumentTree) AddLeavesFromDocument(document proto.Message) (err 
 	if err != nil {
 		return err
 	}
+	err = fillBackSalts(document,leaves)
+	if err != nil {
+		return err
+	}
 	return doctree.AddLeaves(leaves)
 }
 
-func getSaltsFromMessage(message proto.Message) (salts []*proofspb.Salt, err error){
-	value := reflect.ValueOf(message)
-	msgStructValue := value.Elem()
-	for i := 0; i < msgStructValue.NumField(); i++ {
-		field := msgStructValue.Type().Field(i)
-		if strings.HasPrefix(field.Name, "XXX_") {
-			continue
-		}
-		protoTag := field.Tag.Get("protobuf")
-		name, _, err := ExtractFieldTags(protoTag)
-		if (err != nil) {
-			return nil, err
-		}
-		if name == "salts" {
-			if strings.Contains(protoTag, ",rep,"){
-				return msgStructValue.Field(i).Interface().([]*proofspb.Salt), nil
-			}
-		}
+func fillBackSalts(message proto.Message, leaves []LeafNode)(err error){
+	var saltsSlice []*proofspb.Salt =[]*proofspb.Salt {}
+	for _, leaf := range leaves {
+		var item *proofspb.Salt = new (proofspb.Salt)
+		item.Compact = leaf.Property.CompactName()
+		item.Value = leaf.Salt
+		saltsSlice = append(saltsSlice, item)
 	}
-	return nil, nil;
+	value := reflect.ValueOf(message).Elem().FieldByName(SaltsFieldName)
+	if value == reflect.ValueOf(nil) {
+		return errors.New("Cannot find salts field in messgae")
+	}
+	value.Set(reflect.ValueOf(saltsSlice))
+	return nil
+}
+
+func getSaltsFromMessage(message proto.Message) (salts []*proofspb.Salt, err error){
+	field := reflect.ValueOf(message).Elem().FieldByName(SaltsFieldName)
+	if field == reflect.ValueOf(nil) {
+		return nil,  errors.New("Cannot find salts field in messgae")
+	}
+	return field.Interface().([]*proofspb.Salt), nil
 }
 // Generate calculated the merkle root with all supplied leaves. This method can only be called once and makes
 // the tree immutable.

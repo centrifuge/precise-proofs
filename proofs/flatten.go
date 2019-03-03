@@ -328,9 +328,14 @@ func sliceToMap(value reflect.Value, mappingKey string, keyLength uint64) (refle
 	}
 
 	_, elemMD := descriptor.ForMessage(reflect.New(elemType).Interface().(descriptor.Message))
-	if len(elemMD.Field) == 2 {
+	_, saltsFieldFound := elemType.FieldByName(SaltsFieldName)
+	if ((len(elemMD.Field) == 2) || ((len(elemMD.Field) == 3) && (saltsFieldFound))) {
 		valueField, valueFound := elemType.FieldByNameFunc(func(name string) bool {
-			return !strings.HasPrefix(name, "XXX_") && name != mappingKey
+			if (saltsFieldFound) {
+				return !strings.HasPrefix(name, "XXX_") && name != mappingKey && name != SaltsFieldName
+			}else{
+				return !strings.HasPrefix(name, "XXX_") && name != mappingKey
+			}
 		})
 		if !valueFound {
 			return reflect.Value{}, errors.Errorf("could not find field in %s not called %q", elemType, mappingKey)
