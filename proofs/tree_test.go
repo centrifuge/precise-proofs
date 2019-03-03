@@ -1425,3 +1425,11 @@ func Test_ReturnGeneratedSalts(t *testing.T) {
 
 	assert.Equal(t, hash1, hash2)
 }
+
+func Test_MessageWithoutSaltsField(t *testing.T) {
+	doc := new (documentspb.ExampleWithoutSalts)
+	doc.ValueA = "TestA"
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash})
+	err := doctree.AddLeavesFromDocument(doc)
+	assert.EqualError(t, err, "Cannot find salts field in message")
+}

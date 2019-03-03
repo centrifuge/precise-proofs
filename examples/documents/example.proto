@@ -215,3 +215,8 @@ message ContainSalts {
   int32  valueB = 2;
   repeated proofs.Salt salts = 3;
 }
+
+message ExampleWithoutSalts {
+  string valueA = 1;
+  int32  valueB = 2;
+}

@@ -342,7 +342,7 @@ func fillBackSalts(message proto.Message, leaves []LeafNode)(err error){
 	}
 	value := reflect.ValueOf(message).Elem().FieldByName(SaltsFieldName)
 	if value == reflect.ValueOf(nil) {
-		return errors.New("Cannot find salts field in messgae")
+		return errors.New("Cannot find salts field in message")
 	}
 	value.Set(reflect.ValueOf(saltsSlice))
 	return nil
@@ -351,7 +351,7 @@ func fillBackSalts(message proto.Message, leaves []LeafNode)(err error){
 func getSaltsFromMessage(message proto.Message) (salts []*proofspb.Salt, err error){
 	field := reflect.ValueOf(message).Elem().FieldByName(SaltsFieldName)
 	if field == reflect.ValueOf(nil) {
-		return nil,  errors.New("Cannot find salts field in messgae")
+		return nil,  errors.New("Cannot find salts field in message")
 	}
 	return field.Interface().([]*proofspb.Salt), nil
 }
