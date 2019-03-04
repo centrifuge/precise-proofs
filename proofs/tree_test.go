@@ -14,7 +14,6 @@ import (
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/assert"
 	"github.com/xsleonard/go-merkle"
-	"github.com/centrifuge/precise-proofs/proofs/proto"
 	"github.com/pkg/errors"
 )
 
@@ -1269,11 +1268,12 @@ func Test_SaltMessage(t *testing.T) {
 }
 
 func Example_complete() {
-	// ContainSalts is a protobuf message which contain salts message
-	document := documentspb.ContainSalts{
-		ValueA:     "valueAValue",
-		ValueB:     10,
-		Salts:      []*proofspb.Salt{{Compact: []byte{0,0,0,1}, Value: []byte{0x1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x2}},{Compact: []byte{0,0,0,2}, Value: []byte{0x3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x4}}},
+	// ExampleDocument is a protobuf message
+	document := documentspb.ExampleDocument{
+		Value1:      1,
+		ValueA:      "Foo",
+		ValueB:      "Bar",
+		ValueBytes1: []byte("foobar"),
 	}
 
 	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New()})
