@@ -41,7 +41,7 @@ For `[]byte` fields the default encoding used for tree and proof generation is H
 See below code sample (`examples/simple.go`) for a usage example. For detailed usage, check godocs.
 
 ```go,
-  // ExampleDocument is a protobuf message
+	// ExampleDocument is a protobuf message
 	document := documentspb.ExampleDocument{
 		Value1:      1,
 		ValueA:      "Foo",
@@ -49,16 +49,13 @@ See below code sample (`examples/simple.go`) for a usage example. For detailed u
 		ValueBytes1: []byte("foobar"),
 	}
 
-  // You can also use compacts salts mapping generated in last session.
-	salts := Salts{}
-	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New(), Salts: &salts})
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New()})
 	doctree.AddLeavesFromDocument(&document)
-  // Here salts will contain generated salts for those fields whose salts are not provided in the slice
 
 	doctree.Generate()
 	fmt.Printf("Generated tree: %s\n", doctree.String())
 
-	proof, _ := doctree.CreateProof("ValueA")
+	proof, _ := doctree.CreateProof("valueA")
 	proofJson, _ := json.Marshal(proof)
 	fmt.Println("Proof:\n", string(proofJson))
 
@@ -69,8 +66,8 @@ See below code sample (`examples/simple.go`) for a usage example. For detailed u
 
 ## Development
 ### Building protobuf messages
-If the protobuf messages are ever changed, the recommended procedure is to build them using prototools. Use 
-prototools version 1.3.0 and execute the command `prototol generate` to udpate both the example and the proofs 
+If the protobuf messages are ever changed, the recommended procedure is to build them using prototools. Use
+prototools version 1.3.0 and execute the command `prototol generate` to udpate both the example and the proofs
 messages.
 
 
