@@ -45,7 +45,6 @@ message AllFieldTypesSalts {
 
 message SimpleItem {
   string valueA = 1;
-  repeated proofs.Salt salts = 2;
 }
 
 message RepeatedItem {
@@ -56,7 +55,6 @@ message RepeatedItem {
 
 message SimpleMap {
   map<int32,string> value = 1;
-  repeated proofs.Salt salts = 2;
 }
 
 message SimpleStringMap {
@@ -74,7 +72,6 @@ message NestedMap {
 message SimpleEntry {
   string entry_key = 1;
   string entry_value = 2;
-  repeated proofs.Salt salts = 3;
 }
 
 message SimpleEntries {
@@ -90,7 +87,6 @@ message Entry {
     string valueA = 2;
     bytes valueB = 3;
     int64 valueC = 4;
-    repeated proofs.Salt salts = 5;
 }
 
 message Entries {
@@ -104,7 +100,6 @@ message Entries {
 message BytesKeyEntry {
     bytes address = 1;
     string value = 2;
-    repeated proofs.Salt salts = 3;
 }
 
 message BytesKeyEntries {

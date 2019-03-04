@@ -220,6 +220,16 @@ func defaultGetSalt(message proto.Message) (Salts, error) {
 			return nil, err
 		} else if (n != 32) {
 			return nil, errors.Wrapf(err, "Only read %d instead of 32 random bytes", n)
+    }
+
+		salt := proofspb.Salt{
+			Compact: compact,
+			Value:   randbytes,
+		}
+		salts = append(salts, &salt)
+		err = fillBackSalts(message, salts)
+		if (err != nil){
+			return nil, err
 		}
 		return randbytes, nil
 	}, nil
@@ -325,21 +335,10 @@ func (doctree *DocumentTree) AddLeavesFromDocument(document proto.Message) (err 
 	if err != nil {
 		return err
 	}
-	err = fillBackSalts(document,leaves)
-	if err != nil {
-		return err
-	}
 	return doctree.AddLeaves(leaves)
 }
 
-func fillBackSalts(message proto.Message, leaves []LeafNode)(err error){
-	var saltsSlice []*proofspb.Salt =[]*proofspb.Salt {}
-	for _, leaf := range leaves {
-		var item *proofspb.Salt = new (proofspb.Salt)
-		item.Compact = leaf.Property.CompactName()
-		item.Value = leaf.Salt
-		saltsSlice = append(saltsSlice, item)
-	}
+func fillBackSalts(message proto.Message, saltsSlice []*proofspb.Salt)(err error){
 	value := reflect.ValueOf(message).Elem().FieldByName(SaltsFieldName)
 	if value == reflect.ValueOf(nil) {
 		return errors.New("Cannot find salts field in message")
