@@ -220,7 +220,7 @@ func defaultGetSalt(message proto.Message) (Salts, error) {
 			return nil, err
 		} else if (n != 32) {
 			return nil, errors.Wrapf(err, "Only read %d instead of 32 random bytes", n)
-    }
+		}
 
 		salt := proofspb.Salt{
 			Compact: compact,
