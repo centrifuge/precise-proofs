@@ -14,12 +14,17 @@ import (
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/stretchr/testify/assert"
 	"github.com/xsleonard/go-merkle"
+	"github.com/pkg/errors"
 )
 
 var testSalt = []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225}
 
-func NewSaltForTest(compact []byte) (salt []byte) {
-	return testSalt
+func NewSaltForTest(compact []byte) (salt []byte, err error) {
+	return testSalt, nil
+}
+
+func NewSaltForErrorTest(compact []byte) (salt []byte, err error) {
+	return nil, errors.New("Cannot get salt")
 }
 
 var sha256Hash = sha256.New()
@@ -53,7 +58,8 @@ func TestValueToBytesArray(t *testing.T) {
 
 	// Timestamp
 	ts := time.Now()
-	expected := toBytesArray(ts.Unix())
+	expected, err := toBytesArray(ts.Unix())
+	assert.NoError(t, err)
 	pt, _ := ptypes.TimestampProto(ts)
 	v, err = f.valueToBytesArray(pt)
 	assert.Equal(t, expected, v)
@@ -117,7 +123,7 @@ func TestTree_Generate(t *testing.T) {
 		ValueB: "Bar",
 	}
 
-	leaves, err := FlattenMessage(&protoMessage, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
+	leaves, err := FlattenMessage(&protoMessage, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty)
 	assert.NoError(t, err)
 	tree := merkle.NewTreeWithOpts(merkle.TreeOptions{DisableHashLeaves: true})
 	var hashes [][]byte
@@ -138,7 +144,7 @@ func TestSortedHashTree_Generate(t *testing.T) {
 		ValueB: "Bar",
 	}
 
-	leaves, err := FlattenMessage(&protoMessage, NewSaltForTest, DefaultSaltsLengthSuffix, sha256Hash, false, Empty)
+	leaves, err := FlattenMessage(&protoMessage, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty)
 	assert.NoError(t, err)
 	tree := merkle.NewTreeWithOpts(merkle.TreeOptions{DisableHashLeaves: true, EnableHashSorting: true})
 	var hashes [][]byte
@@ -339,7 +345,7 @@ func TestDocumentTree_ToStringNilEncoder(t *testing.T) {
 }
 
 func TestDocumentTree_Generate_twice(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: NewSaltForTest})
 	err := doctree.AddLeavesFromDocument(&documentspb.LongDocumentExample)
 	assert.Nil(t, err)
 	err = doctree.Generate()
@@ -350,14 +356,14 @@ func TestDocumentTree_Generate_twice(t *testing.T) {
 
 // Test DocumentTree sets rootHash correctly and validated the generated Proof
 func TestDocumentTree_WithRootHash(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: NewSaltForTest})
 	err := doctree.AddLeavesFromDocument(&documentspb.ExampleFilledRepeatedDocument)
 	assert.NoError(t, err)
 
 	err = doctree.Generate()
 	assert.NoError(t, err)
 
-	expectedRootHash := []byte{0x6, 0xfe, 0x23, 0xfe, 0x7f, 0x5f, 0x27, 0x8c, 0xca, 0xc9, 0x25, 0x9c, 0x1a, 0xa8, 0x61, 0xd9, 0xd3, 0x25, 0xe9, 0xb3, 0xec, 0xd5, 0x9f, 0xd3, 0x4d, 0xdb, 0x3d, 0xd2, 0x5b, 0x9c, 0xaa, 0x57}
+	expectedRootHash := []byte{0x16, 0xce, 0xc4, 0xa8, 0xb5, 0xf, 0xe4, 0xf4, 0x1a, 0x47, 0x4, 0xfa, 0xe0, 0x3f, 0x45, 0x7f, 0xad, 0x8e, 0x6b, 0x8e, 0x1c, 0xff, 0x2c, 0x7b, 0x47, 0x4f, 0xbb, 0x36, 0xc0, 0x74, 0xef, 0x70}
 	assert.Equal(t, expectedRootHash, doctree.RootHash())
 
 	proof, err := doctree.CreateProof("valueA")
@@ -368,7 +374,7 @@ func TestDocumentTree_WithRootHash(t *testing.T) {
 	assert.True(t, valid)
 
 	// Generate doctree with RootHash set and validate the above generated Proof
-	doctreeWithRootHash := NewDocumentTreeWithRootHash(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest}, expectedRootHash)
+	doctreeWithRootHash := NewDocumentTreeWithRootHash(TreeOptions{Hash: sha256Hash, Salts: NewSaltForTest}, expectedRootHash)
 	assert.Equal(t, expectedRootHash, doctreeWithRootHash.rootHash)
 
 	valid, err = doctreeWithRootHash.ValidateProof(&proof)
@@ -380,7 +386,7 @@ func TestDocumentTree_WithRootHash(t *testing.T) {
 func TestTree_hash(t *testing.T) {
 	// MD5
 	hashFuncMd5 := md5.New()
-	doctree := NewDocumentTree(TreeOptions{Hash: hashFuncMd5, GetSalt: NewSaltForTest})
+	doctree := NewDocumentTree(TreeOptions{Hash: hashFuncMd5, Salts: NewSaltForTest})
 	err := doctree.AddLeavesFromDocument(&documentspb.LongDocumentExample)
 	assert.Nil(t, err)
 	err = doctree.Generate()
@@ -390,13 +396,13 @@ func TestTree_hash(t *testing.T) {
 	assert.Equal(t, expectedRootHash, doctree.rootHash)
 
 	// No hash func set
-	doctreeNoHash := NewDocumentTree(TreeOptions{GetSalt: NewSaltForTest})
+	doctreeNoHash := NewDocumentTree(TreeOptions{Salts: NewSaltForTest})
 	err = doctreeNoHash.AddLeavesFromDocument(&documentspb.LongDocumentExample)
 	assert.NotNil(t, err)
 	assert.EqualError(t, err, "hash is not set")
 
 	// SHA256
-	doctreeSha256 := NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctreeSha256 := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: NewSaltForTest})
 	err = doctreeSha256.AddLeavesFromDocument(&documentspb.LongDocumentExample)
 	assert.Nil(t, err)
 	err = doctreeSha256.Generate()
@@ -406,7 +412,7 @@ func TestTree_hash(t *testing.T) {
 
 func TestTree_AddLeaf_hashed(t *testing.T) {
 	foobarHash := sha256.Sum256([]byte("foobar"))
-	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: NewSaltForTest})
 	err := doctree.AddLeaf(
 		LeafNode{
 			Hash:     foobarHash[:],
@@ -441,7 +447,7 @@ func TestTree_AddLeaf_hashed(t *testing.T) {
 
 func TestTree_AddLeaves_hashed(t *testing.T) {
 	foobarHash := sha256.Sum256([]byte("foobar"))
-	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: NewSaltForTest})
 	err := doctree.AddLeaves([]LeafNode{
 		{
 			Hash:     foobarHash[:],
@@ -472,7 +478,7 @@ func TestTree_AddLeaves_hashed(t *testing.T) {
 }
 
 func TestTree_AddLeavesFromDocument_twice(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: NewSaltForTest})
 	err := doctree.AddLeavesFromDocument(&documentspb.LongDocumentExample)
 	length := len(doctree.leaves)
 	assert.Nil(t, err)
@@ -497,7 +503,7 @@ func TestTree_AddLeavesFromDocument_twice(t *testing.T) {
 }
 
 func TestTree_GenerateStandardProof(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: NewSaltForTest})
 	err := doctree.AddLeavesFromDocument(&documentspb.LongDocumentExample)
 	assert.Nil(t, err)
 	err = doctree.Generate()
@@ -515,14 +521,14 @@ func TestTree_GenerateStandardProof(t *testing.T) {
 }
 
 func TestTree_GenerateNestedTreeCombinedStandardProof(t *testing.T) {
-	doctreeA := NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctreeA := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: NewSaltForTest})
 	err := doctreeA.AddLeavesFromDocument(&documentspb.ExampleFilledRepeatedDocument)
 	assert.Nil(t, err)
 
 	err = doctreeA.Generate()
 	assert.NoError(t, err)
 
-	doctreeB := NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctreeB := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: NewSaltForTest})
 	docB := &documentspb.ExampleDocument{
 		ValueA:         "Example",
 		ValueNotHashed: doctreeA.rootHash,
@@ -533,10 +539,10 @@ func TestTree_GenerateNestedTreeCombinedStandardProof(t *testing.T) {
 	err = doctreeB.Generate()
 	assert.NoError(t, err)
 
-	expectedRootHashA := []byte{0x6, 0xfe, 0x23, 0xfe, 0x7f, 0x5f, 0x27, 0x8c, 0xca, 0xc9, 0x25, 0x9c, 0x1a, 0xa8, 0x61, 0xd9, 0xd3, 0x25, 0xe9, 0xb3, 0xec, 0xd5, 0x9f, 0xd3, 0x4d, 0xdb, 0x3d, 0xd2, 0x5b, 0x9c, 0xaa, 0x57}
+	expectedRootHashA := []byte{0x16, 0xce, 0xc4, 0xa8, 0xb5, 0xf, 0xe4, 0xf4, 0x1a, 0x47, 0x4, 0xfa, 0xe0, 0x3f, 0x45, 0x7f, 0xad, 0x8e, 0x6b, 0x8e, 0x1c, 0xff, 0x2c, 0x7b, 0x47, 0x4f, 0xbb, 0x36, 0xc0, 0x74, 0xef, 0x70}
 	assert.Equal(t, expectedRootHashA, doctreeA.RootHash())
 
-	expectedRootHashB := []byte{0xc9, 0x98, 0x2f, 0x35, 0xbc, 0x9e, 0x84, 0xab, 0xdc, 0x70, 0x12, 0x31, 0xa0, 0x45, 0x55, 0xa0, 0xb, 0xa2, 0x13, 0x13, 0x2a, 0x90, 0xee, 0xde, 0xac, 0xbc, 0x8f, 0xcd, 0x80, 0xf9, 0x3a, 0x59}
+	expectedRootHashB := []byte{0xcd, 0xef, 0x2a, 0x55, 0x26, 0x5b, 0x4, 0xa1, 0xc2, 0x72, 0x84, 0x5, 0x9, 0x34, 0xd3, 0xeb, 0x89, 0x31, 0x4c, 0xaa, 0xd7, 0xef, 0x7c, 0x28, 0x79, 0xb9, 0xd5, 0x9e, 0xdd, 0xf8, 0xaf, 0xd8}
 	assert.Equal(t, expectedRootHashB, doctreeB.RootHash())
 
 	fieldProofA, err := doctreeA.CreateProof("valueA")
@@ -564,14 +570,14 @@ func TestTree_GenerateNestedTreeCombinedStandardProof(t *testing.T) {
 }
 
 func TestTree_GenerateNestedTreeCombinedSortedHashesProof(t *testing.T) {
-	doctreeA := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctreeA := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash, Salts: NewSaltForTest})
 	err := doctreeA.AddLeavesFromDocument(&documentspb.ExampleFilledRepeatedDocument)
 	assert.Nil(t, err)
 
 	err = doctreeA.Generate()
 	assert.Nil(t, err)
 
-	doctreeB := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctreeB := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash, Salts: NewSaltForTest})
 	docB := &documentspb.ExampleDocument{
 		ValueA:         "Example",
 		ValueNotHashed: doctreeA.rootHash,
@@ -582,10 +588,10 @@ func TestTree_GenerateNestedTreeCombinedSortedHashesProof(t *testing.T) {
 	err = doctreeB.Generate()
 	assert.Nil(t, err)
 
-	expectedRootHashA := []byte{0x6, 0xfe, 0x23, 0xfe, 0x7f, 0x5f, 0x27, 0x8c, 0xca, 0xc9, 0x25, 0x9c, 0x1a, 0xa8, 0x61, 0xd9, 0xd3, 0x25, 0xe9, 0xb3, 0xec, 0xd5, 0x9f, 0xd3, 0x4d, 0xdb, 0x3d, 0xd2, 0x5b, 0x9c, 0xaa, 0x57}
+	expectedRootHashA := []byte{0x16, 0xce, 0xc4, 0xa8, 0xb5, 0xf, 0xe4, 0xf4, 0x1a, 0x47, 0x4, 0xfa, 0xe0, 0x3f, 0x45, 0x7f, 0xad, 0x8e, 0x6b, 0x8e, 0x1c, 0xff, 0x2c, 0x7b, 0x47, 0x4f, 0xbb, 0x36, 0xc0, 0x74, 0xef, 0x70}
 	assert.Equal(t, expectedRootHashA, doctreeA.RootHash())
 
-	expectedRootHashB := []byte{0x1a, 0xab, 0xa0, 0x26, 0x3d, 0xba, 0x4c, 0x85, 0x30, 0xc4, 0x87, 0x2c, 0x16, 0xd9, 0x72, 0x68, 0x5a, 0xe5, 0x1f, 0x90, 0x81, 0xde, 0xb4, 0x1d, 0xb0, 0x7b, 0xf, 0x67, 0xed, 0xde, 0xdb, 0xeb}
+	expectedRootHashB := []byte{0xd2, 0xe8, 0xd5, 0x57, 0x8c, 0x5e, 0xa5, 0xfc, 0x70, 0xf6, 0xb7, 0xf3, 0x87, 0xf7, 0x54, 0x55, 0xc7, 0x76, 0x35, 0xd6, 0xcc, 0xf1, 0xcd, 0x4f, 0x7, 0xb7, 0x65, 0xcb, 0x74, 0xff, 0xb, 0x9d}
 	assert.Equal(t, expectedRootHashB, doctreeB.RootHash())
 
 	fieldProofA, err := doctreeA.CreateProof("valueA")
@@ -671,7 +677,7 @@ func TestTree_GenerateProofHashed(t *testing.T) {
 }
 
 func TestTree_GenerateSortedProof(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash, Salts: NewSaltForTest})
 	err := doctree.AddLeavesFromDocument(&documentspb.LongDocumentExample)
 	assert.Nil(t, err)
 	err = doctree.Generate()
@@ -690,18 +696,18 @@ func TestTree_GenerateSortedProof(t *testing.T) {
 }
 
 func TestTree_GenerateWithRepeatedFields(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash, Salts: NewSaltForTest})
 	err := doctree.AddLeavesFromDocument(&documentspb.ExampleFilledRepeatedDocument)
 	assert.Nil(t, err)
 	err = doctree.Generate()
 	assert.Nil(t, err)
-	expectedRootHash := []byte{0x6, 0xfe, 0x23, 0xfe, 0x7f, 0x5f, 0x27, 0x8c, 0xca, 0xc9, 0x25, 0x9c, 0x1a, 0xa8, 0x61, 0xd9, 0xd3, 0x25, 0xe9, 0xb3, 0xec, 0xd5, 0x9f, 0xd3, 0x4d, 0xdb, 0x3d, 0xd2, 0x5b, 0x9c, 0xaa, 0x57}
+	expectedRootHash := []byte{0x16, 0xce, 0xc4, 0xa8, 0xb5, 0xf, 0xe4, 0xf4, 0x1a, 0x47, 0x4, 0xfa, 0xe0, 0x3f, 0x45, 0x7f, 0xad, 0x8e, 0x6b, 0x8e, 0x1c, 0xff, 0x2c, 0x7b, 0x47, 0x4f, 0xbb, 0x36, 0xc0, 0x74, 0xef, 0x70}
 	assert.Equal(t, expectedRootHash, doctree.RootHash())
 	propOrder := doctree.PropertyOrder()
 	assert.Equal(t, []Property{
 		Empty.FieldProp("valueA", 1),
 		Empty.FieldProp("valueB", 2),
-		Empty.FieldProp("valueC", 3).LengthProp(DefaultSaltsLengthSuffix),
+		Empty.FieldProp("valueC", 3).LengthProp(DefaultReadablePropertyLengthSuffix),
 		Empty.FieldProp("valueC", 3).SliceElemProp(0),
 		Empty.FieldProp("valueC", 3).SliceElemProp(1),
 	}, propOrder)
@@ -715,12 +721,12 @@ func TestTree_GenerateWithRepeatedFields(t *testing.T) {
 }
 
 func TestTree_GenerateWithNestedAndRepeatedFields(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash, Salts: NewSaltForTest})
 	err := doctree.AddLeavesFromDocument(&documentspb.ExampleFilledNestedRepeatedDocument)
 	assert.Nil(t, err)
 	err = doctree.Generate()
 	assert.Nil(t, err)
-	expectedRootHash := []byte{0x72, 0x1b, 0xd3, 0xbb, 0xca, 0xbf, 0x5b, 0x6a, 0x2, 0xfe, 0x29, 0xe6, 0x7b, 0xe0, 0xf5, 0xd9, 0x96, 0x74, 0x98, 0x95, 0x51, 0x7, 0x97, 0x72, 0x4e, 0x9a, 0xac, 0x5a, 0x3f, 0xde, 0xcb, 0x33}
+	expectedRootHash := []byte{0x0, 0x9, 0xa1, 0xef, 0x58, 0x71, 0xef, 0x9f, 0xf6, 0x81, 0x6, 0xb0, 0x8d, 0x2f, 0x36, 0x5a, 0x76, 0xa7, 0x6b, 0x53, 0xb1, 0x80, 0xc4, 0x5, 0x4b, 0x29, 0x6, 0x40, 0xa8, 0x20, 0x63, 0xba}
 	assert.Equal(t, expectedRootHash, doctree.RootHash())
 
 	propOrder := doctree.PropertyOrder()
@@ -728,7 +734,7 @@ func TestTree_GenerateWithNestedAndRepeatedFields(t *testing.T) {
 	assert.Equal(t, []Property{
 		Empty.FieldProp("valueA", 1),
 		Empty.FieldProp("valueB", 2),
-		Empty.FieldProp("valueC", 3).LengthProp(DefaultSaltsLengthSuffix),
+		Empty.FieldProp("valueC", 3).LengthProp(DefaultReadablePropertyLengthSuffix),
 		Empty.FieldProp("valueC", 3).SliceElemProp(0).FieldProp("valueA", 1),
 		Empty.FieldProp("valueC", 3).SliceElemProp(1).FieldProp("valueA", 1),
 		Empty.FieldProp("valueD", 4).FieldProp("valueA", 1).FieldProp("valueA", 1),
@@ -744,7 +750,7 @@ func TestTree_GenerateWithNestedAndRepeatedFields(t *testing.T) {
 }
 
 func TestCreateProof_standard(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: NewSaltForTest})
 	doc := documentspb.FilledExampleDocument
 	doc.ValueNotHashed = sha256Hash.Sum([]byte("some hash"))
 	doc.ValueBytes1 = []byte("ValueBytes1")
@@ -794,7 +800,7 @@ func TestCreateProof_standard(t *testing.T) {
 }
 
 func TestCreateProof_compact(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: NewSaltForTest})
 	doc := documentspb.FilledExampleDocument
 	doc.ValueNotHashed = sha256Hash.Sum([]byte("some hash"))
 	doc.ValueBytes1 = []byte("ValueBytes1")
@@ -844,7 +850,7 @@ func TestCreateProof_compact(t *testing.T) {
 
 	// nested
 	docNested := documentspb.ExampleFilledNestedRepeatedDocument
-	doctree = NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctree = NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: NewSaltForTest})
 	err = doctree.AddLeavesFromDocument(&docNested)
 	assert.Nil(t, err)
 	err = doctree.Generate()
@@ -858,7 +864,7 @@ func TestCreateProof_compact(t *testing.T) {
 }
 
 func TestCreateProof_standard_compactProperties(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, CompactProperties: true, GetSalt: NewSaltForTest})
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, CompactProperties: true, Salts: NewSaltForTest})
 	doc := documentspb.FilledExampleDocument
 	doc.ValueBytes1 = []byte("ValueBytes1")
 	err := doctree.AddLeavesFromDocument(&doc)
@@ -907,7 +913,7 @@ func TestCreateProof_standard_compactProperties(t *testing.T) {
 }
 
 func TestCreateOneofProof(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: NewSaltForTest})
 	err := doctree.AddLeavesFromDocument(&documentspb.ExampleOneofSampleDocument)
 	assert.Nil(t, err)
 	err = doctree.Generate()
@@ -918,7 +924,9 @@ func TestCreateOneofProof(t *testing.T) {
 	proof, err := doctree.CreateProof("valueB")
 	assert.Nil(t, err)
 	assert.Equal(t, ReadableName("valueB"), proof.Property)
-	assert.Equal(t, toBytesArray(documentspb.ExampleOneofSampleDocument.OneofBlock.(*documentspb.OneofSample_ValueB).ValueB), proof.Value)
+	ev, err := toBytesArray(documentspb.ExampleOneofSampleDocument.OneofBlock.(*documentspb.OneofSample_ValueB).ValueB)
+	assert.NoError(t, err)
+	assert.Equal(t, ev, proof.Value)
 	assert.Equal(t, testSalt, proof.Salt)
 
 	fieldHash, err := CalculateHashForProofField(&proof, sha256Hash)
@@ -931,7 +939,7 @@ func TestCreateOneofProof(t *testing.T) {
 	assert.True(t, valid)
 	assert.Nil(t, err)
 
-	doctree = NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctree = NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: NewSaltForTest})
 	err = doctree.AddLeavesFromDocument(&documentspb.OneofSample{
 		OneofBlock: &documentspb.OneofSample_ValueC{"bor"},
 	})
@@ -943,7 +951,7 @@ func TestCreateOneofProof(t *testing.T) {
 	_, err = doctree.CreateProof("valueC")
 	assert.Nil(t, err)
 
-	doctree = NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctree = NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: NewSaltForTest})
 	err = doctree.AddLeavesFromDocument(&documentspb.OneofSample{
 		OneofBlock: &documentspb.OneofSample_ValueD{&documentspb.SimpleItem{ValueA: "testA"}},
 	})
@@ -955,7 +963,7 @@ func TestCreateOneofProof(t *testing.T) {
 	_, err = doctree.CreateProof("valueD.valueA")
 	assert.Nil(t, err)
 
-	doctree = NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctree = NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: NewSaltForTest})
 	err = doctree.AddLeavesFromDocument(&documentspb.OneofSample{})
 	assert.Nil(t, err)
 	err = doctree.Generate()
@@ -970,7 +978,7 @@ func TestCreateOneofProof(t *testing.T) {
 }
 
 func TestCreateProof_sorted(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash, Salts: NewSaltForTest})
 	err := doctree.AddLeavesFromDocument(&documentspb.FilledExampleDocument)
 	assert.Nil(t, err)
 	err = doctree.Generate()
@@ -1003,7 +1011,7 @@ func TestCreateProof_sorted(t *testing.T) {
 }
 
 func TestCreateRepeatedSortedProof(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash, Salts: NewSaltForTest})
 	err := doctree.AddLeavesFromDocument(&documentspb.ExampleFilledRepeatedDocument)
 	assert.Nil(t, err)
 	err = doctree.Generate()
@@ -1018,7 +1026,7 @@ func TestCreateRepeatedSortedProof(t *testing.T) {
 	assert.Equal(t, testSalt, proof.Salt)
 
 	fieldHash, err := CalculateHashForProofField(&proof, sha256Hash)
-	rootHash := []byte{0x6, 0xfe, 0x23, 0xfe, 0x7f, 0x5f, 0x27, 0x8c, 0xca, 0xc9, 0x25, 0x9c, 0x1a, 0xa8, 0x61, 0xd9, 0xd3, 0x25, 0xe9, 0xb3, 0xec, 0xd5, 0x9f, 0xd3, 0x4d, 0xdb, 0x3d, 0xd2, 0x5b, 0x9c, 0xaa, 0x57}
+	rootHash := []byte{0x16, 0xce, 0xc4, 0xa8, 0xb5, 0xf, 0xe4, 0xf4, 0x1a, 0x47, 0x4, 0xfa, 0xe0, 0x3f, 0x45, 0x7f, 0xad, 0x8e, 0x6b, 0x8e, 0x1c, 0xff, 0x2c, 0x7b, 0x47, 0x4f, 0xbb, 0x36, 0xc0, 0x74, 0xef, 0x70}
 	assert.Equal(t, rootHash, doctree.rootHash)
 	valid, err := ValidateProofSortedHashes(fieldHash, proof.SortedHashes, rootHash, doctree.hash)
 	assert.True(t, valid)
@@ -1035,7 +1043,7 @@ func TestCreateRepeatedSortedProof(t *testing.T) {
 }
 
 func TestCreateRepeatedSortedProofAutoSalts(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash, Salts: NewSaltForTest})
 
 	err := doctree.AddLeavesFromDocument(&documentspb.ExampleFilledNestedRepeatedDocument)
 	assert.Nil(t, err)
@@ -1067,7 +1075,7 @@ func TestCreateRepeatedSortedProofAutoSalts(t *testing.T) {
 }
 
 func TestCreateProofFromRepeatedField(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash, Salts: NewSaltForTest})
 
 	err := doctree.AddLeavesFromDocument(&documentspb.ExampleFilledNestedRepeatedDocument)
 	assert.Nil(t, err)
@@ -1082,7 +1090,7 @@ func TestCreateProofFromRepeatedField(t *testing.T) {
 }
 
 func TestCreateProofFromRepeatedFieldWithParentPrefix(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash, ParentPrefix: Property{Text: "doc"}, GetSalt: NewSaltForTest})
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash, ParentPrefix: Property{Text: "doc"}, Salts: NewSaltForTest})
 
 	err := doctree.AddLeavesFromDocument(&documentspb.ExampleFilledNestedRepeatedDocument)
 	assert.Nil(t, err)
@@ -1097,7 +1105,7 @@ func TestCreateProofFromRepeatedFieldWithParentPrefix(t *testing.T) {
 }
 
 func TestCreateProofFromNestedField(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash, Salts: NewSaltForTest})
 
 	err := doctree.AddLeavesFromDocument(&documentspb.ExampleFilledNestedRepeatedDocument)
 	assert.Nil(t, err)
@@ -1112,7 +1120,7 @@ func TestCreateProofFromNestedField(t *testing.T) {
 }
 
 func TestCreateProofFromNestedFieldWithParentPrefix(t *testing.T) {
-	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash, ParentPrefix: Property{Text: "doc"}, GetSalt: NewSaltForTest})
+	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash, ParentPrefix: Property{Text: "doc"}, Salts: NewSaltForTest})
 
 	err := doctree.AddLeavesFromDocument(&documentspb.ExampleFilledNestedRepeatedDocument)
 	assert.Nil(t, err)
@@ -1128,7 +1136,7 @@ func TestCreateProofFromNestedFieldWithParentPrefix(t *testing.T) {
 
 func TestTree_AddLeaves_TwoLeafTree(t *testing.T) {
 	// Leaf A: Hashed -- Leaf B: Hashed
-	tree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256.New(), GetSalt: NewSaltForTest})
+	tree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256.New(), Salts: NewSaltForTest})
 	hashLeafA := sha256.Sum256([]byte("leafA"))
 	err := tree.AddLeaf(LeafNode{Hash: hashLeafA[:], Property: NewProperty("LeafA", 1), Hashed: true})
 	assert.Nil(t, err)
@@ -1139,7 +1147,7 @@ func TestTree_AddLeaves_TwoLeafTree(t *testing.T) {
 	assert.NotEqual(t, hashLeafA[:], tree.RootHash())
 
 	// Leaf A: Regular -- Leaf B: Hashed
-	tree = NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256.New(), GetSalt: NewSaltForTest})
+	tree = NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256.New(), Salts: NewSaltForTest})
 	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA", 1), Salt: make([]byte, 32), Value: []byte{1}})
 	assert.Nil(t, err)
 	err = tree.AddLeaf(LeafNode{Hash: hashLeafA[:], Property: NewProperty("LeafB", 1), Hashed: true})
@@ -1149,7 +1157,7 @@ func TestTree_AddLeaves_TwoLeafTree(t *testing.T) {
 	assert.NotEqual(t, hashLeafA[:], tree.RootHash())
 
 	// Leaf A: Hashed -- Leaf B: Regular (hashed)
-	tree = NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256.New(), GetSalt: NewSaltForTest})
+	tree = NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256.New(), Salts: NewSaltForTest})
 	err = tree.AddLeaf(LeafNode{Hash: hashLeafA[:], Property: NewProperty("LeafA", 1), Hashed: true})
 	assert.Nil(t, err)
 	leafB := LeafNode{Property: NewProperty("LeafB", 2), Salt: make([]byte, 32), Value: []byte{1}}
@@ -1161,7 +1169,7 @@ func TestTree_AddLeaves_TwoLeafTree(t *testing.T) {
 	assert.NotEqual(t, hashLeafA[:], tree.RootHash())
 
 	// Leaf A: Hashed -- Leaf B: Regular (no call to HashNode)
-	tree = NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256.New(), GetSalt: NewSaltForTest})
+	tree = NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256.New(), Salts: NewSaltForTest})
 	err = tree.AddLeaf(LeafNode{Hash: hashLeafA[:], Property: NewProperty("LeafA", 1), Hashed: true})
 	assert.Nil(t, err)
 	leafB = LeafNode{Property: NewProperty("LeafB", 2), Salt: make([]byte, 32), Value: []byte{1}}
@@ -1182,7 +1190,7 @@ func Test_Enums(t *testing.T) {
 		EnumType:    documentspb.Enum_type_two,
 	}
 
-	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New(), GetSalt: NewSaltForTest})
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New(), Salts: NewSaltForTest})
 	doctree.AddLeavesFromDocument(&document)
 	doctree.Generate()
 	fmt.Printf("Generated tree: %s\n", doctree.String())
@@ -1202,7 +1210,7 @@ func Test_Enums(t *testing.T) {
 func Test_integers(t *testing.T) {
 	doc := new(documentspb.Integers)
 
-	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New(), GetSalt: NewSaltForTest})
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New(), Salts: NewSaltForTest})
 	doctree.AddLeavesFromDocument(doc)
 	doctree.Generate()
 	fmt.Printf("Generated tree: %s\n", doctree.String())
@@ -1219,51 +1227,9 @@ func Test_integers(t *testing.T) {
 	}
 }
 
-func Test_CompactSaltPairs(t *testing.T) {
-	salts := Salts{}
-	doc := documentspb.FilledExampleDocument
-
-	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: &salts})
-	err := doctree.AddLeavesFromDocument(&doc)
-	assert.Nil(t, err)
-	doctree.Generate()
-	proof, err := doctree.CreateProof("valueA")
-	salt1 := proof.Salt
-	assert.Nil(t, err)
-	valid, err := doctree.ValidateProof(&proof)
-	assert.True(t, valid)
-	assert.Nil(t, err)
-
-	doctree2 := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: &salts})
-	err = doctree2.AddLeavesFromDocument(&doc)
-	assert.Nil(t, err)
-	doctree2.Generate()
-	proof2, err := doctree2.CreateProof("valueB")
-	salt2 := proof2.Salt
-	assert.Nil(t, err)
-	valid, err = doctree2.ValidateProof(&proof2)
-	assert.True(t, valid)
-	assert.Nil(t, err)
-
-	assert.NotEqual(t, salt1, salt2, "Two salts should be different")
-	assert.Equal(t, doctree.RootHash(), doctree2.RootHash(), "Two rootHash should be same")
-
-	doctree3 := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: &salts})
-	err = doctree3.AddLeavesFromDocument(&doc)
-	assert.Nil(t, err)
-	doctree3.Generate()
-	proof3, err := doctree3.CreateProof("valueA")
-	assert.Nil(t, err)
-	salt3 := proof3.Salt
-	valid, err = doctree3.ValidateProof(&proof3)
-	assert.True(t, valid)
-	assert.Nil(t, err)
-	assert.Equal(t, salt1, salt3, "Two salts should be same")
-}
-
 func Test_GenerateSingleLeafTree(t *testing.T) {
 	foobarHash := sha256.Sum256([]byte("foobar"))
-	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, GetSalt: NewSaltForTest})
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: NewSaltForTest})
 	err := doctree.AddLeaf(
 		LeafNode{
 			Hash:     foobarHash[:],
@@ -1276,4 +1242,194 @@ func Test_GenerateSingleLeafTree(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Len(t, doctree.leaves, 1)
 	assert.Equal(t, foobarHash[:], doctree.RootHash())
+}
+
+func Test_SaltMessage(t *testing.T) {
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash})
+	err := doctree.AddLeavesFromDocument(&documentspb.ExampleContainSaltsDocument)
+	assert.Nil(t, err)
+	err = doctree.Generate()
+	assert.Nil(t, err)
+	assert.Len(t, doctree.leaves, 2)
+	assert.Equal(t,doctree.leaves[0].Salt, []byte{0x1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x2}, "Salt should Match with the one contained in salt message")
+	assert.Equal(t,doctree.leaves[1].Salt, []byte{0x3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x4}, "Salt should Match with the one contained in salt message")
+
+	doctree2 := NewDocumentTree(TreeOptions{Hash: sha256Hash})
+	document := &documentspb.ExampleContainSaltsDocument
+	document.Salts = nil
+	err = doctree2.AddLeavesFromDocument(document)
+	assert.Nil(t, err)
+	err = doctree2.Generate()
+	assert.Nil(t, err)
+	assert.Len(t, doctree2.leaves, 2)
+	for _, leaf := range doctree2.leaves {
+		assert.NotNil(t, leaf.Salt)
+	}
+}
+
+func Example_complete() {
+	// ExampleDocument is a protobuf message
+	document := documentspb.ExampleDocument{
+		Value1:      1,
+		ValueA:      "Foo",
+		ValueB:      "Bar",
+		ValueBytes1: []byte("foobar"),
+	}
+
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New()})
+	doctree.AddLeavesFromDocument(&document)
+	doctree.Generate()
+	fmt.Printf("Generated tree: %s\n", doctree.String())
+
+	// Generate the actual proof for a field. In this case the field called "valueA".
+	proof, _ := doctree.CreateProof("valueA")
+	proofJson, _ := json.Marshal(proof)
+	fmt.Println("Proof:\n", string(proofJson))
+
+	// Validate the proof that was just generated
+	valid, _ := doctree.ValidateProof(&proof)
+
+	fmt.Printf("Proof validated: %v\n", valid)
+}
+
+func TestTree_LengthProp_ListMap(t *testing.T) {
+	// length is 0
+	doc := new(documentspb.SimpleEntries)
+	tree := NewDocumentTree(TreeOptions{CompactProperties: true, EnableHashSorting: true, Hash: sha256.New()})
+	err := tree.AddLeavesFromDocument(doc)
+	assert.NoError(t, err)
+	_, l := tree.GetLeafByProperty("entries.length")
+	assert.Equal(t, l.Property.ReadableName(), "entries.length")
+	expectedLen := 0
+	el, err := toBytesArray(expectedLen)
+	assert.NoError(t, err)
+	assert.Equal(t, l.Value, el)
+
+	// length is 1
+	doc.Entries = append(doc.Entries, &documentspb.SimpleEntry{
+		EntryKey:   "some key",
+		EntryValue: "some value",
+	})
+
+	tree = NewDocumentTree(TreeOptions{CompactProperties: true, EnableHashSorting: true, Hash: sha256.New()})
+	err = tree.AddLeavesFromDocument(doc)
+	assert.NoError(t, err)
+	_, l = tree.GetLeafByProperty("entries.length")
+	assert.Equal(t, l.Property.ReadableName(), "entries.length")
+	expectedLen = 1
+	el, err = toBytesArray(expectedLen)
+	assert.NoError(t, err)
+	assert.Equal(t, l.Value, el)
+}
+
+func TestTree_LengthProp_Map(t *testing.T) {
+	// length is 0
+	doc := new(documentspb.SimpleStringMap)
+	tree := NewDocumentTree(TreeOptions{CompactProperties: true, EnableHashSorting: true, Hash: sha256.New()})
+	err := tree.AddLeavesFromDocument(doc)
+	assert.NoError(t, err)
+	_, l := tree.GetLeafByProperty("value.length")
+	assert.Equal(t, l.Property.ReadableName(), "value.length")
+	expectedLen := 0
+	el, err := toBytesArray(expectedLen)
+	assert.NoError(t, err)
+	assert.Equal(t, l.Value, el)
+
+	// length is 1
+	doc.Value = make(map[string]string)
+	doc.Value["some key"] = "some value"
+	tree = NewDocumentTree(TreeOptions{CompactProperties: true, EnableHashSorting: true, Hash: sha256.New()})
+	err = tree.AddLeavesFromDocument(doc)
+	assert.NoError(t, err)
+	_, l = tree.GetLeafByProperty("value.length")
+	assert.Equal(t, l.Property.ReadableName(), "value.length")
+	expectedLen = 1
+	el, err = toBytesArray(expectedLen)
+	assert.NoError(t, err)
+	assert.Equal(t, l.Value, el)
+}
+
+func TestTree_LengthProp_List(t *testing.T) {
+	// length is 0
+	doc := new(documentspb.RepeatedItem)
+	tree := NewDocumentTree(TreeOptions{CompactProperties: true, EnableHashSorting: true, Hash: sha256.New()})
+	err := tree.AddLeavesFromDocument(doc)
+	assert.NoError(t, err)
+	_, l := tree.GetLeafByProperty("valueA.length")
+	assert.Equal(t, l.Property.ReadableName(), "valueA.length")
+	expectedLen := 0
+	el, err := toBytesArray(expectedLen)
+	assert.NoError(t, err)
+	assert.Equal(t, l.Value, el)
+
+	// length is 1
+	doc.ValueA = append(doc.ValueA, &documentspb.SimpleItem{
+		ValueA: "some string",
+	})
+	tree = NewDocumentTree(TreeOptions{CompactProperties: true, EnableHashSorting: true, Hash: sha256.New()})
+	err = tree.AddLeavesFromDocument(doc)
+	assert.NoError(t, err)
+	_, l = tree.GetLeafByProperty("valueA.length")
+	assert.Equal(t, l.Property.ReadableName(), "valueA.length")
+	expectedLen = 1
+	el, err = toBytesArray(expectedLen)
+	assert.NoError(t, err)
+	assert.Equal(t, l.Value, el)
+
+	leaves := tree.GetLeaves()
+	assert.Len(t, leaves, 3)
+
+}
+
+func Test_GetSalt_Error(t *testing.T) {
+	tree := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: NewSaltForErrorTest})
+	err := tree.AddLeavesFromDocument(&documentspb.ExampleContainSaltsDocument)
+	assert.EqualError(t, err, "error handling field ValueA: Cannot get salt")
+
+	doc1 := new(documentspb.SimpleEntries)
+	tree = NewDocumentTree(TreeOptions{CompactProperties: true, EnableHashSorting: true, Hash: sha256.New(), Salts: NewSaltForErrorTest})
+	err = tree.AddLeavesFromDocument(doc1)
+	assert.EqualError(t, err, "error handling field Entries: Cannot get salt")
+
+	doc2 := new(documentspb.RepeatedItem)
+	tree = NewDocumentTree(TreeOptions{CompactProperties: true, EnableHashSorting: true, Hash: sha256.New(), Salts: NewSaltForErrorTest})
+	err = tree.AddLeavesFromDocument(doc2)
+	assert.EqualError(t, err, "error handling field ValueA: Cannot get salt")
+}
+
+func Test_ReturnGeneratedSalts(t *testing.T) {
+	doc := new (documentspb.ContainSalts)
+	doc.ValueA = "TestA"
+	doc.ValueB = 5
+	assert.Nil(t, doc.Salts)
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash})
+	err := doctree.AddLeavesFromDocument(doc)
+	assert.Nil(t, err)
+	assert.Equal(t, len(doc.Salts), 2)
+	err = doctree.Generate()
+	assert.Nil(t, err)
+	assert.Len(t, doctree.leaves, 2)
+	hash1 := doctree.hash
+
+	doctree2 := NewDocumentTree(TreeOptions{Hash: sha256Hash})
+	doc2 := new (documentspb.ContainSalts)
+	doc2.ValueA = "TestA"
+	doc2.ValueB = 5
+	assert.Nil(t, doc2.Salts)
+	doc2.Salts = doc.Salts
+	err = doctree2.AddLeavesFromDocument(doc2)
+	assert.Nil(t, err)
+	err = doctree2.Generate()
+	assert.Nil(t, err)
+	hash2 := doctree2.hash
+
+	assert.Equal(t, hash1, hash2)
+}
+
+func Test_MessageWithoutSaltsField(t *testing.T) {
+	doc := new (documentspb.ExampleWithoutSalts)
+	doc.ValueA = "TestA"
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash})
+	err := doctree.AddLeavesFromDocument(doc)
+	assert.EqualError(t, err, "Cannot find salts field in message")
 }
