@@ -292,6 +292,11 @@ func NewDocumentTreeWithRootHash(proofOpts TreeOptions, rootHash []byte) Documen
 	return documentTree
 }
 
+// GetParentPrefix returns the configured parent prefix of the tree
+func (doctree *DocumentTree) GetParentPrefix() Property {
+	return doctree.parentPrefix
+}
+
 // AddLeaves appends list of leaves to the tree's leaves.
 // This function can be called multiple times and leaves will be added from left to right. Note that the lexicographic
 // sorting doesn't get applied in this method but in the protobuf flattening. The order in which leaves are added in
