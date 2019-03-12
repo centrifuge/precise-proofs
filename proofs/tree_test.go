@@ -1092,6 +1092,8 @@ func TestCreateProofFromRepeatedField(t *testing.T) {
 func TestCreateProofFromRepeatedFieldWithParentPrefix(t *testing.T) {
 	doctree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256Hash, ParentPrefix: Property{Text: "doc"}, Salts: NewSaltForTest})
 
+	assert.Equal(t, doctree.GetParentPrefix().ReadableName(), "doc")
+
 	err := doctree.AddLeavesFromDocument(&documentspb.ExampleFilledNestedRepeatedDocument)
 	assert.Nil(t, err)
 	err = doctree.Generate()
