@@ -3,6 +3,7 @@ package proofs
 import (
 	"crypto/sha256"
 	"testing"
+
 	"github.com/centrifuge/precise-proofs/examples/documents"
 	"github.com/stretchr/testify/assert"
 )
@@ -14,7 +15,7 @@ func TestFlattenMessage(t *testing.T) {
 
 	leaves, err := FlattenMessage(&message, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty)
 	assert.NoError(t, err)
-	assert.Equal(t, 9, len(leaves))
+	assert.Equal(t, 10, len(leaves))
 
 	var propOrder []Property
 	for _, leaf := range leaves {
@@ -28,6 +29,7 @@ func TestFlattenMessage(t *testing.T) {
 		Empty.FieldProp("value2", 4),
 		Empty.FieldProp("valueA", 1),
 		Empty.FieldProp("valueB", 2),
+		Empty.FieldProp("valueBool", 12),
 		Empty.FieldProp("value_bytes1", 5),
 		Empty.FieldProp("value_not_hashed", 9),
 		Empty.FieldProp("value_not_ignored", 7),
@@ -50,7 +52,7 @@ func TestFlattenMessage_compact(t *testing.T) {
 
 	leaves, err := FlattenMessage(&message, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, true, Empty)
 	assert.NoError(t, err)
-	assert.Equal(t, 9, len(leaves))
+	assert.Equal(t, 10, len(leaves))
 
 	var propOrder []Property
 	for _, leaf := range leaves {
@@ -66,6 +68,7 @@ func TestFlattenMessage_compact(t *testing.T) {
 		Empty.FieldProp("value_not_ignored", 7),
 		Empty.FieldProp("value_not_hashed", 9),
 		Empty.FieldProp("enum_type", 10),
+		Empty.FieldProp("valueBool", 12),
 	}, propOrder)
 	f := &messageFlattener{}
 	v, _ := f.valueToBytesArray("Foo")
@@ -84,7 +87,7 @@ func TestFlattenMessageWithPrefix(t *testing.T) {
 	parentProp := NewProperty("doc", 42)
 	leaves, err := FlattenMessage(&message, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, parentProp)
 	assert.NoError(t, err)
-	assert.Equal(t, 9, len(leaves))
+	assert.Equal(t, 10, len(leaves))
 
 	var propOrder []Property
 	for _, leaf := range leaves {
@@ -98,6 +101,7 @@ func TestFlattenMessageWithPrefix(t *testing.T) {
 		parentProp.FieldProp("value2", 4),
 		parentProp.FieldProp("valueA", 1),
 		parentProp.FieldProp("valueB", 2),
+		parentProp.FieldProp("valueBool", 12),
 		parentProp.FieldProp("value_bytes1", 5),
 		parentProp.FieldProp("value_not_hashed", 9),
 		parentProp.FieldProp("value_not_ignored", 7),
@@ -146,13 +150,14 @@ func TestFlattenMessage_HashedField(t *testing.T) {
 		Empty.FieldProp("value2", 4),
 		Empty.FieldProp("valueA", 1),
 		Empty.FieldProp("valueB", 2),
+		Empty.FieldProp("valueBool", 12),
 		Empty.FieldProp("value_bytes1", 5),
 		Empty.FieldProp("value_not_hashed", 9),
 		Empty.FieldProp("value_not_ignored", 7),
 	}, propOrder)
 	assert.Nil(t, err)
-	assert.Equal(t, leaves[7].Hash, foobarHash[:])
-	assert.Equal(t, leaves[7].Value, []byte{})
+	assert.Equal(t, leaves[8].Hash, foobarHash[:])
+	assert.Equal(t, leaves[8].Value, []byte{})
 
 	invalidMessage := &documentspb.InvalidHashedFieldDocument{
 		Value: "foobar",

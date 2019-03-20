@@ -38,7 +38,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 			return errors.Wrap(err, "failed convert value to string")
 		}
 		salt, err := salts(prop.CompactName())
-		if (err != nil) {
+		if err != nil {
 			return err
 		}
 		f.appendLeaf(prop, valueBytesArray, salt, readablePropertyLengthSuffix, nil, false)
@@ -94,7 +94,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 
 			// if field's name is salts, then bypass flatten this node because it just contain salts
 			if name == "salts" {
-				if strings.Contains(protoTag, ",rep,"){
+				if strings.Contains(protoTag, ",rep,") {
 					continue
 				}
 			}
@@ -149,7 +149,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 			return err
 		}
 		salt, err := salts(lengthProp.CompactName())
-		if (err != nil) {
+		if err != nil {
 			return err
 		}
 		f.appendLeaf(lengthProp, lengthBytes, salt, readablePropertyLengthSuffix, []byte{}, false)
@@ -170,11 +170,10 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 			return err
 		}
 		salt, err := salts(lengthProp.CompactName())
-		if (err != nil) {
+		if err != nil {
 			return err
 		}
 		f.appendLeaf(lengthProp, lengthBytes, salt, readablePropertyLengthSuffix, []byte{}, false)
-
 
 		// Handle each value of the map
 		for _, k := range value.MapKeys() {
@@ -195,7 +194,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 			return err
 		}
 		salt, err := salts(prop.CompactName())
-		if (err != nil) {
+		if err != nil {
 			return err
 		}
 		f.appendLeaf(prop, valueBytesArray, salt, readablePropertyLengthSuffix, []byte{}, false)
@@ -237,6 +236,8 @@ func (f *messageFlattener) valueToBytesArray(value interface{}) (b []byte, err e
 		}
 
 		return toBytesArray(t.Unix())
+	case bool:
+		return toBytesArray(v)
 	default:
 		// special case for enums
 		rv := reflect.ValueOf(value)
@@ -280,8 +281,8 @@ func (f *messageFlattener) sortLeaves() (err error) {
 func FlattenMessage(message proto.Message, salts Salts, readablePropertyLengthSuffix string, hashFn hash.Hash, compact bool, parentProp Property) (leaves []LeafNode, err error) {
 	f := messageFlattener{
 		readablePropertyLengthSuffix: readablePropertyLengthSuffix,
-		hash:              hashFn,
-		compactProperties: compact,
+		hash:                         hashFn,
+		compactProperties:            compact,
 	}
 
 	err = f.handleValue(parentProp, reflect.ValueOf(message), salts, readablePropertyLengthSuffix, nil)
@@ -329,11 +330,11 @@ func sliceToMap(value reflect.Value, mappingKey string, keyLength uint64) (refle
 
 	_, elemMD := descriptor.ForMessage(reflect.New(elemType).Interface().(descriptor.Message))
 	_, saltsFieldFound := elemType.FieldByName(SaltsFieldName)
-	if ((len(elemMD.Field) == 2) || ((len(elemMD.Field) == 3) && (saltsFieldFound))) {
+	if (len(elemMD.Field) == 2) || ((len(elemMD.Field) == 3) && (saltsFieldFound)) {
 		valueField, valueFound := elemType.FieldByNameFunc(func(name string) bool {
-			if (saltsFieldFound) {
+			if saltsFieldFound {
 				return !strings.HasPrefix(name, "XXX_") && name != mappingKey && name != SaltsFieldName
-			}else{
+			} else {
 				return !strings.HasPrefix(name, "XXX_") && name != mappingKey
 			}
 		})
