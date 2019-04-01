@@ -18,6 +18,10 @@ func main() {
 		ValueA:      "Foo",
 		ValueB:      "Bar",
 		ValueBytes1: []byte("foobar"),
+		Name: &documentspb.Name{
+			First: "Hello, ",
+			Last:  "World",
+		},
 	}
 
 	doctree := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New()})

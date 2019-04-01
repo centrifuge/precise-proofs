@@ -42,26 +42,34 @@ See below code sample (`examples/simple.go`) for a usage example. For detailed u
 
 ```go,
 	// ExampleDocument is a protobuf message
-	document := documentspb.ExampleDocument{
-		Value1:      1,
-		ValueA:      "Foo",
-		ValueB:      "Bar",
-		ValueBytes1: []byte("foobar"),
-	}
+    document := documentspb.ExampleDocument{
+        Value1:      1,
+        ValueA:      "Foo",
+        ValueB:      "Bar",
+        ValueBytes1: []byte("foobar"),
+        Name: &documentspb.Name{
+            First: "Hello, ",
+            Last:  "World",
+        },
+    }
 
-	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New()})
-	doctree.AddLeavesFromDocument(&document)
+    doctree := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New()})
 
-	doctree.Generate()
-	fmt.Printf("Generated tree: %s\n", doctree.String())
+    checkErr(doctree.AddLeavesFromDocument(&document))
+    checkErr(doctree.Generate())
+    fmt.Printf("Generated tree: %s\n", doctree.String())
 
-	proof, _ := doctree.CreateProof("valueA")
-	proofJson, _ := json.Marshal(proof)
-	fmt.Println("Proof:\n", string(proofJson))
+    // Generate the actual proof for a field. In this case the field called "ValueA".
+    proof, err := doctree.CreateProof("valueA")
+    checkErr(err)
+    proofJson, _ := json.Marshal(proof)
+    fmt.Println("Proof:\n", string(proofJson))
 
-	valid, _ := doctree.ValidateProof(&proof)
+    // Validate the proof that was just generated
+    valid, err := doctree.ValidateProof(&proof)
+    checkErr(err)
 
-	fmt.Printf("Proof validated: %v\n", valid)
+    fmt.Printf("Proof validated: %v\n", valid)
 ```
 
 ## Development

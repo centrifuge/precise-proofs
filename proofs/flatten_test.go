@@ -244,7 +244,7 @@ func TestFlattenMessage_SimpleStringMap(t *testing.T) {
 
 	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty)
 	assert.NoError(t, err)
-	propOrder := []Property{}
+	var propOrder []Property
 	for _, leaf := range leaves {
 		propOrder = append(propOrder, leaf.Property)
 	}
@@ -261,7 +261,7 @@ func TestFlattenMessage_SimpleStringMap(t *testing.T) {
 func TestFlattenMessage_NestedMap(t *testing.T) {
 	message := &documentspb.NestedMap{
 		Value: map[int32]*documentspb.SimpleMap{
-			42: &documentspb.SimpleMap{
+			42: {
 				Value: map[int32]string{
 					-42: "value",
 				},

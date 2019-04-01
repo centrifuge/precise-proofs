@@ -132,7 +132,7 @@ func TestTree_Generate(t *testing.T) {
 		hashes = append(hashes, leaf.Hash)
 	}
 
-	tree.Generate(hashes, sha256Hash)
+	assert.NoError(t, tree.Generate(hashes, sha256Hash))
 	h := tree.Root().Hash
 	expectedHash := []byte{0x1e, 0xea, 0xeb, 0x92, 0x11, 0xe0, 0xa1, 0xbd, 0x10, 0x83, 0x7c, 0xda, 0xee, 0x39, 0xf3, 0x4c, 0xbc, 0xda, 0xe4, 0x93, 0xe, 0x70, 0xb3, 0xb, 0xbb, 0x7f, 0xda, 0xa5, 0x24, 0xfb, 0x93, 0x86}
 	assert.Equal(t, expectedHash, h, "Hash should match")
@@ -151,7 +151,7 @@ func TestSortedHashTree_Generate(t *testing.T) {
 	for _, leaf := range leaves {
 		hashes = append(hashes, leaf.Hash)
 	}
-	tree.Generate(hashes, sha256Hash)
+	assert.NoError(t, tree.Generate(hashes, sha256Hash))
 	h := tree.Root().Hash
 	expectedHash := []byte{0xab, 0xcc, 0xf3, 0xc3, 0xfb, 0xd9, 0xbf, 0xec, 0x73, 0x2f, 0xf3, 0x90, 0xae, 0x36, 0x6c, 0xfe, 0x6f, 0x45, 0x16, 0xa9, 0x6a, 0x4b, 0xdc, 0x88, 0xa9, 0x2f, 0x81, 0x5d, 0x61, 0xe, 0x50, 0xe1}
 	assert.Equal(t, expectedHash, h, "Hash should match")
@@ -625,7 +625,7 @@ func TestTree_GenerateProofHashed(t *testing.T) {
 	hashC := sha256.Sum256([]byte("C"))
 	hashD := sha256.Sum256([]byte("D"))
 
-	doctree.AddLeaves([]LeafNode{
+	err := doctree.AddLeaves([]LeafNode{
 		{
 			Property: Property{Text: "A"},
 			Hash:     hashA[:],
@@ -647,8 +647,9 @@ func TestTree_GenerateProofHashed(t *testing.T) {
 			Hashed:   true,
 		},
 	})
+	assert.NoError(t, err)
 
-	err := doctree.Generate()
+	err = doctree.Generate()
 	assert.Nil(t, err)
 
 	n1 := sha256.Sum256(append(hashA[:], hashB[:]...))
@@ -1161,7 +1162,7 @@ func TestTree_AddLeaves_TwoLeafTree(t *testing.T) {
 	err = tree.AddLeaf(LeafNode{Hash: hashLeafA[:], Property: NewProperty("LeafA", 1), Hashed: true})
 	assert.Nil(t, err)
 	leafB := LeafNode{Property: NewProperty("LeafB", 2), Salt: make([]byte, 32), Value: []byte{1}}
-	leafB.HashNode(sha256.New(), false)
+	assert.NoError(t, leafB.HashNode(sha256.New(), false))
 	err = tree.AddLeaf(leafB)
 	assert.Nil(t, err)
 	err = tree.Generate()
@@ -1191,8 +1192,8 @@ func Test_Enums(t *testing.T) {
 	}
 
 	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New(), Salts: NewSaltForTest})
-	doctree.AddLeavesFromDocument(&document)
-	doctree.Generate()
+	assert.NoError(t, doctree.AddLeavesFromDocument(&document))
+	assert.NoError(t, doctree.Generate())
 	fmt.Printf("Generated tree: %s\n", doctree.String())
 
 	for _, field := range []string{"valueA", "enum_type"} {
@@ -1211,8 +1212,8 @@ func Test_integers(t *testing.T) {
 	doc := new(documentspb.Integers)
 
 	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New(), Salts: NewSaltForTest})
-	doctree.AddLeavesFromDocument(doc)
-	doctree.Generate()
+	assert.NoError(t, doctree.AddLeavesFromDocument(doc))
+	assert.NoError(t, doctree.Generate())
 	fmt.Printf("Generated tree: %s\n", doctree.String())
 
 	for _, field := range []string{"valueA", "valueB", "valueG", "valueH", "valueJ"} {
@@ -1274,11 +1275,22 @@ func Example_complete() {
 		ValueA:      "Foo",
 		ValueB:      "Bar",
 		ValueBytes1: []byte("foobar"),
+		Name: &documentspb.Name{
+			First: "Foo",
+			Last:  "Bar",
+		},
 	}
 
 	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New()})
-	doctree.AddLeavesFromDocument(&document)
-	doctree.Generate()
+	err := doctree.AddLeavesFromDocument(&document)
+	if err != nil {
+		panic(err)
+	}
+
+	err = doctree.Generate()
+	if err != nil {
+		panic(err)
+	}
 	fmt.Printf("Generated tree: %s\n", doctree.String())
 
 	// Generate the actual proof for a field. In this case the field called "valueA".
