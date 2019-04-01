@@ -18,18 +18,16 @@ func main() {
 		ValueA:      "Foo",
 		ValueB:      "Bar",
 		ValueBytes1: []byte("foobar"),
-		EnumType:    documentspb.Enum_type_two,
 	}
 
-	salts := proofs.Salts{}
-	doctree := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New(), Salts: &salts})
+	doctree := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New()})
 
 	checkErr(doctree.AddLeavesFromDocument(&document))
 	checkErr(doctree.Generate())
 	fmt.Printf("Generated tree: %s\n", doctree.String())
 
 	// Generate the actual proof for a field. In this case the field called "ValueA".
-	proof, err := doctree.CreateProof("enum_type")
+	proof, err := doctree.CreateProof("valueA")
 	checkErr(err)
 	proofJson, _ := json.Marshal(proof)
 	fmt.Println("Proof:\n", string(proofJson))
@@ -39,10 +37,6 @@ func main() {
 	checkErr(err)
 
 	fmt.Printf("Proof validated: %v\n", valid)
-	fmt.Println("Compacts -------> Salts")
-	for ii := range salts {
-		fmt.Println(salts[ii].Compact, "------->", salts[ii].Value)
-	}
 }
 
 func checkErr(err error) {

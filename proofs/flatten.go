@@ -11,7 +11,7 @@ import (
 	"github.com/centrifuge/precise-proofs/proofs/proto"
 	"github.com/golang/protobuf/descriptor"
 	"github.com/golang/protobuf/proto"
-	go_descriptor "github.com/golang/protobuf/protoc-gen-go/descriptor"
+	godescriptor "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/golang/protobuf/protoc-gen-go/generator"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -20,16 +20,16 @@ import (
 
 // messageFlattener takes a proto.Message and flattens it to a list of ordered nodes.
 type messageFlattener struct {
-	message           proto.Message
-	leaves            LeafList
-	nodes             [][]byte
-	propOrder         []Property
-	saltsLengthSuffix string
-	hash              hash.Hash
-	compactProperties bool
+	message                      proto.Message
+	leaves                       LeafList
+	nodes                        [][]byte
+	propOrder                    []Property
+	readablePropertyLengthSuffix string
+	hash                         hash.Hash
+	compactProperties            bool
 }
 
-func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSalt GetSalt, saltsLengthSuffix string, outerFieldDescriptor *go_descriptor.FieldDescriptorProto) (err error) {
+func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts Salts, readablePropertyLengthSuffix string, outerFieldDescriptor *godescriptor.FieldDescriptorProto) (err error) {
 	// handle special cases
 	switch v := value.Interface().(type) {
 	case []byte, *timestamp.Timestamp:
@@ -37,14 +37,18 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 		if err != nil {
 			return errors.Wrap(err, "failed convert value to string")
 		}
-		f.appendLeaf(prop, valueBytesArray, getSalt(prop.CompactName()), saltsLengthSuffix, nil, false)
+		salt, err := salts(prop.CompactName())
+		if err != nil {
+			return err
+		}
+		f.appendLeaf(prop, valueBytesArray, salt, readablePropertyLengthSuffix, nil, false)
 		return nil
 	}
 
 	// handle generic recursive cases
 	switch value.Kind() {
 	case reflect.Ptr:
-		return f.handleValue(prop, value.Elem(), getSalt, saltsLengthSuffix, outerFieldDescriptor)
+		return f.handleValue(prop, value.Elem(), salts, readablePropertyLengthSuffix, outerFieldDescriptor)
 	case reflect.Struct:
 
 		// lookup map key from field descriptor, if it exists
@@ -92,6 +96,12 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 				return errors.Wrapf(err, "failed to extract protobuf tag info from %q", protoTag)
 			}
 
+			// if field's name is salts, then bypass flatten this node because it just contain salts
+			if name == "salts" {
+				if strings.Contains(protoTag, ",rep,") {
+					continue
+				}
+			}
 			fieldProp := prop.FieldProp(name, num)
 
 			isHashed, err := proto.GetExtension(innerFieldDescriptor.Options, proofspb.E_HashedField)
@@ -112,7 +122,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 					continue
 				}
 
-				f.appendLeaf(fieldProp, []byte{}, nil, saltsLengthSuffix, hashed, true)
+				f.appendLeaf(fieldProp, []byte{}, nil, readablePropertyLengthSuffix, hashed, true)
 				continue
 			}
 
@@ -134,7 +144,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 				continue
 			}
 
-			err = f.handleValue(fieldProp, nextValue, getSalt, saltsLengthSuffix, innerFieldDescriptor)
+			err = f.handleValue(fieldProp, nextValue, salts, readablePropertyLengthSuffix, innerFieldDescriptor)
 			if err != nil {
 				return errors.Wrapf(err, "error handling field %s", field.Name)
 			}
@@ -156,7 +166,12 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 			finalValue = append(finalValue, fieldMap[uint32(k)]...)
 		}
 
-		f.appendLeaf(prop, finalValue, getSalt(prop.CompactName()), saltsLengthSuffix, nil, false)
+		salt, err := salts(prop.CompactName())
+		if err != nil {
+			return err
+		}
+
+		f.appendLeaf(prop, finalValue, salt, readablePropertyLengthSuffix, nil, false)
 
 	case reflect.Slice:
 		mappingKey := generator.CamelCase(getMappingKeyFrom(outerFieldDescriptor))
@@ -172,34 +187,41 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 			if err != nil {
 				return errors.Wrapf(err, "failed to convert %s saltValue to map with mapping_key %q", value.Type(), mappingKey)
 			}
-			return f.handleValue(prop, mapValue, getSalt, saltsLengthSuffix, outerFieldDescriptor)
+			return f.handleValue(prop, mapValue, salts, readablePropertyLengthSuffix, outerFieldDescriptor)
 		}
 
 		// Append length of slice as tree leaf
-		lengthProp := prop.LengthProp(saltsLengthSuffix)
+		lengthProp := prop.LengthProp(readablePropertyLengthSuffix)
 		lengthBytes, err := toBytesArray(value.Len())
 		if err != nil {
 			return err
 		}
-
-		f.appendLeaf(lengthProp, lengthBytes, getSalt(lengthProp.CompactName()), saltsLengthSuffix, []byte{}, false)
+		salt, err := salts(lengthProp.CompactName())
+		if err != nil {
+			return err
+		}
+		f.appendLeaf(lengthProp, lengthBytes, salt, readablePropertyLengthSuffix, []byte{}, false)
 
 		// Handle each element of the slice
 		for i := 0; i < value.Len(); i++ {
 			elemProp := prop.SliceElemProp(FieldNumForSliceLength(i))
-			err := f.handleValue(elemProp, value.Index(i), getSalt, saltsLengthSuffix, outerFieldDescriptor)
+			err := f.handleValue(elemProp, value.Index(i), salts, readablePropertyLengthSuffix, outerFieldDescriptor)
 			if err != nil {
 				return errors.Wrapf(err, "error handling slice element %d", i)
 			}
 		}
 	case reflect.Map:
 		// Append size of map as tree leaf
-		lengthProp := prop.LengthProp(saltsLengthSuffix)
+		lengthProp := prop.LengthProp(readablePropertyLengthSuffix)
 		lengthBytes, err := toBytesArray(value.Len())
 		if err != nil {
 			return err
 		}
-		f.appendLeaf(lengthProp, lengthBytes, getSalt(lengthProp.CompactName()), saltsLengthSuffix, []byte{}, false)
+		salt, err := salts(lengthProp.CompactName())
+		if err != nil {
+			return err
+		}
+		f.appendLeaf(lengthProp, lengthBytes, salt, readablePropertyLengthSuffix, []byte{}, false)
 
 		// Handle each value of the map
 		for _, k := range value.MapKeys() {
@@ -209,7 +231,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 			if err != nil {
 				return errors.Wrapf(err, "failed to create elem prop for %q", k)
 			}
-			err = f.handleValue(elemProp, value.MapIndex(k), getSalt, saltsLengthSuffix, outerFieldDescriptor)
+			err = f.handleValue(elemProp, value.MapIndex(k), salts, readablePropertyLengthSuffix, outerFieldDescriptor)
 			if err != nil {
 				return errors.Wrapf(err, "error handling slice element %s", k)
 			}
@@ -219,13 +241,17 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, getSa
 		if err != nil {
 			return err
 		}
-		f.appendLeaf(prop, valueBytesArray, getSalt(prop.CompactName()), saltsLengthSuffix, []byte{}, false)
+		salt, err := salts(prop.CompactName())
+		if err != nil {
+			return err
+		}
+		f.appendLeaf(prop, valueBytesArray, salt, readablePropertyLengthSuffix, []byte{}, false)
 	}
 
 	return nil
 }
 
-func (f *messageFlattener) appendLeaf(prop Property, value []byte, salt []byte, saltsLengthSuffix string, hash []byte, hashed bool) {
+func (f *messageFlattener) appendLeaf(prop Property, value []byte, salt []byte, readablePropertyLengthSuffix string, hash []byte, hashed bool) {
 	leaf := LeafNode{
 		Property: prop,
 		Value:    value,
@@ -258,6 +284,8 @@ func (f *messageFlattener) valueToBytesArray(value interface{}) (b []byte, err e
 		}
 
 		return toBytesArray(t.Unix())
+	case bool:
+		return toBytesArray(v)
 	default:
 		// special case for enums
 		rv := reflect.ValueOf(value)
@@ -298,14 +326,14 @@ func (f *messageFlattener) sortLeaves() (err error) {
 // of nodes.
 //
 // The fields are sorted lexicographically by their protobuf field names.
-func FlattenMessage(message proto.Message, getSalt GetSalt, saltsLengthSuffix string, hashFn hash.Hash, compact bool, parentProp Property) (leaves []LeafNode, err error) {
+func FlattenMessage(message proto.Message, salts Salts, readablePropertyLengthSuffix string, hashFn hash.Hash, compact bool, parentProp Property) (leaves []LeafNode, err error) {
 	f := messageFlattener{
-		saltsLengthSuffix: saltsLengthSuffix,
-		hash:              hashFn,
-		compactProperties: compact,
+		readablePropertyLengthSuffix: readablePropertyLengthSuffix,
+		hash:                         hashFn,
+		compactProperties:            compact,
 	}
 
-	err = f.handleValue(parentProp, reflect.ValueOf(message), getSalt, saltsLengthSuffix, nil)
+	err = f.handleValue(parentProp, reflect.ValueOf(message), salts, readablePropertyLengthSuffix, nil)
 	if err != nil {
 		return
 	}
@@ -349,9 +377,14 @@ func sliceToMap(value reflect.Value, mappingKey string, keyLength uint64) (refle
 	}
 
 	_, elemMD := descriptor.ForMessage(reflect.New(elemType).Interface().(descriptor.Message))
-	if len(elemMD.Field) == 2 {
+	_, saltsFieldFound := elemType.FieldByName(SaltsFieldName)
+	if (len(elemMD.Field) == 2) || ((len(elemMD.Field) == 3) && (saltsFieldFound)) {
 		valueField, valueFound := elemType.FieldByNameFunc(func(name string) bool {
-			return !strings.HasPrefix(name, "XXX_") && name != mappingKey
+			if saltsFieldFound {
+				return !strings.HasPrefix(name, "XXX_") && name != mappingKey && name != SaltsFieldName
+			} else {
+				return !strings.HasPrefix(name, "XXX_") && name != mappingKey
+			}
 		})
 		if !valueFound {
 			return reflect.Value{}, errors.Errorf("could not find field in %s not called %q", elemType, mappingKey)
@@ -377,7 +410,7 @@ func sliceToMap(value reflect.Value, mappingKey string, keyLength uint64) (refle
 	return mapValue, nil
 }
 
-func getKeyLengthFrom(fd *go_descriptor.FieldDescriptorProto) (keyLength uint64) {
+func getKeyLengthFrom(fd *godescriptor.FieldDescriptorProto) (keyLength uint64) {
 	if fd == nil {
 		return
 	}
@@ -390,7 +423,7 @@ func getKeyLengthFrom(fd *go_descriptor.FieldDescriptorProto) (keyLength uint64)
 	return
 }
 
-func getMappingKeyFrom(fd *go_descriptor.FieldDescriptorProto) (mappingKey string) {
+func getMappingKeyFrom(fd *godescriptor.FieldDescriptorProto) (mappingKey string) {
 	if fd == nil {
 		return
 	}
@@ -403,7 +436,7 @@ func getMappingKeyFrom(fd *go_descriptor.FieldDescriptorProto) (mappingKey strin
 	return
 }
 
-func getAppendFieldsFrom(fd *go_descriptor.FieldDescriptorProto) bool {
+func getAppendFieldsFrom(fd *godescriptor.FieldDescriptorProto) bool {
 	if fd == nil {
 		return false
 	}

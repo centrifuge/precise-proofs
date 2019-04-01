@@ -124,10 +124,10 @@ func (n Property) MapElemProp(k interface{}, keyLength uint64) (Property, error)
 }
 
 // LengthProp returns a child Property representing the length of a repeated field
-func (n Property) LengthProp(saltsLengthSuffix string) Property {
+func (n Property) LengthProp(readablePropertyLengthSuffix string) Property {
 	return Property{
 		Parent:     &n,
-		Text:       saltsLengthSuffix,
+		Text:       readablePropertyLengthSuffix,
 		NameFormat: SubFieldFormat,
 	}
 }
@@ -229,7 +229,7 @@ func keyNames(key interface{}, keyLength uint64) (string, []byte, error) {
 		reflect.Copy(sk, k)
 		return keyNames(sk.Interface(), keyLength)
 	case reflect.String:
-		escaper := regexp.MustCompile(`\\|\.|\[|\]`)
+		escaper := regexp.MustCompile(`[\\.\[\]]`)
 		readableKey := escaper.ReplaceAllStringFunc(k.String(), func(match string) string {
 			switch match {
 			case `\`:
