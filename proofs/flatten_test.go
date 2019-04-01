@@ -453,3 +453,23 @@ func TestFlatten_AppendFields(t *testing.T) {
 	assert.Equal(t, leaves[5].Property.ReadableName(), "phone_numbers[home]")
 	assert.Equal(t, leaves[5].Value, []byte("+1123456789"))
 }
+
+func TestFlatten_AppendField_Failure(t *testing.T) {
+	doc := &documentspb.UnsupportedAppendDocument{
+		Name: &documentspb.Name{
+			First: "hello, ",
+			Last:  "World",
+		},
+		Nested: &documentspb.ExampleNested{
+			HashedValue: []byte("some hashed value"),
+			Name: &documentspb.Name{
+				First: "hello, ",
+				Last:  "World",
+			},
+		},
+	}
+
+	_, err := FlattenMessage(doc, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Got unsupported value of type *documentspb.Name")
+}

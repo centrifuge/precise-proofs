@@ -210,7 +210,6 @@ func padTo(bs []byte, totalLength uint64) ([]byte, error) {
 
 // returns the readable and compact names of the given map key
 func keyNames(key interface{}, keyLength uint64) (string, []byte, error) {
-
 	// special compound cases
 	switch k := key.(type) {
 	case []byte:

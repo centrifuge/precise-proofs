@@ -31,6 +31,11 @@ type messageFlattener struct {
 
 func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts Salts, readablePropertyLengthSuffix string, outerFieldDescriptor *godescriptor.FieldDescriptorProto) (err error) {
 	// handle special cases
+	// if the underlying value is nil, let's skip it
+	if !value.IsValid() {
+		return nil
+	}
+
 	switch v := value.Interface().(type) {
 	case []byte, *timestamp.Timestamp:
 		valueBytesArray, err := f.valueToBytesArray(v)

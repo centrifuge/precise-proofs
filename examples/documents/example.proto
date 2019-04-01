@@ -29,6 +29,7 @@ message ExampleDocument {
   ];
   Enum enum_type = 10;
   bool valueBool = 12;
+  Name name = 13[ (proofs.append_fields) = true ];
   repeated proofs.Salt salts = 11;
 }
 
@@ -228,6 +229,11 @@ message PhoneNumber {
   string number = 3;
 }
 
+message ExampleNested {
+  bytes hashed_value = 1 [(proofs.hashed_field) = true];
+  Name name = 2;
+}
+
 message AppendFieldDocument {
   Name name = 1[ (proofs.append_fields) = true ];
   repeated Name names = 2[ (proofs.append_fields) = true ];
@@ -236,4 +242,9 @@ message AppendFieldDocument {
     (proofs.mapping_key) = "type",
     (proofs.append_fields) = true
   ];
+}
+
+message UnsupportedAppendDocument {
+  Name name = 1[ (proofs.append_fields) = true ];
+  ExampleNested nested = 2[ (proofs.append_fields) = true ];
 }
