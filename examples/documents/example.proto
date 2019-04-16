@@ -28,6 +28,7 @@ message ExampleDocument {
     (proofs.hashed_field) = true
   ];
   Enum enum_type = 10;
+  bool valueBool = 12;
   repeated proofs.Salt salts = 11;
 }
 
