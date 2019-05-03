@@ -251,8 +251,8 @@ type DocumentTree struct {
 	readablePropertyLengthSuffix string
 	parentPrefix                 Property
 	compactProperties            bool
-	leafNodesByReadableName      map[string]LeafNode
-	leafNodesByCompactsString    map[string]LeafNode
+	nameIndex                    map[string]struct{}
+	propertyIndex                map[string]struct{}
 }
 
 func (doctree *DocumentTree) String() string {
@@ -284,8 +284,8 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 		hash:                         proofOpts.Hash,
 		parentPrefix:                 proofOpts.ParentPrefix,
 		compactProperties:            proofOpts.CompactProperties,
-		leafNodesByReadableName:      make(map[string]LeafNode),
-		leafNodesByCompactsString:    make(map[string]LeafNode),
+		nameIndex:                    make(map[string]struct{}),
+		propertyIndex:                make(map[string]struct{}),
 	}
 }
 
@@ -326,16 +326,16 @@ func (doctree *DocumentTree) AddLeaf(leaf LeafNode) error {
 
 	var rnStr = pty.ReadableName()
 	var compactStr = fmt.Sprint(pty.CompactName())
-	_, ok := doctree.leafNodesByReadableName[rnStr]
+	_, ok := doctree.nameIndex[rnStr]
 	if ok {
 		return errors.New("duplicated leaf")
 	}
-	doctree.leafNodesByReadableName[rnStr] = leaf
-	_, ok = doctree.leafNodesByCompactsString[compactStr]
+	doctree.nameIndex[rnStr] = struct{}{}
+	_, ok = doctree.propertyIndex[compactStr]
 	if ok {
 		return errors.New("duplicated leaf")
 	}
-	doctree.leafNodesByCompactsString[compactStr] = leaf
+	doctree.propertyIndex[compactStr] = struct{}{}
 
 	doctree.leaves = append(doctree.leaves, leaf)
 	return nil
