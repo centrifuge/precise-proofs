@@ -416,7 +416,7 @@ func TestTree_AddLeaf_hashed(t *testing.T) {
 	err := doctree.AddLeaf(
 		LeafNode{
 			Hash:     foobarHash[:],
-			Property: Property{Text: "Foobar1"},
+			Property: Property{Text: "Foobar1", Compact: []byte{1}},
 			Hashed:   true,
 		},
 	)
@@ -424,7 +424,7 @@ func TestTree_AddLeaf_hashed(t *testing.T) {
 	err = doctree.AddLeaf(
 		LeafNode{
 			Hash:     foobarHash[:],
-			Property: Property{Text: "Foobar2"},
+			Property: Property{Text: "Foobar2", Compact: []byte{2}},
 			Hashed:   true,
 		},
 	)
@@ -451,12 +451,12 @@ func TestTree_AddLeaves_hashed(t *testing.T) {
 	err := doctree.AddLeaves([]LeafNode{
 		{
 			Hash:     foobarHash[:],
-			Property: Property{Text: "Foobar1"},
+			Property: Property{Text: "Foobar1", Compact: []byte{1}},
 			Hashed:   true,
 		},
 		{
 			Hash:     foobarHash[:],
-			Property: Property{Text: "Foobar2"},
+			Property: Property{Text: "Foobar2", Compact: []byte{2}},
 			Hashed:   true,
 		},
 	})
@@ -483,14 +483,12 @@ func TestTree_AddLeavesFromDocument_twice(t *testing.T) {
 	length := len(doctree.leaves)
 	assert.Nil(t, err)
 	err = doctree.AddLeavesFromDocument(&documentspb.LongDocumentExample)
-	assert.Nil(t, err)
-	assert.Equal(t, length*2, len(doctree.leaves))
+	assert.EqualError(t, err, "duplicated leaf")
+	assert.Equal(t, length, len(doctree.leaves))
 	err = doctree.Generate()
 	assert.Nil(t, err)
 
-	assert.Equal(t, doctree.leaves[0].Property, doctree.leaves[length].Property)
-
-	expectedRootHash := []byte{0xb6, 0x41, 0xd9, 0xab, 0x37, 0x4a, 0x33, 0x15, 0x71, 0x42, 0x91, 0x58, 0x8e, 0xe3, 0x38, 0xf3, 0x75, 0x8c, 0xd2, 0xbf, 0xdd, 0xd4, 0x47, 0x1e, 0xed, 0x1, 0x52, 0xd6, 0xb7, 0x71, 0x5e, 0x59}
+	expectedRootHash := []byte{0xe1, 0xee, 0x59, 0x40, 0xb8, 0x2c, 0x2b, 0xb4, 0x44, 0xa0, 0x4e, 0xe2, 0x3, 0x87, 0x27, 0xe8, 0x3a, 0xaa, 0xfd, 0xb0, 0x77, 0x70, 0x56, 0x5a, 0x5c, 0x40, 0xb3, 0x57, 0x14, 0x3d, 0xf0, 0xb5}
 	assert.Equal(t, expectedRootHash, doctree.RootHash())
 
 	hashes, err := doctree.pickHashesFromMerkleTree(0)
@@ -627,22 +625,22 @@ func TestTree_GenerateProofHashed(t *testing.T) {
 
 	doctree.AddLeaves([]LeafNode{
 		{
-			Property: Property{Text: "A"},
+			Property: Property{Text: "A", Compact: []byte{1}},
 			Hash:     hashA[:],
 			Hashed:   true,
 		},
 		{
-			Property: Property{Text: "B"},
+			Property: Property{Text: "B", Compact: []byte{2}},
 			Hash:     hashB[:],
 			Hashed:   true,
 		},
 		{
-			Property: Property{Text: "C"},
+			Property: Property{Text: "C", Compact: []byte{3}},
 			Hash:     hashC[:],
 			Hashed:   true,
 		},
 		{
-			Property: Property{Text: "D"},
+			Property: Property{Text: "D", Compact: []byte{4}},
 			Hash:     hashD[:],
 			Hashed:   true,
 		},
@@ -1150,7 +1148,7 @@ func TestTree_AddLeaves_TwoLeafTree(t *testing.T) {
 	tree = NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256.New(), Salts: NewSaltForTest})
 	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA", 1), Salt: make([]byte, 32), Value: []byte{1}})
 	assert.Nil(t, err)
-	err = tree.AddLeaf(LeafNode{Hash: hashLeafA[:], Property: NewProperty("LeafB", 1), Hashed: true})
+	err = tree.AddLeaf(LeafNode{Hash: hashLeafA[:], Property: NewProperty("LeafB", 2), Hashed: true})
 	assert.Nil(t, err)
 	err = tree.Generate()
 	assert.Nil(t, err)
@@ -1432,4 +1430,36 @@ func Test_MessageWithoutSaltsField(t *testing.T) {
 	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash})
 	err := doctree.AddLeavesFromDocument(doc)
 	assert.EqualError(t, err, "Cannot find salts field in message")
+}
+
+func TestTree_AddTwoLeavesWithSameReadableName(t *testing.T) {
+
+	tree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256.New(), Salts: NewSaltForTest})
+	hashLeafA := sha256.Sum256([]byte("leafA"))
+	err := tree.AddLeaf(LeafNode{Hash: hashLeafA[:], Property: NewProperty("LeafA", 1), Hashed: true})
+	assert.Nil(t, err)
+	err = tree.AddLeaf(LeafNode{Hash: hashLeafA[:], Property: NewProperty("LeafA", 2), Hashed: true})
+	assert.EqualError(t, err, "duplicated leaf")
+
+	tree2 := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256.New(), Salts: NewSaltForTest})
+	err = tree2.AddLeaves([]LeafNode{LeafNode{Hash: hashLeafA[:], Property: NewProperty("LeafA", 1), Hashed: true},
+		LeafNode{Hash: hashLeafA[:], Property: NewProperty("LeafA", 2), Hashed: true}})
+
+	assert.EqualError(t, err, "duplicated leaf")
+}
+
+func TestTree_AddTwoLeavesWithSameCompactName(t *testing.T) {
+
+	tree := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256.New(), Salts: NewSaltForTest})
+	hashLeafA := sha256.Sum256([]byte("leafA"))
+	err := tree.AddLeaf(LeafNode{Hash: hashLeafA[:], Property: NewProperty("LeafA", 1), Hashed: true})
+	assert.Nil(t, err)
+	err = tree.AddLeaf(LeafNode{Hash: hashLeafA[:], Property: NewProperty("LeafB", 1), Hashed: true})
+	assert.EqualError(t, err, "duplicated leaf")
+
+	tree2 := NewDocumentTree(TreeOptions{EnableHashSorting: true, Hash: sha256.New(), Salts: NewSaltForTest})
+	err = tree2.AddLeaves([]LeafNode{LeafNode{Hash: hashLeafA[:], Property: NewProperty("LeafA", 1), Hashed: true},
+		LeafNode{Hash: hashLeafA[:], Property: NewProperty("LeafB", 1), Hashed: true}})
+
+	assert.EqualError(t, err, "duplicated leaf")
 }
