@@ -29,6 +29,8 @@ message ExampleDocument {
   ];
   Enum enum_type = 10;
   bool valueBool = 12;
+  string paddingA = 13 [(proofs.padded_field_length) = 32 ];
+  bytes  paddingB = 14 [(proofs.padded_field_length) = 32 ];
   repeated proofs.Salt salts = 11;
 }
 

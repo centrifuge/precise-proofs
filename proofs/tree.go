@@ -164,7 +164,8 @@ Custom Document Prefix
 
 Library supports adding a prefix to the document path by setting up `TreeOption.ParentPrefix` to the desired value.
 
-
+Field Padding Support
+Library supports padding bytes and string field, `proto.padded_field_length` is used to define fixed length of a bytes or string field, if the length of field contained in message is less than fixed length, this field will be padded with `0x0`s, if length of field contained in message is bigger than fixed length, an error is returned. `TreeOption.FixedLengthFieldLeftPadding` is used to control padding direction, `true` means padding in the left, default `false` means padding in the right.
 */
 package proofs
 

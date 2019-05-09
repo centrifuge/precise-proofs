@@ -15,7 +15,7 @@ func TestFlattenMessage(t *testing.T) {
 
 	leaves, err := FlattenMessage(&message, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty, false)
 	assert.NoError(t, err)
-	assert.Equal(t, 10, len(leaves))
+	assert.Equal(t, 12, len(leaves))
 
 	var propOrder []Property
 	for _, leaf := range leaves {
@@ -25,6 +25,8 @@ func TestFlattenMessage(t *testing.T) {
 	assert.Equal(t, []Property{
 		Empty.FieldProp("ValueCamelCased", 6),
 		Empty.FieldProp("enum_type", 10),
+		Empty.FieldProp("paddingA", 13),
+		Empty.FieldProp("paddingB", 14),
 		Empty.FieldProp("value1", 3),
 		Empty.FieldProp("value2", 4),
 		Empty.FieldProp("valueA", 1),
@@ -42,7 +44,7 @@ func TestFlattenMessage(t *testing.T) {
 	expectedPayload := append([]byte("valueA"), v...)
 	expectedPayload = append(expectedPayload, testSalt[:]...)
 	expectedHash := sha256.Sum256(expectedPayload)
-	assert.Equal(t, expectedHash[:], leaves[4].Hash)
+	assert.Equal(t, expectedHash[:], leaves[6].Hash)
 }
 
 func TestFlattenMessage_compact(t *testing.T) {
@@ -52,7 +54,7 @@ func TestFlattenMessage_compact(t *testing.T) {
 
 	leaves, err := FlattenMessage(&message, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, true, Empty, false)
 	assert.NoError(t, err)
-	assert.Equal(t, 10, len(leaves))
+	assert.Equal(t, 12, len(leaves))
 
 	var propOrder []Property
 	for _, leaf := range leaves {
@@ -69,6 +71,8 @@ func TestFlattenMessage_compact(t *testing.T) {
 		Empty.FieldProp("value_not_hashed", 9),
 		Empty.FieldProp("enum_type", 10),
 		Empty.FieldProp("valueBool", 12),
+		Empty.FieldProp("paddingA", 13),
+		Empty.FieldProp("paddingB", 14),
 	}, propOrder)
 	f := &messageFlattener{}
 	v, _ := f.valueToBytesArray("Foo")
@@ -87,7 +91,7 @@ func TestFlattenMessageWithPrefix(t *testing.T) {
 	parentProp := NewProperty("doc", 42)
 	leaves, err := FlattenMessage(&message, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, parentProp, false)
 	assert.NoError(t, err)
-	assert.Equal(t, 10, len(leaves))
+	assert.Equal(t, 12, len(leaves))
 
 	var propOrder []Property
 	for _, leaf := range leaves {
@@ -97,6 +101,8 @@ func TestFlattenMessageWithPrefix(t *testing.T) {
 	assert.Equal(t, []Property{
 		parentProp.FieldProp("ValueCamelCased", 6),
 		parentProp.FieldProp("enum_type", 10),
+		parentProp.FieldProp("paddingA", 13),
+		parentProp.FieldProp("paddingB", 14),
 		parentProp.FieldProp("value1", 3),
 		parentProp.FieldProp("value2", 4),
 		parentProp.FieldProp("valueA", 1),
@@ -112,7 +118,7 @@ func TestFlattenMessageWithPrefix(t *testing.T) {
 	expectedPayload := append([]byte("doc.valueA"), v...)
 	expectedPayload = append(expectedPayload, testSalt[:]...)
 	expectedHash := sha256.Sum256(expectedPayload)
-	assert.Equal(t, expectedHash[:], leaves[4].Hash)
+	assert.Equal(t, expectedHash[:], leaves[6].Hash)
 }
 
 func TestFlattenMessage_AllFieldTypes(t *testing.T) {
@@ -146,6 +152,8 @@ func TestFlattenMessage_HashedField(t *testing.T) {
 	assert.Equal(t, []Property{
 		Empty.FieldProp("ValueCamelCased", 6),
 		Empty.FieldProp("enum_type", 10),
+		Empty.FieldProp("paddingA", 13),
+		Empty.FieldProp("paddingB", 14),
 		Empty.FieldProp("value1", 3),
 		Empty.FieldProp("value2", 4),
 		Empty.FieldProp("valueA", 1),
@@ -156,8 +164,8 @@ func TestFlattenMessage_HashedField(t *testing.T) {
 		Empty.FieldProp("value_not_ignored", 7),
 	}, propOrder)
 	assert.Nil(t, err)
-	assert.Equal(t, leaves[8].Hash, foobarHash[:])
-	assert.Equal(t, leaves[8].Value, []byte{})
+	assert.Equal(t, leaves[10].Hash, foobarHash[:])
+	assert.Equal(t, leaves[10].Value, []byte{})
 
 	invalidMessage := &documentspb.InvalidHashedFieldDocument{
 		Value: "foobar",

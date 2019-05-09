@@ -18,9 +18,10 @@ func main() {
 		ValueA:      "Foo",
 		ValueB:      "Bar",
 		ValueBytes1: []byte("foobar"),
+		PaddingA:    "WillBePadded",
 	}
 
-	doctree := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New()})
+	doctree := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New(), FixedLengthFieldLeftPadding: true})
 
 	checkErr(doctree.AddLeavesFromDocument(&document))
 	checkErr(doctree.Generate())
