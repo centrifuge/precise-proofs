@@ -21,7 +21,7 @@ func main() {
 		PaddingA:    "WillBePadded",
 	}
 
-	doctree := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New(), FixedLengthFieldLeftPadding: true})
+	doctree := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New()})
 
 	checkErr(doctree.AddLeavesFromDocument(&document))
 	checkErr(doctree.Generate())

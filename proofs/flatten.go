@@ -38,10 +38,10 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 		var err error
 		if outerFieldDescriptor != nil {
 			var extVal interface{}
-			extVal, err = proto.GetExtension(outerFieldDescriptor.Options, proofspb.E_PaddedFieldLength)
+			extVal, err = proto.GetExtension(outerFieldDescriptor.Options, proofspb.E_FieldLength)
 			if err == nil {
-				paddedFieldLength := *(extVal.(*uint64))
-				valueBytesArray, err = f.valueToPaddingBytesArray(v, int(paddedFieldLength))
+				fixedFieldLength := *(extVal.(*uint64))
+				valueBytesArray, err = f.valueToPaddingBytesArray(v, int(fixedFieldLength))
 			} else {
 				valueBytesArray, err = f.valueToBytesArray(v)
 			}
@@ -208,10 +208,10 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 		// Check if the field has an padded_field_length option
 		if outerFieldDescriptor != nil {
 			var extVal interface{}
-			extVal, err = proto.GetExtension(outerFieldDescriptor.Options, proofspb.E_PaddedFieldLength)
+			extVal, err = proto.GetExtension(outerFieldDescriptor.Options, proofspb.E_FieldLength)
 			if err == nil {
-				paddedFieldLength := *(extVal.(*uint64))
-				valueBytesArray, err = f.valueToPaddingBytesArray(value.Interface(), int(paddedFieldLength))
+				fixedFieldLength := *(extVal.(*uint64))
+				valueBytesArray, err = f.valueToPaddingBytesArray(value.Interface(), int(fixedFieldLength))
 			} else {
 				valueBytesArray, err = f.valueToBytesArray(value.Interface())
 			}
@@ -277,7 +277,7 @@ func (f *messageFlattener) valueToBytesArray(value interface{}) (b []byte, err e
 	}
 }
 
-func (f *messageFlattener) valueToPaddingBytesArray(value interface{}, paddingLength int) (b []byte, err error) {
+func (f *messageFlattener) valueToPaddingBytesArray(value interface{}, fixedLength int) (b []byte, err error) {
 	var values []byte
 	switch v := value.(type) {
 	case string:
@@ -287,11 +287,11 @@ func (f *messageFlattener) valueToPaddingBytesArray(value interface{}, paddingLe
 	default:
 		return []byte{}, errors.Errorf("Type %T does not surporting padding", v)
 	}
-	if len(values) > paddingLength {
-		return []byte{}, errors.Errorf("Field's length %d is bigger than %d", len(values), paddingLength)
+	if len(values) > fixedLength {
+		return []byte{}, errors.Errorf("Field's length %d is bigger than %d", len(values), fixedLength)
 	}
-	toPadLength := paddingLength - len(values)
-	padding := bytes.Repeat([]byte{0}, toPadLength)
+	paddingLength := fixedLength - len(values)
+	padding := bytes.Repeat([]byte{0}, paddingLength)
 	if f.fixedLengthFieldLeftPadding {
 		return append(padding, values...), nil
 	} else {
@@ -418,7 +418,7 @@ func getKeyLengthFrom(fd *go_descriptor.FieldDescriptorProto) (keyLength uint64)
 		return
 	}
 
-	extVal, err := proto.GetExtension(fd.Options, proofspb.E_KeyLength)
+	extVal, err := proto.GetExtension(fd.Options, proofspb.E_FieldLength)
 	if err == nil {
 		keyLength = *(extVal.(*uint64))
 	}

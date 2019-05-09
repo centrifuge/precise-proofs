@@ -50,7 +50,7 @@ See below code sample (`examples/simple.go`) for a usage example. For detailed u
 		PaddingA:    "WillBePadded",
 	}
 
-	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New(), FixedLengthFieldLeftPadding: true})
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New()})
 	doctree.AddLeavesFromDocument(&document)
 
 	doctree.Generate()
