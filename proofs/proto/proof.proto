@@ -14,6 +14,7 @@ extend google.protobuf.FieldOptions {
   bool hashed_field = 2862101;
   uint64 key_length = 2862102;
   string mapping_key = 2862103;
+  uint64 padded_field_length = 2862104;
 }
 
 message MerkleHash {

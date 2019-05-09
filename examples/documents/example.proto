@@ -216,3 +216,9 @@ message ExampleWithoutSalts {
   string valueA = 1;
   int32  valueB = 2;
 }
+
+message ExampleWithPaddingField {
+  string valueA = 1 [(proofs.padded_field_length) = 32 ];
+  bytes  valueB = 2 [(proofs.padded_field_length) = 32 ];
+  repeated proofs.Salt salts = 3;
+}

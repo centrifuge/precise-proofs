@@ -27,15 +27,29 @@ type messageFlattener struct {
 	readablePropertyLengthSuffix string
 	hash                         hash.Hash
 	compactProperties            bool
+	fixedLengthFieldLeftPadding  bool
 }
 
 func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts Salts, readablePropertyLengthSuffix string, outerFieldDescriptor *go_descriptor.FieldDescriptorProto) (err error) {
 	// handle special cases
 	switch v := value.Interface().(type) {
 	case []byte, *timestamp.Timestamp:
-		valueBytesArray, err := f.valueToBytesArray(v)
+		var valueBytesArray []byte
+		var err error
+		if outerFieldDescriptor != nil {
+			var extVal interface{}
+			extVal, err = proto.GetExtension(outerFieldDescriptor.Options, proofspb.E_PaddedFieldLength)
+			if err == nil {
+				paddedFieldLength := *(extVal.(*uint64))
+				valueBytesArray, err = f.valueToPaddingBytesArray(v, int(paddedFieldLength))
+			} else {
+				valueBytesArray, err = f.valueToBytesArray(v)
+			}
+		} else {
+			valueBytesArray, err = f.valueToBytesArray(v)
+		}
 		if err != nil {
-			return errors.Wrap(err, "failed convert value to string")
+			return err
 		}
 		salt, err := salts(prop.CompactName())
 		if err != nil {
@@ -189,7 +203,21 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 			}
 		}
 	default:
-		valueBytesArray, err := f.valueToBytesArray(value.Interface())
+		var valueBytesArray []byte
+		var err error
+		// Check if the field has an padded_field_length option
+		if outerFieldDescriptor != nil {
+			var extVal interface{}
+			extVal, err = proto.GetExtension(outerFieldDescriptor.Options, proofspb.E_PaddedFieldLength)
+			if err == nil {
+				paddedFieldLength := *(extVal.(*uint64))
+				valueBytesArray, err = f.valueToPaddingBytesArray(value.Interface(), int(paddedFieldLength))
+			} else {
+				valueBytesArray, err = f.valueToBytesArray(value.Interface())
+			}
+		} else {
+			valueBytesArray, err = f.valueToBytesArray(value.Interface())
+		}
 		if err != nil {
 			return err
 		}
@@ -249,6 +277,28 @@ func (f *messageFlattener) valueToBytesArray(value interface{}) (b []byte, err e
 	}
 }
 
+func (f *messageFlattener) valueToPaddingBytesArray(value interface{}, paddingLength int) (b []byte, err error) {
+	var values []byte
+	switch v := value.(type) {
+	case string:
+		values = []byte(v)
+	case []byte:
+		values = v
+	default:
+		return []byte{}, errors.Errorf("Type %T does not surporting padding", v)
+	}
+	if len(values) > paddingLength {
+		return []byte{}, errors.Errorf("Field's length %d is bigger than %d", len(values), paddingLength)
+	}
+	toPadLength := paddingLength - len(values)
+	padding := bytes.Repeat([]byte{0}, toPadLength)
+	if f.fixedLengthFieldLeftPadding {
+		return append(padding, values...), nil
+	} else {
+		return append(values, padding...), nil
+	}
+}
+
 // sortLeaves by the property attribute and copies the properties and
 // concatenated byte values into the nodes
 func (f *messageFlattener) sortLeaves() (err error) {
@@ -278,11 +328,12 @@ func (f *messageFlattener) sortLeaves() (err error) {
 // of nodes.
 //
 // The fields are sorted lexicographically by their protobuf field names.
-func FlattenMessage(message proto.Message, salts Salts, readablePropertyLengthSuffix string, hashFn hash.Hash, compact bool, parentProp Property) (leaves []LeafNode, err error) {
+func FlattenMessage(message proto.Message, salts Salts, readablePropertyLengthSuffix string, hashFn hash.Hash, compact bool, parentProp Property, fixedLengthFieldLeftPadding bool) (leaves []LeafNode, err error) {
 	f := messageFlattener{
 		readablePropertyLengthSuffix: readablePropertyLengthSuffix,
 		hash:                         hashFn,
 		compactProperties:            compact,
+		fixedLengthFieldLeftPadding:  fixedLengthFieldLeftPadding,
 	}
 
 	err = f.handleValue(parentProp, reflect.ValueOf(message), salts, readablePropertyLengthSuffix, nil)

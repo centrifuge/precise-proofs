@@ -1,6 +1,7 @@
 package proofs
 
 import (
+	"bytes"
 	"crypto/md5"
 	"crypto/sha256"
 	"encoding/json"
@@ -123,7 +124,7 @@ func TestTree_Generate(t *testing.T) {
 		ValueB: "Bar",
 	}
 
-	leaves, err := FlattenMessage(&protoMessage, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty)
+	leaves, err := FlattenMessage(&protoMessage, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty, false)
 	assert.NoError(t, err)
 	tree := merkle.NewTreeWithOpts(merkle.TreeOptions{DisableHashLeaves: true})
 	var hashes [][]byte
@@ -144,7 +145,7 @@ func TestSortedHashTree_Generate(t *testing.T) {
 		ValueB: "Bar",
 	}
 
-	leaves, err := FlattenMessage(&protoMessage, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty)
+	leaves, err := FlattenMessage(&protoMessage, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty, false)
 	assert.NoError(t, err)
 	tree := merkle.NewTreeWithOpts(merkle.TreeOptions{DisableHashLeaves: true, EnableHashSorting: true})
 	var hashes [][]byte
@@ -1462,4 +1463,60 @@ func TestTree_AddTwoLeavesWithSameCompactName(t *testing.T) {
 		LeafNode{Hash: hashLeafA[:], Property: NewProperty("LeafB", 1), Hashed: true}})
 
 	assert.EqualError(t, err, "duplicated leaf")
+}
+
+func TestTree_TooLongStringAndBytes(t *testing.T) {
+	doc := new(documentspb.ExampleWithPaddingField)
+	doc.ValueA = "TestATestATestATestATestATestATestATestATestA"
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash})
+	err := doctree.AddLeavesFromDocument(doc)
+	assert.EqualError(t, err, "error handling field ValueA: Field's length 45 is bigger than 32")
+
+	doc2 := new(documentspb.ExampleWithPaddingField)
+	doc2.ValueA = "TestA"
+	doc2.ValueB = []byte{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 1, 1, 1}
+	doctree2 := NewDocumentTree(TreeOptions{Hash: sha256Hash})
+	err = doctree2.AddLeavesFromDocument(doc2)
+	assert.EqualError(t, err, "error handling field ValueB: Field's length 33 is bigger than 32")
+}
+
+func TestTree_PaddingSucess(t *testing.T) {
+	doc := new(documentspb.ExampleWithPaddingField)
+	doc.ValueA = "TestA"
+	doc.ValueB = []byte{1, 2, 3}
+	padding := bytes.Repeat([]byte{0}, 32-len(doc.ValueA))
+	padding2 := bytes.Repeat([]byte{0}, 32-len(doc.ValueB))
+	//right padding
+	doctree := NewDocumentTree(TreeOptions{Hash: sha256Hash})
+	err := doctree.AddLeavesFromDocument(doc)
+	assert.Nil(t, err)
+	leaves := doctree.GetLeaves()
+	assert.Equal(t, leaves[0].Value, append([]byte(doc.ValueA), padding...))
+	assert.Equal(t, leaves[1].Value, append(doc.ValueB, padding2...))
+	//left padding
+	doctree2 := NewDocumentTree(TreeOptions{Hash: sha256Hash, FixedLengthFieldLeftPadding: true})
+	err = doctree2.AddLeavesFromDocument(doc)
+	assert.Nil(t, err)
+	leaves = doctree2.GetLeaves()
+	assert.Equal(t, leaves[0].Value, append(padding, []byte(doc.ValueA)...))
+	assert.Equal(t, leaves[1].Value, append(padding2, doc.ValueB...))
+
+	//no padding
+	doc2 := new(documentspb.ExampleWithPaddingField)
+	doc2.ValueA = "TestATestATestATestATestATestABB"
+	doc2.ValueB = []byte{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0}
+
+	doctree3 := NewDocumentTree(TreeOptions{Hash: sha256Hash, FixedLengthFieldLeftPadding: true})
+	err = doctree3.AddLeavesFromDocument(doc2)
+	assert.Nil(t, err)
+	leaves = doctree3.GetLeaves()
+	assert.Equal(t, leaves[0].Value, []byte(doc2.ValueA))
+	assert.Equal(t, leaves[1].Value, doc2.ValueB)
+
+	doctree4 := NewDocumentTree(TreeOptions{Hash: sha256Hash})
+	err = doctree4.AddLeavesFromDocument(doc2)
+	assert.Nil(t, err)
+	leaves = doctree4.GetLeaves()
+	assert.Equal(t, leaves[0].Value, []byte(doc2.ValueA))
+	assert.Equal(t, leaves[1].Value, doc2.ValueB)
 }

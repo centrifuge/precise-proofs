@@ -198,8 +198,9 @@ type TreeOptions struct {
 	ReadablePropertyLengthSuffix string
 	Hash                         hash.Hash
 	// ParentPrefix defines an arbitrary prefix to prepend to the parent, so all fields are prepended with it
-	ParentPrefix      Property
-	CompactProperties bool
+	ParentPrefix                Property
+	CompactProperties           bool
+	FixedLengthFieldLeftPadding bool
 }
 
 type Salts func(compact []byte) ([]byte, error)
@@ -251,6 +252,7 @@ type DocumentTree struct {
 	readablePropertyLengthSuffix string
 	parentPrefix                 Property
 	compactProperties            bool
+	fixedLengthFieldLeftPadding  bool
 	nameIndex                    map[string]struct{}
 	propertyIndex                map[string]struct{}
 }
@@ -284,6 +286,7 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 		hash:                         proofOpts.Hash,
 		parentPrefix:                 proofOpts.ParentPrefix,
 		compactProperties:            proofOpts.CompactProperties,
+		fixedLengthFieldLeftPadding:  proofOpts.FixedLengthFieldLeftPadding,
 		nameIndex:                    make(map[string]struct{}),
 		propertyIndex:                make(map[string]struct{}),
 	}
@@ -356,7 +359,7 @@ func (doctree *DocumentTree) AddLeavesFromDocument(document proto.Message) (err 
 			return err
 		}
 	}
-	leaves, err := FlattenMessage(document, salts, doctree.readablePropertyLengthSuffix, doctree.hash, doctree.compactProperties, doctree.parentPrefix)
+	leaves, err := FlattenMessage(document, salts, doctree.readablePropertyLengthSuffix, doctree.hash, doctree.compactProperties, doctree.parentPrefix, doctree.fixedLengthFieldLeftPadding)
 	if err != nil {
 		return err
 	}
