@@ -1600,6 +1600,10 @@ func TestTree_ToomanyLeaves(t *testing.T) {
 func TestTree_TreeDepthArg(t *testing.T) {
 	_, err := NewDocumentTree(TreeOptions{Salts: NewSaltForTest, TreeDepth: 33})
 	assert.EqualError(t, err, "TreeDepth is too bigger, it should not be bigger than 32")
+
+	_, err = NewDocumentTreeWithRootHash(TreeOptions{Hash: sha256Hash, Salts: NewSaltForTest, TreeDepth: 33}, nil)
+	assert.EqualError(t, err, "TreeDepth is too bigger, it should not be bigger than 32")
+
 	_, err = NewDocumentTree(TreeOptions{Salts: NewSaltForTest, TreeDepth: 32})
 	assert.Nil(t, err)
 }
