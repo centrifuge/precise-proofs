@@ -271,7 +271,7 @@ func (doctree *DocumentTree) String() string {
 }
 
 // NewDocumentTree returns an empty DocumentTree
-func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
+func NewDocumentTree(proofOpts TreeOptions) (DocumentTree, error) {
 	opts := merkle.TreeOptions{
 		DisableHashLeaves: true,
 	}
@@ -289,6 +289,9 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 	var leavesNo uint = 0
 
 	if proofOpts.TreeDepth != 0 {
+		if (proofOpts.TreeDepth) > 32 {
+			return DocumentTree{}, errors.New("TreeDepth is too bigger, it should not be bigger than 32")
+		}
 		leavesNo = 1 << proofOpts.TreeDepth
 	}
 
@@ -305,15 +308,18 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 		nameIndex:                    make(map[string]struct{}),
 		propertyIndex:                make(map[string]struct{}),
 		fixedNoOfLeafs:               leavesNo,
-	}
+	}, nil
 }
 
 // NewDocumentTree returns a DocumentTree with that has a root hash set.
 // It can be used to validate proofs but not for creating any.
-func NewDocumentTreeWithRootHash(proofOpts TreeOptions, rootHash []byte) DocumentTree {
-	documentTree := NewDocumentTree(proofOpts)
+func NewDocumentTreeWithRootHash(proofOpts TreeOptions, rootHash []byte) (DocumentTree, error) {
+	documentTree, err := NewDocumentTree(proofOpts)
+	if err != nil {
+		return DocumentTree{}, err
+	}
 	documentTree.rootHash = rootHash
-	return documentTree
+	return documentTree, nil
 }
 
 // AddLeaves appends list of leaves to the tree's leaves.
