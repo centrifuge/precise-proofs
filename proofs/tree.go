@@ -165,7 +165,12 @@ Custom Document Prefix
 Library supports adding a prefix to the document path by setting up `TreeOption.ParentPrefix` to the desired value.
 
 Field Padding Support
+
 Library supports padding bytes and string field, one usage of `proto.field_length` is used to define fixed length of a bytes or string field, if the length of field contained in message is less than fixed length, this field will be padded with `0x0`s, if length of field contained in message is bigger than fixed length, an error is returned. `TreeOption.FixedLengthFieldLeftPadding` is used to control padding direction, `true` means padding in the left, default `false` means padding in the right.
+
+Fixed Length Tree
+
+`TreeOption.TreeDepth` is used to define an optional fixed length tree. If this option is provided during creating document tree, the tree will be extended to have the depth specified in the option, totally  `(2**TreeDepth)` leaves. Empty leaves with hash `hash([]byte{})` will be added to the tree if client does not provide enough leaf nodes.  If provided leaf nodes surpass `(2**TreeDepth)`, an error will be returned.
 */
 package proofs
 
@@ -202,6 +207,7 @@ type TreeOptions struct {
 	ParentPrefix                Property
 	CompactProperties           bool
 	FixedLengthFieldLeftPadding bool
+	TreeDepth                   uint
 }
 
 type Salts func(compact []byte) ([]byte, error)
@@ -256,6 +262,8 @@ type DocumentTree struct {
 	fixedLengthFieldLeftPadding  bool
 	nameIndex                    map[string]struct{}
 	propertyIndex                map[string]struct{}
+	fixedNoOfLeafs               uint
+	// 0 means number of leafs is not fixed
 }
 
 func (doctree *DocumentTree) String() string {
@@ -278,6 +286,12 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 	if proofOpts.ReadablePropertyLengthSuffix != "" {
 		readablePropertyLengthSuffix = proofOpts.ReadablePropertyLengthSuffix
 	}
+	var leavesNo uint = 0
+
+	if proofOpts.TreeDepth != 0 {
+		leavesNo = 1 << proofOpts.TreeDepth
+	}
+
 	return DocumentTree{
 		propertyList:                 []Property{},
 		merkleTree:                   merkle.NewTreeWithOpts(opts),
@@ -290,6 +304,7 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 		fixedLengthFieldLeftPadding:  proofOpts.FixedLengthFieldLeftPadding,
 		nameIndex:                    make(map[string]struct{}),
 		propertyIndex:                make(map[string]struct{}),
+		fixedNoOfLeafs:               leavesNo,
 	}
 }
 
@@ -326,8 +341,11 @@ func (doctree *DocumentTree) AddLeaf(leaf LeafNode) error {
 	if doctree.filled {
 		return errors.New("tree already filled")
 	}
-	var pty = leaf.Property
+	if (doctree.fixedNoOfLeafs != 0) && (uint(len(doctree.leaves)) == doctree.fixedNoOfLeafs) {
+		return errors.New("tree already has enough leaves")
+	}
 
+	var pty = leaf.Property
 	var rnStr = pty.ReadableName()
 	var compactStr = fmt.Sprint(pty.CompactName())
 	_, ok := doctree.nameIndex[rnStr]
@@ -384,11 +402,34 @@ func getSaltsFromMessage(message proto.Message) (salts []*proofspb.Salt, err err
 	return field.Interface().([]*proofspb.Salt), nil
 }
 
+func emptyNodeHash(h hash.Hash) ([]byte, error) {
+	defer h.Reset()
+	_, err := h.Write([]byte{})
+	if err != nil {
+		return []byte{}, err
+	}
+	hash := h.Sum(nil)
+	return hash, nil
+}
+
 // Generate calculated the merkle root with all supplied leaves. This method can only be called once and makes
 // the tree immutable.
 func (doctree *DocumentTree) Generate() error {
 	if doctree.filled {
 		return errors.New("tree already filled")
+	}
+
+	if doctree.fixedNoOfLeafs != 0 {
+		emptyNoToBeAdded := doctree.fixedNoOfLeafs - uint(len(doctree.leaves))
+		if emptyNoToBeAdded > 0 {
+			hash, err := emptyNodeHash(doctree.hash)
+			if err != nil {
+				return err
+			}
+			for i := 0; i < int(emptyNoToBeAdded); i++ {
+				doctree.leaves = append(doctree.leaves, LeafNode{Hash: hash, Hashed: true})
+			}
+		}
 	}
 
 	hashes := make([][]byte, len(doctree.leaves))

@@ -1520,3 +1520,33 @@ func TestTree_PaddingSucess(t *testing.T) {
 	assert.Equal(t, leaves[0].Value, []byte(doc2.ValueA))
 	assert.Equal(t, leaves[1].Value, doc2.ValueB)
 }
+
+func TestTree_ToomanyLeaves(t *testing.T) {
+	tree := NewDocumentTree(TreeOptions{Salts: NewSaltForTest, TreeDepth: 3})
+	err := tree.AddLeaf(LeafNode{Property: NewProperty("LeafA1", 1)})
+	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA2", 2)})
+	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA3", 3)})
+	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA4", 4)})
+	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA5", 5)})
+	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA6", 6)})
+	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA7", 7)})
+	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA8", 8)})
+	assert.Nil(t, err)
+
+	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA9", 9)})
+	assert.EqualError(t, err, "tree already has enough leaves")
+}
+
+func TestTree_EmptyLeavesAdded(t *testing.T) {
+	tree := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: NewSaltForTest, TreeDepth: 3})
+	err := tree.AddLeaf(LeafNode{Property: NewProperty("LeafA1", 1), Salt: testSalt})
+	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA2", 2), Salt: testSalt})
+	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA3", 3), Salt: testSalt})
+	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA4", 4), Salt: testSalt})
+	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA5", 5), Salt: testSalt})
+	assert.Nil(t, err)
+	err = tree.Generate()
+	assert.Nil(t, err)
+	leaves := tree.GetLeaves()
+	assert.Len(t, leaves, 8)
+}
