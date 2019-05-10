@@ -203,6 +203,7 @@ type TreeOptions struct {
 	// does not collide with potential field names of your own proto structs.
 	ReadablePropertyLengthSuffix string
 	Hash                         hash.Hash
+	// A custom hash function for leaves. Default to Hash if not specified.
 	LeafHash                     hash.Hash
 	// ParentPrefix defines an arbitrary prefix to prepend to the parent, so all fields are prepended with it
 	ParentPrefix                Property
