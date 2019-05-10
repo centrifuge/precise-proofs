@@ -47,6 +47,7 @@ See below code sample (`examples/simple.go`) for a usage example. For detailed u
 		ValueA:      "Foo",
 		ValueB:      "Bar",
 		ValueBytes1: []byte("foobar"),
+		PaddingA:    "WillBePadded",
 	}
 
 	doctree := NewDocumentTree(TreeOptions{Hash: sha256.New()})

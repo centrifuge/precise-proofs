@@ -38,7 +38,7 @@ Nested, repeated, and map fields will be flattened following a dotted notation. 
 	  repeated Document fieldB = 2;
 	  repeated string fieldC = 3;
 	  map<string, Document> fieldD = 4 [
-	      (proofs.key_length) = 4
+	      (proofs.field_length) = 4
 	  ];
 	  map<uint64, string> fieldE = 5;
 	}
@@ -164,7 +164,8 @@ Custom Document Prefix
 
 Library supports adding a prefix to the document path by setting up `TreeOption.ParentPrefix` to the desired value.
 
-
+Field Padding Support
+Library supports padding bytes and string field, one usage of `proto.field_length` is used to define fixed length of a bytes or string field, if the length of field contained in message is less than fixed length, this field will be padded with `0x0`s, if length of field contained in message is bigger than fixed length, an error is returned. `TreeOption.FixedLengthFieldLeftPadding` is used to control padding direction, `true` means padding in the left, default `false` means padding in the right.
 */
 package proofs
 
@@ -198,8 +199,9 @@ type TreeOptions struct {
 	ReadablePropertyLengthSuffix string
 	Hash                         hash.Hash
 	// ParentPrefix defines an arbitrary prefix to prepend to the parent, so all fields are prepended with it
-	ParentPrefix      Property
-	CompactProperties bool
+	ParentPrefix                Property
+	CompactProperties           bool
+	FixedLengthFieldLeftPadding bool
 }
 
 type Salts func(compact []byte) ([]byte, error)
@@ -251,6 +253,7 @@ type DocumentTree struct {
 	readablePropertyLengthSuffix string
 	parentPrefix                 Property
 	compactProperties            bool
+	fixedLengthFieldLeftPadding  bool
 	nameIndex                    map[string]struct{}
 	propertyIndex                map[string]struct{}
 }
@@ -284,6 +287,7 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 		hash:                         proofOpts.Hash,
 		parentPrefix:                 proofOpts.ParentPrefix,
 		compactProperties:            proofOpts.CompactProperties,
+		fixedLengthFieldLeftPadding:  proofOpts.FixedLengthFieldLeftPadding,
 		nameIndex:                    make(map[string]struct{}),
 		propertyIndex:                make(map[string]struct{}),
 	}
@@ -356,7 +360,7 @@ func (doctree *DocumentTree) AddLeavesFromDocument(document proto.Message) (err 
 			return err
 		}
 	}
-	leaves, err := FlattenMessage(document, salts, doctree.readablePropertyLengthSuffix, doctree.hash, doctree.compactProperties, doctree.parentPrefix)
+	leaves, err := FlattenMessage(document, salts, doctree.readablePropertyLengthSuffix, doctree.hash, doctree.compactProperties, doctree.parentPrefix, doctree.fixedLengthFieldLeftPadding)
 	if err != nil {
 		return err
 	}
