@@ -203,6 +203,7 @@ type TreeOptions struct {
 	// does not collide with potential field names of your own proto structs.
 	ReadablePropertyLengthSuffix string
 	Hash                         hash.Hash
+	LeafHash                     hash.Hash
 	// ParentPrefix defines an arbitrary prefix to prepend to the parent, so all fields are prepended with it
 	ParentPrefix                Property
 	CompactProperties           bool
@@ -256,6 +257,7 @@ type DocumentTree struct {
 	salts                        Salts
 	propertyList                 []Property
 	hash                         hash.Hash
+	leafHash                     hash.Hash
 	readablePropertyLengthSuffix string
 	parentPrefix                 Property
 	compactProperties            bool
@@ -295,6 +297,10 @@ func NewDocumentTree(proofOpts TreeOptions) (DocumentTree, error) {
 		leavesNo = 1 << proofOpts.TreeDepth
 	}
 
+	if proofOpts.LeafHash == nil {
+		proofOpts.LeafHash = proofOpts.Hash
+	}
+
 	return DocumentTree{
 		propertyList:                 []Property{},
 		merkleTree:                   merkle.NewTreeWithOpts(opts),
@@ -302,6 +308,7 @@ func NewDocumentTree(proofOpts TreeOptions) (DocumentTree, error) {
 		readablePropertyLengthSuffix: readablePropertyLengthSuffix,
 		leaves:                       []LeafNode{},
 		hash:                         proofOpts.Hash,
+		leafHash:                     proofOpts.LeafHash,
 		parentPrefix:                 proofOpts.ParentPrefix,
 		compactProperties:            proofOpts.CompactProperties,
 		fixedLengthFieldLeftPadding:  proofOpts.FixedLengthFieldLeftPadding,
@@ -384,7 +391,7 @@ func (doctree *DocumentTree) AddLeavesFromDocument(document proto.Message) (err 
 			return err
 		}
 	}
-	leaves, err := FlattenMessage(document, salts, doctree.readablePropertyLengthSuffix, doctree.hash, doctree.compactProperties, doctree.parentPrefix, doctree.fixedLengthFieldLeftPadding)
+	leaves, err := FlattenMessage(document, salts, doctree.readablePropertyLengthSuffix, doctree.leafHash, doctree.compactProperties, doctree.parentPrefix, doctree.fixedLengthFieldLeftPadding)
 	if err != nil {
 		return err
 	}
@@ -441,7 +448,7 @@ func (doctree *DocumentTree) Generate() error {
 	hashes := make([][]byte, len(doctree.leaves))
 	for i, leaf := range doctree.leaves {
 		if len(leaf.Hash) < 1 || leaf.Hashed {
-			err := leaf.HashNode(doctree.hash, doctree.compactProperties)
+			err := leaf.HashNode(doctree.leafHash, doctree.compactProperties)
 			if err != nil {
 				return err
 			}
@@ -449,6 +456,7 @@ func (doctree *DocumentTree) Generate() error {
 
 		hashes[i] = leaf.Hash
 	}
+
 	err := doctree.merkleTree.Generate(hashes, doctree.hash)
 	if err != nil {
 		return fmt.Errorf("failed to generate merkle tree: %s", err)
@@ -610,7 +618,7 @@ func (doctree *DocumentTree) pickHashesFromMerkleTreeAsList(leaf uint64) (hashes
 func (doctree *DocumentTree) ValidateProof(proof *proofspb.Proof) (valid bool, err error) {
 	var fieldHash []byte
 	if len(proof.Hash) == 0 {
-		fieldHash, err = CalculateHashForProofField(proof, doctree.hash)
+		fieldHash, err = CalculateHashForProofField(proof, doctree.leafHash)
 	} else {
 		fieldHash = proof.Hash
 	}
@@ -699,10 +707,11 @@ func (m sortByCompactName) Less(i, j int) bool {
 // HashTwoValues concatenate two hashes to calculate hash out of the result. This is used in the merkleTree calculation code
 // as well as the validation code.
 func HashTwoValues(a []byte, b []byte, hashFunc hash.Hash) (hash []byte) {
-	data := make([]byte, hashFunc.Size()*2)
-	copy(data[:hashFunc.Size()], a[:hashFunc.Size()])
-	copy(data[hashFunc.Size():], b[:hashFunc.Size()])
-	return hashBytes(hashFunc, data)
+	data := make([]byte, len(a)+len(b))
+	copy(data[:len(a)], a)
+	copy(data[len(a):], b)
+	hash = hashBytes(hashFunc, data)
+	return
 }
 
 // hashBytes takes a hash.Hash interface and hashes the provided value

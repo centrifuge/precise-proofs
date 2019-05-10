@@ -55,12 +55,12 @@
   version = "v1.2.2"
 
 [[projects]]
-  digest = "1:65f2553aabd1d6879691058ce20eac0f798a82d92c71f13cd56de3350fa06183"
+  digest = "1:87b8d3b60855068808bbd97d07cd95c1b54a5b447b7176ae393099bbef1ff7ee"
   name = "github.com/xsleonard/go-merkle"
   packages = ["."]
   pruneopts = "UT"
-  revision = "a73b8999d89d80bdcd89d199f41ab7fcdfd12dde"
-  source = "github.com/mikiquantum/go-merkle"
+  revision = "bbee8bc8c4717ba17fc9186ff78ddb415a4370dc"
+  source = "github.com/touhonoob/go-merkle"
 
 [solve-meta]
   analyzer-name = "dep"
