@@ -1622,3 +1622,26 @@ func TestTree_EmptyLeavesAdded(t *testing.T) {
 	leaves := tree.GetLeaves()
 	assert.Len(t, leaves, 8)
 }
+
+func TestTree_AddLeavesFromDocumentWithCustomLeafHashFunction(t *testing.T) {
+	doctree, err := NewDocumentTree(TreeOptions{
+		Hash:     sha256Hash,
+		LeafHash: md5.New(),
+		Salts:    NewSaltForTest,
+	})
+	assert.Nil(t, err)
+
+	err = doctree.AddLeavesFromDocument(&documentspb.LongDocumentExample)
+	assert.Nil(t, err)
+	for _, leaf := range doctree.GetLeaves() {
+		assert.Len(t, leaf.Hash, 16, "leaves should be hashed with md5")
+	}
+	err = doctree.Generate()
+	assert.Nil(t, err)
+
+	rootHash := doctree.rootHash
+	assert.Len(t, rootHash, 32, "root should be hashed with sha256")
+
+	expectedHash := []byte{0x6b, 0x24, 0x6, 0xf, 0x81, 0xa4, 0x13, 0x10, 0x9d, 0x79, 0xe1, 0xdd, 0x29, 0xbf, 0x55, 0x8d, 0x3e, 0x52, 0x7a, 0x1, 0xbf, 0x47, 0xdb, 0xa, 0x57, 0x22, 0xc0, 0x64, 0x83, 0xcc, 0xde, 0x13}
+	assert.Equal(t, expectedHash, rootHash, "Hash should match")
+}
