@@ -1621,6 +1621,29 @@ func TestTree_EmptyLeavesAdded(t *testing.T) {
 	assert.Nil(t, err)
 	leaves := tree.GetLeaves()
 	assert.Len(t, leaves, 8)
+	rootHash := tree.rootHash
+	assert.Len(t, rootHash, 32, "root should be hashed with sha256")
+	expectedHash := []byte{0xb4, 0xd4, 0xcd, 0x8f, 0x12, 0x5, 0x24, 0x48, 0xe0, 0x5, 0xd0, 0x10, 0x11, 0x9a, 0x21, 0xc1, 0x38, 0x47, 0x49, 0x72, 0x4d, 0xc1, 0x3e, 0xbb, 0x5, 0x2d, 0x1f, 0x6e, 0x7a, 0x6b, 0x74, 0xe0}
+	assert.Equal(t, expectedHash, rootHash, "Hash should match")
+}
+
+func TestTree_EmptyLeavesAddedWithCustomLeafHashFunction(t *testing.T) {
+	tree, err := NewDocumentTree(TreeOptions{Hash: sha256Hash, LeafHash: md5.New(), Salts: NewSaltForTest, TreeDepth: 3})
+	assert.Nil(t, err)
+	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA1", 1), Salt: testSalt})
+	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA2", 2), Salt: testSalt})
+	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA3", 3), Salt: testSalt})
+	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA4", 4), Salt: testSalt})
+	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA5", 5), Salt: testSalt})
+	assert.Nil(t, err)
+	err = tree.Generate()
+	assert.Nil(t, err)
+	leaves := tree.GetLeaves()
+	assert.Len(t, leaves, 8)
+	rootHash := tree.rootHash
+	assert.Len(t, rootHash, 32, "root should be hashed with sha256")
+	expectedHash := []byte{0x10, 0x7d, 0x72, 0x94, 0xdb, 0x89, 0xd, 0xc0, 0x44, 0x34, 0x5b, 0xa9, 0xdd, 0x9b, 0xdc, 0xce, 0xcc, 0xb2, 0x0, 0x30, 0xb3, 0xe9, 0x41, 0x80, 0x37, 0x5e, 0x6f, 0x73, 0xdc, 0x6c, 0x95, 0x8}
+	assert.Equal(t, expectedHash, rootHash, "Hash should match")
 }
 
 func TestTree_AddLeavesFromDocumentWithCustomLeafHashFunction(t *testing.T) {

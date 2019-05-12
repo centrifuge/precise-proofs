@@ -204,7 +204,7 @@ type TreeOptions struct {
 	ReadablePropertyLengthSuffix string
 	Hash                         hash.Hash
 	// A custom hash function for leaves. Default to Hash if not specified.
-	LeafHash                     hash.Hash
+	LeafHash hash.Hash
 	// ParentPrefix defines an arbitrary prefix to prepend to the parent, so all fields are prepended with it
 	ParentPrefix                Property
 	CompactProperties           bool
@@ -436,7 +436,7 @@ func (doctree *DocumentTree) Generate() error {
 	if doctree.fixedNoOfLeafs != 0 {
 		emptyNoToBeAdded := doctree.fixedNoOfLeafs - uint(len(doctree.leaves))
 		if emptyNoToBeAdded > 0 {
-			hash, err := emptyNodeHash(doctree.hash)
+			hash, err := emptyNodeHash(doctree.leafHash)
 			if err != nil {
 				return err
 			}
