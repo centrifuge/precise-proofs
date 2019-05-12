@@ -59,8 +59,8 @@
   name = "github.com/xsleonard/go-merkle"
   packages = ["."]
   pruneopts = "UT"
-  revision = "bbee8bc8c4717ba17fc9186ff78ddb415a4370dc"
-  source = "github.com/touhonoob/go-merkle"
+  revision = "b9ed22bcdcd77050e8bec4ca821c43f19339f46f"
+  source = "github.com/centrifuge/go-merkle"
 
 [solve-meta]
   analyzer-name = "dep"
