@@ -311,7 +311,7 @@ func NewDocumentTree(proofOpts TreeOptions) (DocumentTree, error) {
 	}, nil
 }
 
-// NewDocumentTree returns a DocumentTree with that has a root hash set.
+// NewDocumentTree returns a DocumentTree that has a root hash set.
 // It can be used to validate proofs but not for creating any.
 func NewDocumentTreeWithRootHash(proofOpts TreeOptions, rootHash []byte) (DocumentTree, error) {
 	documentTree, err := NewDocumentTree(proofOpts)
