@@ -18,6 +18,7 @@ func main() {
 		ValueA:      "Foo",
 		ValueB:      "Bar",
 		ValueBytes1: []byte("foobar"),
+		PaddingA:    "WillBePadded",
 	}
 
 	doctree := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New()})
@@ -37,6 +38,14 @@ func main() {
 	checkErr(err)
 
 	fmt.Printf("Proof validated: %v\n", valid)
+
+	// Fixed Length Tree
+	doctree2 := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New(), TreeDepth: 5})
+	fmt.Printf("\n\nLeaves number of generated tree should be %d\n", 1<<5)
+	checkErr(doctree2.AddLeavesFromDocument(&document))
+	checkErr(doctree2.Generate())
+	fmt.Printf("Leaves number of the tree is %d\n", len(doctree2.GetLeaves()))
+
 }
 
 func checkErr(err error) {
