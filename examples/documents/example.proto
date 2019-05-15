@@ -30,6 +30,8 @@ message ExampleDocument {
   Enum enum_type = 10;
   bool valueBool = 12;
   Name name = 13[ (proofs.append_fields) = true ];
+  string paddingA = 14 [(proofs.field_length) = 32 ];
+  bytes  paddingB = 15 [(proofs.field_length) = 32 ];
   repeated proofs.Salt salts = 11;
 }
 
@@ -61,7 +63,7 @@ message SimpleMap {
 
 message SimpleStringMap {
   map<string,string> value = 1 [
-    (proofs.key_length) = 32
+    (proofs.field_length) = 32
   ];
   repeated proofs.Salt salts = 2;
 }
@@ -78,7 +80,7 @@ message SimpleEntry {
 
 message SimpleEntries {
   repeated SimpleEntry entries = 1 [
-    (proofs.key_length) = 32,
+    (proofs.field_length) = 32,
     (proofs.mapping_key) = "entry_key"
   ];
   repeated proofs.Salt salts = 2;
@@ -93,7 +95,7 @@ message Entry {
 
 message Entries {
   repeated Entry entries = 1 [
-    (proofs.key_length) = 32,
+    (proofs.field_length) = 32,
     (proofs.mapping_key) = "entry_key"
   ];
   repeated proofs.Salt salts = 2;
@@ -106,7 +108,7 @@ message BytesKeyEntry {
 
 message BytesKeyEntries {
   repeated BytesKeyEntry entries = 1 [
-    (proofs.key_length) = 20,
+    (proofs.field_length) = 20,
     (proofs.mapping_key) = "address"
   ];
   repeated proofs.Salt salts = 2;
@@ -129,7 +131,7 @@ message SimpleMapDocument {
   string valueA = 1;
   string valueB = 2;
   map<string, string> valueC = 3 [
-    (proofs.key_length) = 32
+    (proofs.field_length) = 32
   ];
   map<int32, string> valueD = 4;
   repeated proofs.Salt salts = 5;
@@ -238,7 +240,7 @@ message AppendFieldDocument {
   Name name = 1[ (proofs.append_fields) = true ];
   repeated Name names = 2[ (proofs.append_fields) = true ];
   repeated PhoneNumber phone_numbers = 3 [
-    (proofs.key_length) = 4,
+    (proofs.field_length) = 4,
     (proofs.mapping_key) = "type",
     (proofs.append_fields) = true
   ];
@@ -247,4 +249,11 @@ message AppendFieldDocument {
 message UnsupportedAppendDocument {
   Name name = 1[ (proofs.append_fields) = true ];
   ExampleNested nested = 2[ (proofs.append_fields) = true ];
+}
+
+
+message ExampleWithPaddingField {
+  string valueA = 1 [(proofs.field_length) = 32 ];
+  bytes  valueB = 2 [(proofs.field_length) = 32 ];
+  repeated proofs.Salt salts = 3;
 }
