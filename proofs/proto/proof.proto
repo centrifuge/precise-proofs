@@ -12,7 +12,7 @@ import "google/protobuf/descriptor.proto";
 extend google.protobuf.FieldOptions {
   bool exclude_from_tree = 2862100;
   bool hashed_field = 2862101;
-  uint64 key_length = 2862102;
+  uint64 field_length = 2862102;
   string mapping_key = 2862103;
 }
 

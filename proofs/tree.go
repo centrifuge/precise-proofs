@@ -38,7 +38,7 @@ Nested, repeated, and map fields will be flattened following a dotted notation. 
 	  repeated Document fieldB = 2;
 	  repeated string fieldC = 3;
 	  map<string, Document> fieldD = 4 [
-	      (proofs.key_length) = 4
+	      (proofs.field_length) = 4
 	  ];
 	  map<uint64, string> fieldE = 5;
 	}
@@ -164,7 +164,13 @@ Custom Document Prefix
 
 Library supports adding a prefix to the document path by setting up `TreeOption.ParentPrefix` to the desired value.
 
+Field Padding Support
 
+Library supports padding bytes and string field, one usage of `proto.field_length` is used to define fixed length of a bytes or string field, if the length of field contained in message is less than fixed length, this field will be padded with `0x0`s, if length of field contained in message is bigger than fixed length, an error is returned. `TreeOption.FixedLengthFieldLeftPadding` is used to control padding direction, `true` means padding in the left, default `false` means padding in the right.
+
+Fixed Length Tree
+
+`TreeOption.TreeDepth` is used to define an optional fixed length tree. If this option is provided, the tree will be extended to have the depth specified in the option, so a fixed number of `(2**TreeDepth)` leaves. Empty leaves with hash `hash([]byte{})` will be added to the tree if client does not provide enough leaf nodes.  If the provided leaf nodes surpass `(2**TreeDepth)`, an error will be returned.
 */
 package proofs
 
@@ -198,8 +204,10 @@ type TreeOptions struct {
 	ReadablePropertyLengthSuffix string
 	Hash                         hash.Hash
 	// ParentPrefix defines an arbitrary prefix to prepend to the parent, so all fields are prepended with it
-	ParentPrefix      Property
-	CompactProperties bool
+	ParentPrefix                Property
+	CompactProperties           bool
+	FixedLengthFieldLeftPadding bool
+	TreeDepth                   uint
 }
 
 type Salts func(compact []byte) ([]byte, error)
@@ -251,8 +259,11 @@ type DocumentTree struct {
 	readablePropertyLengthSuffix string
 	parentPrefix                 Property
 	compactProperties            bool
+	fixedLengthFieldLeftPadding  bool
 	nameIndex                    map[string]struct{}
 	propertyIndex                map[string]struct{}
+	fixedNoOfLeafs               uint
+	// 0 means number of leafs is not fixed
 }
 
 func (doctree *DocumentTree) String() string {
@@ -260,7 +271,7 @@ func (doctree *DocumentTree) String() string {
 }
 
 // NewDocumentTree returns an empty DocumentTree
-func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
+func NewDocumentTree(proofOpts TreeOptions) (DocumentTree, error) {
 	opts := merkle.TreeOptions{
 		DisableHashLeaves: true,
 	}
@@ -275,6 +286,15 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 	if proofOpts.ReadablePropertyLengthSuffix != "" {
 		readablePropertyLengthSuffix = proofOpts.ReadablePropertyLengthSuffix
 	}
+	var leavesNo uint = 0
+
+	if proofOpts.TreeDepth != 0 {
+		if (proofOpts.TreeDepth) > 32 {
+			return DocumentTree{}, errors.New("TreeDepth is too bigger, it should not be bigger than 32")
+		}
+		leavesNo = 1 << proofOpts.TreeDepth
+	}
+
 	return DocumentTree{
 		propertyList:                 []Property{},
 		merkleTree:                   merkle.NewTreeWithOpts(opts),
@@ -284,17 +304,22 @@ func NewDocumentTree(proofOpts TreeOptions) DocumentTree {
 		hash:                         proofOpts.Hash,
 		parentPrefix:                 proofOpts.ParentPrefix,
 		compactProperties:            proofOpts.CompactProperties,
+		fixedLengthFieldLeftPadding:  proofOpts.FixedLengthFieldLeftPadding,
 		nameIndex:                    make(map[string]struct{}),
 		propertyIndex:                make(map[string]struct{}),
-	}
+		fixedNoOfLeafs:               leavesNo,
+	}, nil
 }
 
-// NewDocumentTree returns a DocumentTree with that has a root hash set.
+// NewDocumentTree returns a DocumentTree that has a root hash set.
 // It can be used to validate proofs but not for creating any.
-func NewDocumentTreeWithRootHash(proofOpts TreeOptions, rootHash []byte) DocumentTree {
-	documentTree := NewDocumentTree(proofOpts)
+func NewDocumentTreeWithRootHash(proofOpts TreeOptions, rootHash []byte) (DocumentTree, error) {
+	documentTree, err := NewDocumentTree(proofOpts)
+	if err != nil {
+		return DocumentTree{}, err
+	}
 	documentTree.rootHash = rootHash
-	return documentTree
+	return documentTree, nil
 }
 
 // AddLeaves appends list of leaves to the tree's leaves.
@@ -322,8 +347,11 @@ func (doctree *DocumentTree) AddLeaf(leaf LeafNode) error {
 	if doctree.filled {
 		return errors.New("tree already filled")
 	}
-	var pty = leaf.Property
+	if (doctree.fixedNoOfLeafs != 0) && (uint(len(doctree.leaves)) == doctree.fixedNoOfLeafs) {
+		return errors.New("tree already has enough leaves")
+	}
 
+	var pty = leaf.Property
 	var rnStr = pty.ReadableName()
 	var compactStr = fmt.Sprint(pty.CompactName())
 	_, ok := doctree.nameIndex[rnStr]
@@ -356,7 +384,7 @@ func (doctree *DocumentTree) AddLeavesFromDocument(document proto.Message) (err 
 			return err
 		}
 	}
-	leaves, err := FlattenMessage(document, salts, doctree.readablePropertyLengthSuffix, doctree.hash, doctree.compactProperties, doctree.parentPrefix)
+	leaves, err := FlattenMessage(document, salts, doctree.readablePropertyLengthSuffix, doctree.hash, doctree.compactProperties, doctree.parentPrefix, doctree.fixedLengthFieldLeftPadding)
 	if err != nil {
 		return err
 	}
@@ -380,11 +408,34 @@ func getSaltsFromMessage(message proto.Message) (salts []*proofspb.Salt, err err
 	return field.Interface().([]*proofspb.Salt), nil
 }
 
+func emptyNodeHash(h hash.Hash) ([]byte, error) {
+	defer h.Reset()
+	_, err := h.Write([]byte{})
+	if err != nil {
+		return []byte{}, err
+	}
+	hash := h.Sum(nil)
+	return hash, nil
+}
+
 // Generate calculated the merkle root with all supplied leaves. This method can only be called once and makes
 // the tree immutable.
 func (doctree *DocumentTree) Generate() error {
 	if doctree.filled {
 		return errors.New("tree already filled")
+	}
+
+	if doctree.fixedNoOfLeafs != 0 {
+		emptyNoToBeAdded := doctree.fixedNoOfLeafs - uint(len(doctree.leaves))
+		if emptyNoToBeAdded > 0 {
+			hash, err := emptyNodeHash(doctree.hash)
+			if err != nil {
+				return err
+			}
+			for i := 0; i < int(emptyNoToBeAdded); i++ {
+				doctree.leaves = append(doctree.leaves, LeafNode{Hash: hash, Hashed: true})
+			}
+		}
 	}
 
 	hashes := make([][]byte, len(doctree.leaves))
