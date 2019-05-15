@@ -25,8 +25,8 @@ func TestFlattenMessage(t *testing.T) {
 	assert.Equal(t, []Property{
 		Empty.FieldProp("ValueCamelCased", 6),
 		Empty.FieldProp("enum_type", 10),
-		Empty.FieldProp("paddingA", 13),
-		Empty.FieldProp("paddingB", 14),
+		Empty.FieldProp("paddingA", 14),
+		Empty.FieldProp("paddingB", 15),
 		Empty.FieldProp("value1", 3),
 		Empty.FieldProp("value2", 4),
 		Empty.FieldProp("valueA", 1),
@@ -71,8 +71,8 @@ func TestFlattenMessage_compact(t *testing.T) {
 		Empty.FieldProp("value_not_hashed", 9),
 		Empty.FieldProp("enum_type", 10),
 		Empty.FieldProp("valueBool", 12),
-		Empty.FieldProp("paddingA", 13),
-		Empty.FieldProp("paddingB", 14),
+		Empty.FieldProp("paddingA", 14),
+		Empty.FieldProp("paddingB", 15),
 	}, propOrder)
 	f := &messageFlattener{}
 	v, _ := f.valueToBytesArray("Foo")
@@ -101,8 +101,8 @@ func TestFlattenMessageWithPrefix(t *testing.T) {
 	assert.Equal(t, []Property{
 		parentProp.FieldProp("ValueCamelCased", 6),
 		parentProp.FieldProp("enum_type", 10),
-		parentProp.FieldProp("paddingA", 13),
-		parentProp.FieldProp("paddingB", 14),
+		parentProp.FieldProp("paddingA", 14),
+		parentProp.FieldProp("paddingB", 15),
 		parentProp.FieldProp("value1", 3),
 		parentProp.FieldProp("value2", 4),
 		parentProp.FieldProp("valueA", 1),
@@ -152,8 +152,8 @@ func TestFlattenMessage_HashedField(t *testing.T) {
 	assert.Equal(t, []Property{
 		Empty.FieldProp("ValueCamelCased", 6),
 		Empty.FieldProp("enum_type", 10),
-		Empty.FieldProp("paddingA", 13),
-		Empty.FieldProp("paddingB", 14),
+		Empty.FieldProp("paddingA", 14),
+		Empty.FieldProp("paddingB", 15),
 		Empty.FieldProp("value1", 3),
 		Empty.FieldProp("value2", 4),
 		Empty.FieldProp("valueA", 1),
@@ -252,7 +252,7 @@ func TestFlattenMessage_SimpleStringMap(t *testing.T) {
 
 	leaves, err := FlattenMessage(message, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty, false)
 	assert.NoError(t, err)
-	propOrder := []Property{}
+	var propOrder []Property
 	for _, leaf := range leaves {
 		propOrder = append(propOrder, leaf.Property)
 	}
@@ -269,7 +269,7 @@ func TestFlattenMessage_SimpleStringMap(t *testing.T) {
 func TestFlattenMessage_NestedMap(t *testing.T) {
 	message := &documentspb.NestedMap{
 		Value: map[int32]*documentspb.SimpleMap{
-			42: &documentspb.SimpleMap{
+			42: {
 				Value: map[int32]string{
 					-42: "value",
 				},
@@ -417,4 +417,67 @@ func TestFlattenMessageFromAlreadyFilledSalts(t *testing.T) {
 		Empty.FieldProp("valueD", 4).FieldProp("valueA", 1).FieldProp("valueA", 1),
 		Empty.FieldProp("valueD", 4).FieldProp("valueB", 2),
 	}, propOrder)
+}
+
+func TestFlatten_AppendFields(t *testing.T) {
+	doc := &documentspb.AppendFieldDocument{
+		Name: &documentspb.Name{
+			First: "bob",
+			Last:  "barker",
+		},
+
+		Names: []*documentspb.Name{
+			{
+				First: "john",
+				Last:  "doe",
+			},
+
+			{
+				First: "alice",
+				Last:  "adelmann",
+			},
+		},
+
+		PhoneNumbers: []*documentspb.PhoneNumber{
+			{
+				Type:        "home",
+				Countrycode: "+1",
+				Number:      "123456789",
+			},
+		},
+	}
+
+	leaves, err := FlattenMessage(doc, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty, false)
+	assert.Nil(t, err)
+	assert.Len(t, leaves, 6)
+	assert.Equal(t, leaves[0].Property.ReadableName(), "name")
+	assert.Equal(t, leaves[0].Value, []byte("bobbarker"))
+	assert.Equal(t, leaves[1].Property.ReadableName(), "names.length")
+	assert.Equal(t, leaves[2].Property.ReadableName(), "names[0]")
+	assert.Equal(t, leaves[2].Value, []byte("johndoe"))
+	assert.Equal(t, leaves[3].Property.ReadableName(), "names[1]")
+	assert.Equal(t, leaves[3].Value, []byte("aliceadelmann"))
+	assert.Equal(t, leaves[4].Property.ReadableName(), "phone_numbers.length")
+	assert.Equal(t, leaves[5].Property.ReadableName(), "phone_numbers[home]")
+	assert.Equal(t, leaves[5].Value, []byte("+1123456789"))
+}
+
+func TestFlatten_AppendField_Failure(t *testing.T) {
+	doc := &documentspb.UnsupportedAppendDocument{
+		Name: &documentspb.Name{
+			First: "hello, ",
+			Last:  "World",
+		},
+		Nested: &documentspb.ExampleNested{
+			HashedValue: []byte("some hashed value"),
+			Name: &documentspb.Name{
+				First: "hello, ",
+				Last:  "World",
+			},
+		},
+	}
+
+	_, err := FlattenMessage(doc, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty, false)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Got unsupported value of type *documentspb.Name")
 }

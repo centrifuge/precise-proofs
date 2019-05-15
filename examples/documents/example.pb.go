@@ -3,11 +3,14 @@
 
 package documentspb
 
-import proto "github.com/golang/protobuf/proto"
-import fmt "fmt"
-import math "math"
-import timestamp "github.com/golang/protobuf/ptypes/timestamp"
-import proto1 "github.com/centrifuge/precise-proofs/proofs/proto"
+import (
+	fmt "fmt"
+	math "math"
+
+	proto1 "github.com/centrifuge/precise-proofs/proofs/proto"
+	proto "github.com/golang/protobuf/proto"
+	timestamp "github.com/golang/protobuf/ptypes/timestamp"
+)
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -18,7 +21,7 @@ var _ = math.Inf
 // is compatible with the proto package it is being compiled against.
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
-const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
 type Enum int32
 
@@ -31,6 +34,7 @@ var Enum_name = map[int32]string{
 	0: "type_one",
 	1: "type_two",
 }
+
 var Enum_value = map[string]int32{
 	"type_one": 0,
 	"type_two": 1,
@@ -39,8 +43,9 @@ var Enum_value = map[string]int32{
 func (x Enum) String() string {
 	return proto.EnumName(Enum_name, int32(x))
 }
+
 func (Enum) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{0}
+	return fileDescriptor_bbdf1f37afed577e, []int{0}
 }
 
 type ExampleDocument struct {
@@ -55,8 +60,9 @@ type ExampleDocument struct {
 	ValueNotHashed       []byte         `protobuf:"bytes,9,opt,name=value_not_hashed,json=valueNotHashed,proto3" json:"value_not_hashed,omitempty"`
 	EnumType             Enum           `protobuf:"varint,10,opt,name=enum_type,json=enumType,proto3,enum=documents.Enum" json:"enum_type,omitempty"`
 	ValueBool            bool           `protobuf:"varint,12,opt,name=valueBool,proto3" json:"valueBool,omitempty"`
-	PaddingA             string         `protobuf:"bytes,13,opt,name=paddingA,proto3" json:"paddingA,omitempty"`
-	PaddingB             []byte         `protobuf:"bytes,14,opt,name=paddingB,proto3" json:"paddingB,omitempty"`
+	Name                 *Name          `protobuf:"bytes,13,opt,name=name,proto3" json:"name,omitempty"`
+	PaddingA             string         `protobuf:"bytes,14,opt,name=paddingA,proto3" json:"paddingA,omitempty"`
+	PaddingB             []byte         `protobuf:"bytes,15,opt,name=paddingB,proto3" json:"paddingB,omitempty"`
 	Salts                []*proto1.Salt `protobuf:"bytes,11,rep,name=salts,proto3" json:"salts,omitempty"`
 	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
 	XXX_unrecognized     []byte         `json:"-"`
@@ -67,16 +73,17 @@ func (m *ExampleDocument) Reset()         { *m = ExampleDocument{} }
 func (m *ExampleDocument) String() string { return proto.CompactTextString(m) }
 func (*ExampleDocument) ProtoMessage()    {}
 func (*ExampleDocument) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{0}
+	return fileDescriptor_bbdf1f37afed577e, []int{0}
 }
+
 func (m *ExampleDocument) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ExampleDocument.Unmarshal(m, b)
 }
 func (m *ExampleDocument) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ExampleDocument.Marshal(b, m, deterministic)
 }
-func (dst *ExampleDocument) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ExampleDocument.Merge(dst, src)
+func (m *ExampleDocument) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExampleDocument.Merge(m, src)
 }
 func (m *ExampleDocument) XXX_Size() int {
 	return xxx_messageInfo_ExampleDocument.Size(m)
@@ -164,6 +171,13 @@ func (m *ExampleDocument) GetValueBool() bool {
 	return false
 }
 
+func (m *ExampleDocument) GetName() *Name {
+	if m != nil {
+		return m.Name
+	}
+	return nil
+}
+
 func (m *ExampleDocument) GetPaddingA() string {
 	if m != nil {
 		return m.PaddingA
@@ -198,16 +212,17 @@ func (m *AllFieldTypes) Reset()         { *m = AllFieldTypes{} }
 func (m *AllFieldTypes) String() string { return proto.CompactTextString(m) }
 func (*AllFieldTypes) ProtoMessage()    {}
 func (*AllFieldTypes) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{1}
+	return fileDescriptor_bbdf1f37afed577e, []int{1}
 }
+
 func (m *AllFieldTypes) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AllFieldTypes.Unmarshal(m, b)
 }
 func (m *AllFieldTypes) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_AllFieldTypes.Marshal(b, m, deterministic)
 }
-func (dst *AllFieldTypes) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_AllFieldTypes.Merge(dst, src)
+func (m *AllFieldTypes) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AllFieldTypes.Merge(m, src)
 }
 func (m *AllFieldTypes) XXX_Size() int {
 	return xxx_messageInfo_AllFieldTypes.Size(m)
@@ -252,16 +267,17 @@ func (m *AllFieldTypesSalts) Reset()         { *m = AllFieldTypesSalts{} }
 func (m *AllFieldTypesSalts) String() string { return proto.CompactTextString(m) }
 func (*AllFieldTypesSalts) ProtoMessage()    {}
 func (*AllFieldTypesSalts) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{2}
+	return fileDescriptor_bbdf1f37afed577e, []int{2}
 }
+
 func (m *AllFieldTypesSalts) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_AllFieldTypesSalts.Unmarshal(m, b)
 }
 func (m *AllFieldTypesSalts) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_AllFieldTypesSalts.Marshal(b, m, deterministic)
 }
-func (dst *AllFieldTypesSalts) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_AllFieldTypesSalts.Merge(dst, src)
+func (m *AllFieldTypesSalts) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AllFieldTypesSalts.Merge(m, src)
 }
 func (m *AllFieldTypesSalts) XXX_Size() int {
 	return xxx_messageInfo_AllFieldTypesSalts.Size(m)
@@ -304,16 +320,17 @@ func (m *SimpleItem) Reset()         { *m = SimpleItem{} }
 func (m *SimpleItem) String() string { return proto.CompactTextString(m) }
 func (*SimpleItem) ProtoMessage()    {}
 func (*SimpleItem) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{3}
+	return fileDescriptor_bbdf1f37afed577e, []int{3}
 }
+
 func (m *SimpleItem) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SimpleItem.Unmarshal(m, b)
 }
 func (m *SimpleItem) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SimpleItem.Marshal(b, m, deterministic)
 }
-func (dst *SimpleItem) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SimpleItem.Merge(dst, src)
+func (m *SimpleItem) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SimpleItem.Merge(m, src)
 }
 func (m *SimpleItem) XXX_Size() int {
 	return xxx_messageInfo_SimpleItem.Size(m)
@@ -344,16 +361,17 @@ func (m *RepeatedItem) Reset()         { *m = RepeatedItem{} }
 func (m *RepeatedItem) String() string { return proto.CompactTextString(m) }
 func (*RepeatedItem) ProtoMessage()    {}
 func (*RepeatedItem) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{4}
+	return fileDescriptor_bbdf1f37afed577e, []int{4}
 }
+
 func (m *RepeatedItem) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_RepeatedItem.Unmarshal(m, b)
 }
 func (m *RepeatedItem) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_RepeatedItem.Marshal(b, m, deterministic)
 }
-func (dst *RepeatedItem) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_RepeatedItem.Merge(dst, src)
+func (m *RepeatedItem) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_RepeatedItem.Merge(m, src)
 }
 func (m *RepeatedItem) XXX_Size() int {
 	return xxx_messageInfo_RepeatedItem.Size(m)
@@ -396,16 +414,17 @@ func (m *SimpleMap) Reset()         { *m = SimpleMap{} }
 func (m *SimpleMap) String() string { return proto.CompactTextString(m) }
 func (*SimpleMap) ProtoMessage()    {}
 func (*SimpleMap) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{5}
+	return fileDescriptor_bbdf1f37afed577e, []int{5}
 }
+
 func (m *SimpleMap) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SimpleMap.Unmarshal(m, b)
 }
 func (m *SimpleMap) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SimpleMap.Marshal(b, m, deterministic)
 }
-func (dst *SimpleMap) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SimpleMap.Merge(dst, src)
+func (m *SimpleMap) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SimpleMap.Merge(m, src)
 }
 func (m *SimpleMap) XXX_Size() int {
 	return xxx_messageInfo_SimpleMap.Size(m)
@@ -435,16 +454,17 @@ func (m *SimpleStringMap) Reset()         { *m = SimpleStringMap{} }
 func (m *SimpleStringMap) String() string { return proto.CompactTextString(m) }
 func (*SimpleStringMap) ProtoMessage()    {}
 func (*SimpleStringMap) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{6}
+	return fileDescriptor_bbdf1f37afed577e, []int{6}
 }
+
 func (m *SimpleStringMap) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SimpleStringMap.Unmarshal(m, b)
 }
 func (m *SimpleStringMap) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SimpleStringMap.Marshal(b, m, deterministic)
 }
-func (dst *SimpleStringMap) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SimpleStringMap.Merge(dst, src)
+func (m *SimpleStringMap) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SimpleStringMap.Merge(m, src)
 }
 func (m *SimpleStringMap) XXX_Size() int {
 	return xxx_messageInfo_SimpleStringMap.Size(m)
@@ -481,16 +501,17 @@ func (m *NestedMap) Reset()         { *m = NestedMap{} }
 func (m *NestedMap) String() string { return proto.CompactTextString(m) }
 func (*NestedMap) ProtoMessage()    {}
 func (*NestedMap) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{7}
+	return fileDescriptor_bbdf1f37afed577e, []int{7}
 }
+
 func (m *NestedMap) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_NestedMap.Unmarshal(m, b)
 }
 func (m *NestedMap) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_NestedMap.Marshal(b, m, deterministic)
 }
-func (dst *NestedMap) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_NestedMap.Merge(dst, src)
+func (m *NestedMap) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NestedMap.Merge(m, src)
 }
 func (m *NestedMap) XXX_Size() int {
 	return xxx_messageInfo_NestedMap.Size(m)
@@ -527,16 +548,17 @@ func (m *SimpleEntry) Reset()         { *m = SimpleEntry{} }
 func (m *SimpleEntry) String() string { return proto.CompactTextString(m) }
 func (*SimpleEntry) ProtoMessage()    {}
 func (*SimpleEntry) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{8}
+	return fileDescriptor_bbdf1f37afed577e, []int{8}
 }
+
 func (m *SimpleEntry) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SimpleEntry.Unmarshal(m, b)
 }
 func (m *SimpleEntry) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SimpleEntry.Marshal(b, m, deterministic)
 }
-func (dst *SimpleEntry) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SimpleEntry.Merge(dst, src)
+func (m *SimpleEntry) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SimpleEntry.Merge(m, src)
 }
 func (m *SimpleEntry) XXX_Size() int {
 	return xxx_messageInfo_SimpleEntry.Size(m)
@@ -573,16 +595,17 @@ func (m *SimpleEntries) Reset()         { *m = SimpleEntries{} }
 func (m *SimpleEntries) String() string { return proto.CompactTextString(m) }
 func (*SimpleEntries) ProtoMessage()    {}
 func (*SimpleEntries) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{9}
+	return fileDescriptor_bbdf1f37afed577e, []int{9}
 }
+
 func (m *SimpleEntries) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SimpleEntries.Unmarshal(m, b)
 }
 func (m *SimpleEntries) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SimpleEntries.Marshal(b, m, deterministic)
 }
-func (dst *SimpleEntries) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SimpleEntries.Merge(dst, src)
+func (m *SimpleEntries) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SimpleEntries.Merge(m, src)
 }
 func (m *SimpleEntries) XXX_Size() int {
 	return xxx_messageInfo_SimpleEntries.Size(m)
@@ -621,16 +644,17 @@ func (m *Entry) Reset()         { *m = Entry{} }
 func (m *Entry) String() string { return proto.CompactTextString(m) }
 func (*Entry) ProtoMessage()    {}
 func (*Entry) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{10}
+	return fileDescriptor_bbdf1f37afed577e, []int{10}
 }
+
 func (m *Entry) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Entry.Unmarshal(m, b)
 }
 func (m *Entry) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Entry.Marshal(b, m, deterministic)
 }
-func (dst *Entry) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Entry.Merge(dst, src)
+func (m *Entry) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Entry.Merge(m, src)
 }
 func (m *Entry) XXX_Size() int {
 	return xxx_messageInfo_Entry.Size(m)
@@ -681,16 +705,17 @@ func (m *Entries) Reset()         { *m = Entries{} }
 func (m *Entries) String() string { return proto.CompactTextString(m) }
 func (*Entries) ProtoMessage()    {}
 func (*Entries) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{11}
+	return fileDescriptor_bbdf1f37afed577e, []int{11}
 }
+
 func (m *Entries) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Entries.Unmarshal(m, b)
 }
 func (m *Entries) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Entries.Marshal(b, m, deterministic)
 }
-func (dst *Entries) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Entries.Merge(dst, src)
+func (m *Entries) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Entries.Merge(m, src)
 }
 func (m *Entries) XXX_Size() int {
 	return xxx_messageInfo_Entries.Size(m)
@@ -727,16 +752,17 @@ func (m *BytesKeyEntry) Reset()         { *m = BytesKeyEntry{} }
 func (m *BytesKeyEntry) String() string { return proto.CompactTextString(m) }
 func (*BytesKeyEntry) ProtoMessage()    {}
 func (*BytesKeyEntry) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{12}
+	return fileDescriptor_bbdf1f37afed577e, []int{12}
 }
+
 func (m *BytesKeyEntry) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_BytesKeyEntry.Unmarshal(m, b)
 }
 func (m *BytesKeyEntry) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_BytesKeyEntry.Marshal(b, m, deterministic)
 }
-func (dst *BytesKeyEntry) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_BytesKeyEntry.Merge(dst, src)
+func (m *BytesKeyEntry) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_BytesKeyEntry.Merge(m, src)
 }
 func (m *BytesKeyEntry) XXX_Size() int {
 	return xxx_messageInfo_BytesKeyEntry.Size(m)
@@ -773,16 +799,17 @@ func (m *BytesKeyEntries) Reset()         { *m = BytesKeyEntries{} }
 func (m *BytesKeyEntries) String() string { return proto.CompactTextString(m) }
 func (*BytesKeyEntries) ProtoMessage()    {}
 func (*BytesKeyEntries) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{13}
+	return fileDescriptor_bbdf1f37afed577e, []int{13}
 }
+
 func (m *BytesKeyEntries) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_BytesKeyEntries.Unmarshal(m, b)
 }
 func (m *BytesKeyEntries) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_BytesKeyEntries.Marshal(b, m, deterministic)
 }
-func (dst *BytesKeyEntries) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_BytesKeyEntries.Merge(dst, src)
+func (m *BytesKeyEntries) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_BytesKeyEntries.Merge(m, src)
 }
 func (m *BytesKeyEntries) XXX_Size() int {
 	return xxx_messageInfo_BytesKeyEntries.Size(m)
@@ -820,16 +847,17 @@ func (m *TwoLevelRepeatedDocument) Reset()         { *m = TwoLevelRepeatedDocume
 func (m *TwoLevelRepeatedDocument) String() string { return proto.CompactTextString(m) }
 func (*TwoLevelRepeatedDocument) ProtoMessage()    {}
 func (*TwoLevelRepeatedDocument) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{14}
+	return fileDescriptor_bbdf1f37afed577e, []int{14}
 }
+
 func (m *TwoLevelRepeatedDocument) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TwoLevelRepeatedDocument.Unmarshal(m, b)
 }
 func (m *TwoLevelRepeatedDocument) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_TwoLevelRepeatedDocument.Marshal(b, m, deterministic)
 }
-func (dst *TwoLevelRepeatedDocument) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_TwoLevelRepeatedDocument.Merge(dst, src)
+func (m *TwoLevelRepeatedDocument) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TwoLevelRepeatedDocument.Merge(m, src)
 }
 func (m *TwoLevelRepeatedDocument) XXX_Size() int {
 	return xxx_messageInfo_TwoLevelRepeatedDocument.Size(m)
@@ -875,16 +903,17 @@ func (m *SimpleRepeatedDocument) Reset()         { *m = SimpleRepeatedDocument{}
 func (m *SimpleRepeatedDocument) String() string { return proto.CompactTextString(m) }
 func (*SimpleRepeatedDocument) ProtoMessage()    {}
 func (*SimpleRepeatedDocument) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{15}
+	return fileDescriptor_bbdf1f37afed577e, []int{15}
 }
+
 func (m *SimpleRepeatedDocument) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SimpleRepeatedDocument.Unmarshal(m, b)
 }
 func (m *SimpleRepeatedDocument) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SimpleRepeatedDocument.Marshal(b, m, deterministic)
 }
-func (dst *SimpleRepeatedDocument) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SimpleRepeatedDocument.Merge(dst, src)
+func (m *SimpleRepeatedDocument) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SimpleRepeatedDocument.Merge(m, src)
 }
 func (m *SimpleRepeatedDocument) XXX_Size() int {
 	return xxx_messageInfo_SimpleRepeatedDocument.Size(m)
@@ -938,16 +967,17 @@ func (m *SimpleMapDocument) Reset()         { *m = SimpleMapDocument{} }
 func (m *SimpleMapDocument) String() string { return proto.CompactTextString(m) }
 func (*SimpleMapDocument) ProtoMessage()    {}
 func (*SimpleMapDocument) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{16}
+	return fileDescriptor_bbdf1f37afed577e, []int{16}
 }
+
 func (m *SimpleMapDocument) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_SimpleMapDocument.Unmarshal(m, b)
 }
 func (m *SimpleMapDocument) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_SimpleMapDocument.Marshal(b, m, deterministic)
 }
-func (dst *SimpleMapDocument) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_SimpleMapDocument.Merge(dst, src)
+func (m *SimpleMapDocument) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_SimpleMapDocument.Merge(m, src)
 }
 func (m *SimpleMapDocument) XXX_Size() int {
 	return xxx_messageInfo_SimpleMapDocument.Size(m)
@@ -1006,16 +1036,17 @@ func (m *TwoLevelItem) Reset()         { *m = TwoLevelItem{} }
 func (m *TwoLevelItem) String() string { return proto.CompactTextString(m) }
 func (*TwoLevelItem) ProtoMessage()    {}
 func (*TwoLevelItem) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{17}
+	return fileDescriptor_bbdf1f37afed577e, []int{17}
 }
+
 func (m *TwoLevelItem) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_TwoLevelItem.Unmarshal(m, b)
 }
 func (m *TwoLevelItem) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_TwoLevelItem.Marshal(b, m, deterministic)
 }
-func (dst *TwoLevelItem) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_TwoLevelItem.Merge(dst, src)
+func (m *TwoLevelItem) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_TwoLevelItem.Merge(m, src)
 }
 func (m *TwoLevelItem) XXX_Size() int {
 	return xxx_messageInfo_TwoLevelItem.Size(m)
@@ -1062,16 +1093,17 @@ func (m *NestedRepeatedDocument) Reset()         { *m = NestedRepeatedDocument{}
 func (m *NestedRepeatedDocument) String() string { return proto.CompactTextString(m) }
 func (*NestedRepeatedDocument) ProtoMessage()    {}
 func (*NestedRepeatedDocument) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{18}
+	return fileDescriptor_bbdf1f37afed577e, []int{18}
 }
+
 func (m *NestedRepeatedDocument) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_NestedRepeatedDocument.Unmarshal(m, b)
 }
 func (m *NestedRepeatedDocument) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_NestedRepeatedDocument.Marshal(b, m, deterministic)
 }
-func (dst *NestedRepeatedDocument) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_NestedRepeatedDocument.Merge(dst, src)
+func (m *NestedRepeatedDocument) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_NestedRepeatedDocument.Merge(m, src)
 }
 func (m *NestedRepeatedDocument) XXX_Size() int {
 	return xxx_messageInfo_NestedRepeatedDocument.Size(m)
@@ -1129,16 +1161,17 @@ func (m *InvalidHashedFieldDocument) Reset()         { *m = InvalidHashedFieldDo
 func (m *InvalidHashedFieldDocument) String() string { return proto.CompactTextString(m) }
 func (*InvalidHashedFieldDocument) ProtoMessage()    {}
 func (*InvalidHashedFieldDocument) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{19}
+	return fileDescriptor_bbdf1f37afed577e, []int{19}
 }
+
 func (m *InvalidHashedFieldDocument) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_InvalidHashedFieldDocument.Unmarshal(m, b)
 }
 func (m *InvalidHashedFieldDocument) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_InvalidHashedFieldDocument.Marshal(b, m, deterministic)
 }
-func (dst *InvalidHashedFieldDocument) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_InvalidHashedFieldDocument.Merge(dst, src)
+func (m *InvalidHashedFieldDocument) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_InvalidHashedFieldDocument.Merge(m, src)
 }
 func (m *InvalidHashedFieldDocument) XXX_Size() int {
 	return xxx_messageInfo_InvalidHashedFieldDocument.Size(m)
@@ -1181,16 +1214,17 @@ func (m *OneofSample) Reset()         { *m = OneofSample{} }
 func (m *OneofSample) String() string { return proto.CompactTextString(m) }
 func (*OneofSample) ProtoMessage()    {}
 func (*OneofSample) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{20}
+	return fileDescriptor_bbdf1f37afed577e, []int{20}
 }
+
 func (m *OneofSample) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_OneofSample.Unmarshal(m, b)
 }
 func (m *OneofSample) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_OneofSample.Marshal(b, m, deterministic)
 }
-func (dst *OneofSample) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_OneofSample.Merge(dst, src)
+func (m *OneofSample) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_OneofSample.Merge(m, src)
 }
 func (m *OneofSample) XXX_Size() int {
 	return xxx_messageInfo_OneofSample.Size(m)
@@ -1272,88 +1306,13 @@ func (m *OneofSample) GetSalts() []*proto1.Salt {
 	return nil
 }
 
-// XXX_OneofFuncs is for the internal use of the proto package.
-func (*OneofSample) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _OneofSample_OneofMarshaler, _OneofSample_OneofUnmarshaler, _OneofSample_OneofSizer, []interface{}{
+// XXX_OneofWrappers is for the internal use of the proto package.
+func (*OneofSample) XXX_OneofWrappers() []interface{} {
+	return []interface{}{
 		(*OneofSample_ValueB)(nil),
 		(*OneofSample_ValueC)(nil),
 		(*OneofSample_ValueD)(nil),
 	}
-}
-
-func _OneofSample_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*OneofSample)
-	// oneofBlock
-	switch x := m.OneofBlock.(type) {
-	case *OneofSample_ValueB:
-		b.EncodeVarint(2<<3 | proto.WireVarint)
-		b.EncodeVarint(uint64(x.ValueB))
-	case *OneofSample_ValueC:
-		b.EncodeVarint(3<<3 | proto.WireBytes)
-		b.EncodeStringBytes(x.ValueC)
-	case *OneofSample_ValueD:
-		b.EncodeVarint(4<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.ValueD); err != nil {
-			return err
-		}
-	case nil:
-	default:
-		return fmt.Errorf("OneofSample.OneofBlock has unexpected type %T", x)
-	}
-	return nil
-}
-
-func _OneofSample_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*OneofSample)
-	switch tag {
-	case 2: // oneofBlock.valueB
-		if wire != proto.WireVarint {
-			return true, proto.ErrInternalBadWireType
-		}
-		x, err := b.DecodeVarint()
-		m.OneofBlock = &OneofSample_ValueB{int32(x)}
-		return true, err
-	case 3: // oneofBlock.valueC
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		x, err := b.DecodeStringBytes()
-		m.OneofBlock = &OneofSample_ValueC{x}
-		return true, err
-	case 4: // oneofBlock.valueD
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(SimpleItem)
-		err := b.DecodeMessage(msg)
-		m.OneofBlock = &OneofSample_ValueD{msg}
-		return true, err
-	default:
-		return false, nil
-	}
-}
-
-func _OneofSample_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*OneofSample)
-	// oneofBlock
-	switch x := m.OneofBlock.(type) {
-	case *OneofSample_ValueB:
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(x.ValueB))
-	case *OneofSample_ValueC:
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(len(x.ValueC)))
-		n += len(x.ValueC)
-	case *OneofSample_ValueD:
-		s := proto.Size(x.ValueD)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case nil:
-	default:
-		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
-	}
-	return n
 }
 
 type LongDocument struct {
@@ -1382,16 +1341,17 @@ func (m *LongDocument) Reset()         { *m = LongDocument{} }
 func (m *LongDocument) String() string { return proto.CompactTextString(m) }
 func (*LongDocument) ProtoMessage()    {}
 func (*LongDocument) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{21}
+	return fileDescriptor_bbdf1f37afed577e, []int{21}
 }
+
 func (m *LongDocument) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_LongDocument.Unmarshal(m, b)
 }
 func (m *LongDocument) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_LongDocument.Marshal(b, m, deterministic)
 }
-func (dst *LongDocument) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_LongDocument.Merge(dst, src)
+func (m *LongDocument) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_LongDocument.Merge(m, src)
 }
 func (m *LongDocument) XXX_Size() int {
 	return xxx_messageInfo_LongDocument.Size(m)
@@ -1535,16 +1495,17 @@ func (m *Integers) Reset()         { *m = Integers{} }
 func (m *Integers) String() string { return proto.CompactTextString(m) }
 func (*Integers) ProtoMessage()    {}
 func (*Integers) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{22}
+	return fileDescriptor_bbdf1f37afed577e, []int{22}
 }
+
 func (m *Integers) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Integers.Unmarshal(m, b)
 }
 func (m *Integers) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Integers.Marshal(b, m, deterministic)
 }
-func (dst *Integers) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Integers.Merge(dst, src)
+func (m *Integers) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Integers.Merge(m, src)
 }
 func (m *Integers) XXX_Size() int {
 	return xxx_messageInfo_Integers.Size(m)
@@ -1645,16 +1606,17 @@ func (m *ContainSalts) Reset()         { *m = ContainSalts{} }
 func (m *ContainSalts) String() string { return proto.CompactTextString(m) }
 func (*ContainSalts) ProtoMessage()    {}
 func (*ContainSalts) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{23}
+	return fileDescriptor_bbdf1f37afed577e, []int{23}
 }
+
 func (m *ContainSalts) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ContainSalts.Unmarshal(m, b)
 }
 func (m *ContainSalts) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ContainSalts.Marshal(b, m, deterministic)
 }
-func (dst *ContainSalts) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ContainSalts.Merge(dst, src)
+func (m *ContainSalts) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ContainSalts.Merge(m, src)
 }
 func (m *ContainSalts) XXX_Size() int {
 	return xxx_messageInfo_ContainSalts.Size(m)
@@ -1698,16 +1660,17 @@ func (m *ExampleWithoutSalts) Reset()         { *m = ExampleWithoutSalts{} }
 func (m *ExampleWithoutSalts) String() string { return proto.CompactTextString(m) }
 func (*ExampleWithoutSalts) ProtoMessage()    {}
 func (*ExampleWithoutSalts) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{24}
+	return fileDescriptor_bbdf1f37afed577e, []int{24}
 }
+
 func (m *ExampleWithoutSalts) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ExampleWithoutSalts.Unmarshal(m, b)
 }
 func (m *ExampleWithoutSalts) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ExampleWithoutSalts.Marshal(b, m, deterministic)
 }
-func (dst *ExampleWithoutSalts) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ExampleWithoutSalts.Merge(dst, src)
+func (m *ExampleWithoutSalts) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExampleWithoutSalts.Merge(m, src)
 }
 func (m *ExampleWithoutSalts) XXX_Size() int {
 	return xxx_messageInfo_ExampleWithoutSalts.Size(m)
@@ -1732,6 +1695,257 @@ func (m *ExampleWithoutSalts) GetValueB() int32 {
 	return 0
 }
 
+type Name struct {
+	First                string   `protobuf:"bytes,1,opt,name=first,proto3" json:"first,omitempty"`
+	Last                 string   `protobuf:"bytes,2,opt,name=last,proto3" json:"last,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *Name) Reset()         { *m = Name{} }
+func (m *Name) String() string { return proto.CompactTextString(m) }
+func (*Name) ProtoMessage()    {}
+func (*Name) Descriptor() ([]byte, []int) {
+	return fileDescriptor_bbdf1f37afed577e, []int{25}
+}
+
+func (m *Name) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_Name.Unmarshal(m, b)
+}
+func (m *Name) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_Name.Marshal(b, m, deterministic)
+}
+func (m *Name) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Name.Merge(m, src)
+}
+func (m *Name) XXX_Size() int {
+	return xxx_messageInfo_Name.Size(m)
+}
+func (m *Name) XXX_DiscardUnknown() {
+	xxx_messageInfo_Name.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Name proto.InternalMessageInfo
+
+func (m *Name) GetFirst() string {
+	if m != nil {
+		return m.First
+	}
+	return ""
+}
+
+func (m *Name) GetLast() string {
+	if m != nil {
+		return m.Last
+	}
+	return ""
+}
+
+type PhoneNumber struct {
+	Type                 string   `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
+	Countrycode          string   `protobuf:"bytes,2,opt,name=countrycode,proto3" json:"countrycode,omitempty"`
+	Number               string   `protobuf:"bytes,3,opt,name=number,proto3" json:"number,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *PhoneNumber) Reset()         { *m = PhoneNumber{} }
+func (m *PhoneNumber) String() string { return proto.CompactTextString(m) }
+func (*PhoneNumber) ProtoMessage()    {}
+func (*PhoneNumber) Descriptor() ([]byte, []int) {
+	return fileDescriptor_bbdf1f37afed577e, []int{26}
+}
+
+func (m *PhoneNumber) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_PhoneNumber.Unmarshal(m, b)
+}
+func (m *PhoneNumber) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_PhoneNumber.Marshal(b, m, deterministic)
+}
+func (m *PhoneNumber) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PhoneNumber.Merge(m, src)
+}
+func (m *PhoneNumber) XXX_Size() int {
+	return xxx_messageInfo_PhoneNumber.Size(m)
+}
+func (m *PhoneNumber) XXX_DiscardUnknown() {
+	xxx_messageInfo_PhoneNumber.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PhoneNumber proto.InternalMessageInfo
+
+func (m *PhoneNumber) GetType() string {
+	if m != nil {
+		return m.Type
+	}
+	return ""
+}
+
+func (m *PhoneNumber) GetCountrycode() string {
+	if m != nil {
+		return m.Countrycode
+	}
+	return ""
+}
+
+func (m *PhoneNumber) GetNumber() string {
+	if m != nil {
+		return m.Number
+	}
+	return ""
+}
+
+type ExampleNested struct {
+	HashedValue          []byte   `protobuf:"bytes,1,opt,name=hashed_value,json=hashedValue,proto3" json:"hashed_value,omitempty"`
+	Name                 *Name    `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *ExampleNested) Reset()         { *m = ExampleNested{} }
+func (m *ExampleNested) String() string { return proto.CompactTextString(m) }
+func (*ExampleNested) ProtoMessage()    {}
+func (*ExampleNested) Descriptor() ([]byte, []int) {
+	return fileDescriptor_bbdf1f37afed577e, []int{27}
+}
+
+func (m *ExampleNested) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_ExampleNested.Unmarshal(m, b)
+}
+func (m *ExampleNested) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_ExampleNested.Marshal(b, m, deterministic)
+}
+func (m *ExampleNested) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExampleNested.Merge(m, src)
+}
+func (m *ExampleNested) XXX_Size() int {
+	return xxx_messageInfo_ExampleNested.Size(m)
+}
+func (m *ExampleNested) XXX_DiscardUnknown() {
+	xxx_messageInfo_ExampleNested.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_ExampleNested proto.InternalMessageInfo
+
+func (m *ExampleNested) GetHashedValue() []byte {
+	if m != nil {
+		return m.HashedValue
+	}
+	return nil
+}
+
+func (m *ExampleNested) GetName() *Name {
+	if m != nil {
+		return m.Name
+	}
+	return nil
+}
+
+type AppendFieldDocument struct {
+	Name                 *Name          `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Names                []*Name        `protobuf:"bytes,2,rep,name=names,proto3" json:"names,omitempty"`
+	PhoneNumbers         []*PhoneNumber `protobuf:"bytes,3,rep,name=phone_numbers,json=phoneNumbers,proto3" json:"phone_numbers,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
+}
+
+func (m *AppendFieldDocument) Reset()         { *m = AppendFieldDocument{} }
+func (m *AppendFieldDocument) String() string { return proto.CompactTextString(m) }
+func (*AppendFieldDocument) ProtoMessage()    {}
+func (*AppendFieldDocument) Descriptor() ([]byte, []int) {
+	return fileDescriptor_bbdf1f37afed577e, []int{28}
+}
+
+func (m *AppendFieldDocument) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_AppendFieldDocument.Unmarshal(m, b)
+}
+func (m *AppendFieldDocument) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_AppendFieldDocument.Marshal(b, m, deterministic)
+}
+func (m *AppendFieldDocument) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_AppendFieldDocument.Merge(m, src)
+}
+func (m *AppendFieldDocument) XXX_Size() int {
+	return xxx_messageInfo_AppendFieldDocument.Size(m)
+}
+func (m *AppendFieldDocument) XXX_DiscardUnknown() {
+	xxx_messageInfo_AppendFieldDocument.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_AppendFieldDocument proto.InternalMessageInfo
+
+func (m *AppendFieldDocument) GetName() *Name {
+	if m != nil {
+		return m.Name
+	}
+	return nil
+}
+
+func (m *AppendFieldDocument) GetNames() []*Name {
+	if m != nil {
+		return m.Names
+	}
+	return nil
+}
+
+func (m *AppendFieldDocument) GetPhoneNumbers() []*PhoneNumber {
+	if m != nil {
+		return m.PhoneNumbers
+	}
+	return nil
+}
+
+type UnsupportedAppendDocument struct {
+	Name                 *Name          `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Nested               *ExampleNested `protobuf:"bytes,2,opt,name=nested,proto3" json:"nested,omitempty"`
+	XXX_NoUnkeyedLiteral struct{}       `json:"-"`
+	XXX_unrecognized     []byte         `json:"-"`
+	XXX_sizecache        int32          `json:"-"`
+}
+
+func (m *UnsupportedAppendDocument) Reset()         { *m = UnsupportedAppendDocument{} }
+func (m *UnsupportedAppendDocument) String() string { return proto.CompactTextString(m) }
+func (*UnsupportedAppendDocument) ProtoMessage()    {}
+func (*UnsupportedAppendDocument) Descriptor() ([]byte, []int) {
+	return fileDescriptor_bbdf1f37afed577e, []int{29}
+}
+
+func (m *UnsupportedAppendDocument) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_UnsupportedAppendDocument.Unmarshal(m, b)
+}
+func (m *UnsupportedAppendDocument) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_UnsupportedAppendDocument.Marshal(b, m, deterministic)
+}
+func (m *UnsupportedAppendDocument) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_UnsupportedAppendDocument.Merge(m, src)
+}
+func (m *UnsupportedAppendDocument) XXX_Size() int {
+	return xxx_messageInfo_UnsupportedAppendDocument.Size(m)
+}
+func (m *UnsupportedAppendDocument) XXX_DiscardUnknown() {
+	xxx_messageInfo_UnsupportedAppendDocument.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_UnsupportedAppendDocument proto.InternalMessageInfo
+
+func (m *UnsupportedAppendDocument) GetName() *Name {
+	if m != nil {
+		return m.Name
+	}
+	return nil
+}
+
+func (m *UnsupportedAppendDocument) GetNested() *ExampleNested {
+	if m != nil {
+		return m.Nested
+	}
+	return nil
+}
+
 type ExampleWithPaddingField struct {
 	ValueA               string         `protobuf:"bytes,1,opt,name=valueA,proto3" json:"valueA,omitempty"`
 	ValueB               []byte         `protobuf:"bytes,2,opt,name=valueB,proto3" json:"valueB,omitempty"`
@@ -1745,16 +1959,17 @@ func (m *ExampleWithPaddingField) Reset()         { *m = ExampleWithPaddingField
 func (m *ExampleWithPaddingField) String() string { return proto.CompactTextString(m) }
 func (*ExampleWithPaddingField) ProtoMessage()    {}
 func (*ExampleWithPaddingField) Descriptor() ([]byte, []int) {
-	return fileDescriptor_example_0f39f4322c88114a, []int{25}
+	return fileDescriptor_bbdf1f37afed577e, []int{30}
 }
+
 func (m *ExampleWithPaddingField) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_ExampleWithPaddingField.Unmarshal(m, b)
 }
 func (m *ExampleWithPaddingField) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_ExampleWithPaddingField.Marshal(b, m, deterministic)
 }
-func (dst *ExampleWithPaddingField) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ExampleWithPaddingField.Merge(dst, src)
+func (m *ExampleWithPaddingField) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_ExampleWithPaddingField.Merge(m, src)
 }
 func (m *ExampleWithPaddingField) XXX_Size() int {
 	return xxx_messageInfo_ExampleWithPaddingField.Size(m)
@@ -1787,6 +2002,7 @@ func (m *ExampleWithPaddingField) GetSalts() []*proto1.Salt {
 }
 
 func init() {
+	proto.RegisterEnum("documents.Enum", Enum_name, Enum_value)
 	proto.RegisterType((*ExampleDocument)(nil), "documents.ExampleDocument")
 	proto.RegisterType((*AllFieldTypes)(nil), "documents.AllFieldTypes")
 	proto.RegisterType((*AllFieldTypesSalts)(nil), "documents.AllFieldTypesSalts")
@@ -1817,96 +2033,114 @@ func init() {
 	proto.RegisterType((*Integers)(nil), "documents.Integers")
 	proto.RegisterType((*ContainSalts)(nil), "documents.ContainSalts")
 	proto.RegisterType((*ExampleWithoutSalts)(nil), "documents.ExampleWithoutSalts")
+	proto.RegisterType((*Name)(nil), "documents.Name")
+	proto.RegisterType((*PhoneNumber)(nil), "documents.PhoneNumber")
+	proto.RegisterType((*ExampleNested)(nil), "documents.ExampleNested")
+	proto.RegisterType((*AppendFieldDocument)(nil), "documents.AppendFieldDocument")
+	proto.RegisterType((*UnsupportedAppendDocument)(nil), "documents.UnsupportedAppendDocument")
 	proto.RegisterType((*ExampleWithPaddingField)(nil), "documents.ExampleWithPaddingField")
-	proto.RegisterEnum("documents.Enum", Enum_name, Enum_value)
 }
 
-func init() { proto.RegisterFile("example.proto", fileDescriptor_example_0f39f4322c88114a) }
+func init() { proto.RegisterFile("examples/documents/example.proto", fileDescriptor_bbdf1f37afed577e) }
 
-var fileDescriptor_example_0f39f4322c88114a = []byte{
-	// 1341 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x58, 0xcf, 0x6e, 0xdb, 0x46,
-	0x13, 0x0f, 0x25, 0xcb, 0x96, 0x86, 0x94, 0x25, 0x33, 0xf9, 0x1c, 0xc2, 0xf9, 0x8a, 0x28, 0x44,
-	0x0b, 0x08, 0x41, 0x22, 0xc7, 0x72, 0x9c, 0xd8, 0xbd, 0xa4, 0xa6, 0x24, 0xdb, 0x8a, 0x13, 0xc3,
-	0xa0, 0x8d, 0x16, 0x28, 0x50, 0x08, 0xb4, 0xb9, 0x96, 0x85, 0x50, 0xa4, 0x20, 0x52, 0x4e, 0xd5,
-	0xe6, 0x98, 0xa2, 0xef, 0x50, 0x14, 0x45, 0x8f, 0x3d, 0x16, 0x28, 0xd0, 0x43, 0x6f, 0xbe, 0xf7,
-	0xd8, 0x87, 0xe8, 0x0b, 0xf8, 0x5e, 0xec, 0x2e, 0x77, 0xb9, 0xb4, 0xc4, 0x4a, 0x72, 0xdb, 0x9b,
-	0xf8, 0x9b, 0xe1, 0xec, 0x6f, 0xfe, 0xec, 0x0c, 0x47, 0x90, 0x47, 0x5f, 0x5a, 0xdd, 0x9e, 0x83,
-	0x2a, 0xbd, 0xbe, 0x17, 0x78, 0x6a, 0xce, 0xf6, 0x4e, 0x07, 0x5d, 0xe4, 0x06, 0xfe, 0xca, 0xfd,
-	0xb6, 0xe7, 0xb5, 0x1d, 0xb4, 0x4a, 0x04, 0x27, 0x83, 0xb3, 0xd5, 0xa0, 0xd3, 0x45, 0x7e, 0x60,
-	0x75, 0x7b, 0x54, 0x77, 0x45, 0xeb, 0xf5, 0x3d, 0xef, 0xcc, 0xa7, 0x0a, 0xab, 0xe4, 0x21, 0x94,
-	0xdc, 0x8d, 0x49, 0x7c, 0xcb, 0x09, 0xa8, 0x40, 0x7f, 0x3f, 0x07, 0x85, 0x06, 0x3d, 0xb0, 0x1e,
-	0x1e, 0xa4, 0x2e, 0xc3, 0xfc, 0x85, 0xe5, 0x0c, 0xd0, 0xb6, 0x26, 0x95, 0xa4, 0x72, 0xce, 0x0c,
-	0x9f, 0x38, 0x6e, 0x68, 0x29, 0x01, 0x37, 0x38, 0xbe, 0xa6, 0xa5, 0x4b, 0x52, 0x39, 0x1d, 0xe2,
-	0x6b, 0x1c, 0xaf, 0x6a, 0x73, 0x02, 0x5e, 0x55, 0x1f, 0x80, 0x42, 0x7e, 0xb5, 0x4e, 0x86, 0x01,
-	0xf2, 0xd7, 0xb4, 0x4c, 0x49, 0x2a, 0x2b, 0xa6, 0x4c, 0xad, 0x11, 0x48, 0x2d, 0x43, 0xe1, 0x53,
-	0xfc, 0x58, 0xb3, 0xba, 0xc8, 0xa9, 0x59, 0x3e, 0xb2, 0xb5, 0x79, 0xa2, 0x75, 0x1d, 0x56, 0xd7,
-	0x60, 0x89, 0x1a, 0x73, 0xbd, 0xa0, 0xd5, 0x69, 0xbb, 0x5e, 0x1f, 0xd9, 0xda, 0x02, 0xd6, 0x35,
-	0x32, 0x3f, 0x5e, 0x5e, 0xc1, 0x2d, 0xb3, 0x40, 0xe4, 0x07, 0x5e, 0xd0, 0xa4, 0x52, 0xf5, 0x21,
-	0xe4, 0xe9, 0x2b, 0x4c, 0x3d, 0x1b, 0xa9, 0x4b, 0x26, 0xe5, 0xc6, 0x74, 0x57, 0xa1, 0x18, 0x99,
-	0x3f, 0xb7, 0xfc, 0x73, 0x64, 0x6b, 0x39, 0xaa, 0xfe, 0x13, 0x51, 0x5f, 0x64, 0xd6, 0xf7, 0x88,
-	0x50, 0x7d, 0x04, 0x39, 0xe4, 0x0e, 0xba, 0xad, 0x60, 0xd8, 0x43, 0x1a, 0x94, 0xa4, 0xf2, 0x62,
-	0xb5, 0x50, 0xe1, 0x39, 0xac, 0x34, 0xdc, 0x41, 0xd7, 0xcc, 0x62, 0x8d, 0xe3, 0x61, 0x0f, 0xa9,
-	0xff, 0x87, 0x1c, 0x75, 0xdb, 0xf3, 0x1c, 0x4d, 0x29, 0x49, 0xe5, 0xac, 0x19, 0x01, 0xea, 0x03,
-	0xc8, 0xf6, 0x2c, 0xdb, 0xee, 0xb8, 0xed, 0x6d, 0x2d, 0x8f, 0x43, 0x6e, 0x64, 0x7e, 0xbe, 0xbc,
-	0x82, 0x92, 0xc9, 0x61, 0x41, 0xc5, 0xd0, 0x16, 0x29, 0xaf, 0xb8, 0x8a, 0xa1, 0xea, 0x90, 0xc1,
-	0x09, 0xf7, 0x35, 0xb9, 0x94, 0x2e, 0xcb, 0x55, 0xa5, 0x42, 0x6b, 0xa1, 0x72, 0x64, 0x39, 0x81,
-	0x49, 0x45, 0xfa, 0xf7, 0x12, 0xe4, 0xb7, 0x1d, 0x67, 0xa7, 0x83, 0x1c, 0x1b, 0x13, 0xf3, 0x71,
-	0x92, 0xfc, 0xa0, 0xdf, 0x71, 0xdb, 0x2d, 0xc2, 0x27, 0x2c, 0x05, 0x99, 0x62, 0x24, 0x09, 0x6a,
-	0x1d, 0x8a, 0xb8, 0x02, 0x5b, 0xa4, 0x04, 0x43, 0x35, 0x5c, 0x19, 0x72, 0x75, 0xa5, 0x42, 0x4b,
-	0xb5, 0xc2, 0x4a, 0xb5, 0x72, 0xcc, 0x4a, 0xd5, 0x5c, 0xc4, 0xef, 0x1c, 0xe1, 0x9f, 0xd4, 0x0a,
-	0xa7, 0x97, 0x4e, 0xa6, 0xf7, 0x8d, 0x04, 0x6a, 0x8c, 0x1e, 0x16, 0x8e, 0xe7, 0xa8, 0xc4, 0x39,
-	0x96, 0x13, 0x38, 0x2a, 0x37, 0xe2, 0xf1, 0x21, 0xc0, 0x51, 0x07, 0xdf, 0x95, 0x66, 0x80, 0xba,
-	0x49, 0xf7, 0x44, 0x1f, 0x82, 0x62, 0xa2, 0x1e, 0xb2, 0x02, 0x64, 0x13, 0xbd, 0xc7, 0x82, 0x1e,
-	0x36, 0xfd, 0x3f, 0xa1, 0x1e, 0x22, 0x73, 0x13, 0xaf, 0xd9, 0x34, 0x04, 0xdf, 0x41, 0x8e, 0x5a,
-	0x7c, 0x6d, 0xf5, 0xd4, 0x0d, 0xc8, 0xb0, 0xb8, 0xe0, 0x17, 0xee, 0x8f, 0x1c, 0xfb, 0xda, 0xea,
-	0x55, 0x88, 0xf3, 0x0d, 0x37, 0xe8, 0x0f, 0x4d, 0xaa, 0xbd, 0xb2, 0x09, 0x10, 0x81, 0x6a, 0x11,
-	0xd2, 0x6f, 0xd0, 0x90, 0x78, 0x98, 0x31, 0xf1, 0x4f, 0xf5, 0x0e, 0x33, 0x4b, 0xe9, 0xd1, 0x87,
-	0x8f, 0x53, 0x9b, 0x92, 0xfe, 0x8b, 0x04, 0x05, 0x6a, 0xf9, 0x88, 0xa4, 0x00, 0x93, 0x30, 0xe2,
-	0x24, 0x3e, 0x1a, 0x21, 0xc1, 0x55, 0x05, 0x2a, 0xac, 0x88, 0xe9, 0xab, 0x91, 0xe7, 0xa9, 0x44,
-	0xcf, 0x93, 0x59, 0xe7, 0x26, 0xb1, 0xfe, 0x55, 0x82, 0xdc, 0x01, 0xf2, 0x03, 0x64, 0x4f, 0x08,
-	0x1a, 0x57, 0x1a, 0x0d, 0xda, 0x54, 0x14, 0x0f, 0x26, 0x04, 0xf6, 0xa1, 0x48, 0x51, 0xae, 0xde,
-	0x19, 0x97, 0x2f, 0x91, 0xf8, 0x3e, 0xc8, 0x14, 0xa7, 0x06, 0xef, 0xe1, 0xce, 0x13, 0xf4, 0x87,
-	0xad, 0xc8, 0xf3, 0x2c, 0x01, 0xf6, 0xd1, 0x50, 0xbd, 0x0f, 0x32, 0x15, 0x8a, 0x41, 0x00, 0x02,
-	0x11, 0x4e, 0xfa, 0x57, 0x90, 0x8f, 0x8c, 0x75, 0x90, 0xaf, 0x36, 0x60, 0x01, 0xd1, 0x9f, 0x61,
-	0x28, 0x96, 0x47, 0xf8, 0xd0, 0x5c, 0xdd, 0x26, 0xb9, 0xfa, 0xed, 0xf2, 0x4a, 0x38, 0xdf, 0x64,
-	0xef, 0x4e, 0x13, 0x18, 0xdd, 0x81, 0xcc, 0x14, 0x2e, 0x44, 0xd7, 0x2d, 0x95, 0x30, 0x96, 0xd2,
-	0xe4, 0x62, 0x5f, 0x1f, 0x4b, 0xb5, 0xd8, 0xf8, 0xa9, 0xe9, 0x2e, 0x2c, 0x30, 0x1f, 0x5f, 0x5c,
-	0xf7, 0xb1, 0x18, 0x6b, 0xd5, 0xff, 0x8e, 0x77, 0x2f, 0x20, 0x4f, 0xa6, 0xda, 0x3e, 0x1a, 0x52,
-	0x2f, 0x35, 0x58, 0xb0, 0x6c, 0xbb, 0x8f, 0x7c, 0x3f, 0xec, 0x58, 0xec, 0x71, 0x7c, 0x91, 0xea,
-	0xef, 0xa0, 0x20, 0x1a, 0x18, 0x9b, 0x1c, 0x4d, 0x20, 0x1e, 0x3b, 0xcd, 0x58, 0xc2, 0x0e, 0xdc,
-	0xc1, 0x0e, 0xb0, 0x63, 0x66, 0xa3, 0xff, 0xad, 0x04, 0xda, 0xf1, 0x5b, 0xef, 0x15, 0xba, 0x40,
-	0x0e, 0x6b, 0x6b, 0x13, 0x3f, 0x15, 0x56, 0x85, 0x1e, 0x86, 0x2d, 0xdf, 0x15, 0xe8, 0x89, 0xbd,
-	0x71, 0xa6, 0xe6, 0xf6, 0x5e, 0x82, 0x65, 0x5a, 0x78, 0x53, 0xf3, 0x98, 0xf4, 0xc9, 0x52, 0x23,
-	0xe7, 0x31, 0xbc, 0x16, 0xd1, 0x98, 0x4b, 0xa6, 0xf1, 0x67, 0x0a, 0x96, 0xf8, 0x7d, 0xbc, 0x31,
-	0x83, 0xdd, 0x18, 0x03, 0xb9, 0x5a, 0x1e, 0x77, 0xdb, 0x99, 0x75, 0xda, 0x70, 0x6a, 0xb1, 0xde,
-	0xc8, 0x28, 0x7f, 0x12, 0x1a, 0xaa, 0x87, 0x9c, 0xa7, 0x30, 0x54, 0xa7, 0xad, 0x2b, 0x7c, 0x2f,
-	0x72, 0x3a, 0x93, 0xdc, 0xbb, 0xb6, 0x40, 0x16, 0x38, 0xcc, 0xd2, 0x5f, 0xf9, 0xab, 0xf5, 0xd9,
-	0x07, 0xca, 0x10, 0x14, 0x56, 0x7a, 0x23, 0x93, 0x54, 0xfa, 0x6f, 0x27, 0xe9, 0xef, 0x12, 0x2c,
-	0xd3, 0x86, 0xff, 0x8f, 0x8b, 0xed, 0xf1, 0xb5, 0x54, 0xff, 0x2d, 0xeb, 0x1a, 0xbf, 0x3b, 0x75,
-	0xd2, 0xb7, 0xe2, 0x77, 0x47, 0x8c, 0xc6, 0x2c, 0xf9, 0xd3, 0xbf, 0x80, 0x95, 0xa6, 0x7b, 0x61,
-	0x39, 0x1d, 0x9b, 0x7e, 0xa7, 0x92, 0x4f, 0x29, 0xee, 0xd1, 0xbd, 0x68, 0xe8, 0x91, 0xaf, 0x4c,
-	0xfa, 0x69, 0x3b, 0xfd, 0x68, 0xd3, 0xff, 0x90, 0x40, 0xf6, 0x5c, 0xe4, 0x9d, 0x1d, 0x91, 0x55,
-	0xe2, 0x5a, 0x88, 0x32, 0x3c, 0x44, 0x5a, 0x2c, 0x44, 0x99, 0xbd, 0x5b, 0x3c, 0x48, 0x9a, 0x10,
-	0x24, 0xa9, 0x9c, 0xe3, 0x92, 0xd1, 0x78, 0x8c, 0x0f, 0x1f, 0x7f, 0xa1, 0xce, 0x0f, 0x6f, 0x90,
-	0xcd, 0x82, 0x1d, 0xde, 0x88, 0x1c, 0x99, 0x4f, 0x74, 0xc4, 0x50, 0x00, 0x88, 0x1f, 0x86, 0xe3,
-	0x9d, 0xbe, 0xd1, 0xbf, 0x4b, 0x83, 0xf2, 0xca, 0x73, 0xdb, 0x23, 0xa9, 0x7f, 0xa2, 0x15, 0x85,
-	0x99, 0xf2, 0x44, 0x58, 0x81, 0xa4, 0x84, 0x15, 0x28, 0x15, 0x5b, 0x81, 0x18, 0xbe, 0x1e, 0x5b,
-	0x99, 0xd6, 0x39, 0xfe, 0x34, 0x36, 0xb3, 0x9e, 0x72, 0x7c, 0x83, 0xb8, 0xc4, 0xf0, 0x0d, 0x8e,
-	0x3f, 0x23, 0xeb, 0x11, 0xc3, 0x9f, 0x71, 0xfc, 0x39, 0x59, 0x85, 0x18, 0xfe, 0x9c, 0xe3, 0x9b,
-	0x64, 0xe7, 0x61, 0xf8, 0x26, 0xc7, 0xb7, 0xc8, 0x72, 0xc3, 0xf0, 0x2d, 0x21, 0x8f, 0x20, 0xe0,
-	0x62, 0xa9, 0xcb, 0x02, 0x2e, 0xf6, 0x55, 0x45, 0x9c, 0xb9, 0x1c, 0xaf, 0x93, 0x3d, 0x26, 0x3d,
-	0x26, 0x55, 0x8b, 0x02, 0x2e, 0xa4, 0xaa, 0x90, 0x5c, 0x73, 0x3f, 0xa4, 0x20, 0xdb, 0x74, 0x03,
-	0xd4, 0x46, 0x7d, 0x3f, 0xb1, 0xe0, 0xe2, 0x77, 0x32, 0x3d, 0x76, 0x00, 0x48, 0xe5, 0xfc, 0x18,
-	0xa2, 0x38, 0x01, 0x73, 0x09, 0x35, 0xb5, 0xc4, 0x89, 0x32, 0x7c, 0x87, 0x24, 0x40, 0x0d, 0xf1,
-	0x1d, 0x8e, 0xef, 0x92, 0x04, 0x2c, 0x84, 0xf8, 0x2e, 0xc7, 0xf7, 0x48, 0x02, 0xe6, 0x43, 0x7c,
-	0x8f, 0xe3, 0x4d, 0x92, 0x80, 0x42, 0x88, 0x37, 0x39, 0xfe, 0x92, 0x24, 0xa0, 0x18, 0xe2, 0x2f,
-	0xa7, 0x5a, 0xea, 0x4e, 0x40, 0xa9, 0x79, 0x6e, 0x60, 0x75, 0x5c, 0xba, 0x2e, 0x4d, 0xd7, 0xb7,
-	0x32, 0x33, 0xb5, 0xc9, 0x06, 0xdc, 0x0e, 0xff, 0x3e, 0xf8, 0xac, 0x13, 0x9c, 0x7b, 0x83, 0xe0,
-	0x46, 0x47, 0xe9, 0x5f, 0xc3, 0x5d, 0xc1, 0xcc, 0x21, 0x5d, 0x5d, 0x49, 0x8f, 0x52, 0x3f, 0x88,
-	0x9b, 0x8a, 0x8f, 0xbf, 0x6d, 0x2e, 0xa6, 0x16, 0x95, 0xb8, 0x78, 0x2a, 0x1f, 0x1e, 0xea, 0x30,
-	0x87, 0xd7, 0x72, 0x55, 0x81, 0x2c, 0xde, 0xda, 0x5b, 0x9e, 0x8b, 0x8a, 0xb7, 0xf8, 0x53, 0xf0,
-	0xd6, 0x2b, 0x4a, 0xc6, 0x23, 0xc8, 0x9f, 0x7a, 0xdd, 0xa8, 0xf3, 0x18, 0x4a, 0xc8, 0xf7, 0x10,
-	0x6f, 0xb8, 0x87, 0xd2, 0xe7, 0x32, 0x17, 0xf5, 0x4e, 0x4e, 0xe6, 0xc9, 0xde, 0xbb, 0xfe, 0x57,
-	0x00, 0x00, 0x00, 0xff, 0xff, 0x63, 0xbf, 0x96, 0xee, 0xcc, 0x11, 0x00, 0x00,
+var fileDescriptor_bbdf1f37afed577e = []byte{
+	// 1565 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xb4, 0x58, 0xcd, 0x6f, 0x1b, 0x45,
+	0x14, 0xef, 0xfa, 0x23, 0xb1, 0xdf, 0xae, 0x63, 0x67, 0x5b, 0xd2, 0x25, 0x05, 0xd5, 0x5d, 0x40,
+	0xb2, 0xa2, 0xd6, 0x6e, 0xd2, 0xaf, 0x94, 0x4b, 0x89, 0x3f, 0xda, 0xa4, 0x1f, 0x51, 0xb4, 0x29,
+	0x20, 0x81, 0xc0, 0xda, 0x64, 0x27, 0x8e, 0xd5, 0xf5, 0xce, 0xca, 0xbb, 0x6e, 0x31, 0xf4, 0xc0,
+	0x01, 0xc4, 0xff, 0x80, 0x10, 0xe2, 0xc8, 0xb1, 0x12, 0x12, 0x07, 0x4e, 0xe4, 0xce, 0x91, 0x3f,
+	0x82, 0x7f, 0xa0, 0x77, 0x34, 0x33, 0x3b, 0xb3, 0xb3, 0xb1, 0x97, 0x38, 0x01, 0x4e, 0xf6, 0xfc,
+	0xe6, 0xcd, 0x9b, 0xdf, 0xfb, 0x98, 0x37, 0xf3, 0x16, 0xaa, 0xe8, 0x0b, 0x7b, 0xe0, 0xbb, 0x28,
+	0x68, 0x38, 0x78, 0x7f, 0x34, 0x40, 0x5e, 0x18, 0x34, 0x22, 0xa8, 0xee, 0x0f, 0x71, 0x88, 0xf5,
+	0xa2, 0x98, 0x58, 0xbe, 0xdc, 0xc3, 0xb8, 0xe7, 0xa2, 0x06, 0x9d, 0xd8, 0x1b, 0x1d, 0x34, 0xc2,
+	0xfe, 0x00, 0x05, 0xa1, 0x3d, 0xf0, 0x99, 0xec, 0xb2, 0xe1, 0x0f, 0x31, 0x3e, 0x08, 0x98, 0x40,
+	0x83, 0x0e, 0xa2, 0x99, 0x8b, 0x89, 0x99, 0xc0, 0x76, 0x43, 0x36, 0x61, 0xbe, 0xca, 0x41, 0xb9,
+	0xc3, 0x36, 0x6c, 0x47, 0x1b, 0xe9, 0x4b, 0x30, 0xf7, 0xdc, 0x76, 0x47, 0x68, 0xc3, 0x50, 0xaa,
+	0x4a, 0xad, 0x68, 0x45, 0x23, 0x81, 0x37, 0x8d, 0x8c, 0x84, 0x37, 0x05, 0xbe, 0x6a, 0x64, 0xab,
+	0x4a, 0x2d, 0x1b, 0xe1, 0xab, 0x02, 0x5f, 0x33, 0x72, 0x12, 0xbe, 0xa6, 0x5f, 0x01, 0x8d, 0xfe,
+	0xeb, 0xee, 0x8d, 0x43, 0x14, 0xac, 0x1a, 0xf9, 0xaa, 0x52, 0xd3, 0x2c, 0x95, 0x69, 0xa3, 0x90,
+	0x5e, 0x83, 0xf2, 0x47, 0x64, 0xd8, 0xb2, 0x07, 0xc8, 0x6d, 0xd9, 0x01, 0x72, 0x8c, 0x39, 0x2a,
+	0x75, 0x1c, 0xd6, 0x57, 0x61, 0x91, 0x29, 0xf3, 0x70, 0xd8, 0xed, 0xf7, 0x3c, 0x3c, 0x44, 0x8e,
+	0x31, 0x4f, 0x64, 0x9b, 0xf9, 0x9f, 0x8e, 0x5e, 0xc3, 0x39, 0xab, 0x4c, 0xe7, 0xb7, 0x71, 0xb8,
+	0xc5, 0x66, 0xf5, 0x15, 0x28, 0xb1, 0x25, 0x5c, 0xbc, 0x10, 0x8b, 0x2b, 0x16, 0xe3, 0xc6, 0x65,
+	0x1b, 0x50, 0x89, 0xd5, 0x1f, 0xda, 0xc1, 0x21, 0x72, 0x8c, 0x22, 0x13, 0xff, 0x99, 0x8a, 0x2f,
+	0x70, 0xed, 0x9b, 0x74, 0x52, 0xbf, 0x0a, 0x45, 0xe4, 0x8d, 0x06, 0xdd, 0x70, 0xec, 0x23, 0x03,
+	0xaa, 0x4a, 0x6d, 0x61, 0xad, 0x5c, 0x17, 0x31, 0xac, 0x77, 0xbc, 0xd1, 0xc0, 0x2a, 0x10, 0x89,
+	0xa7, 0x63, 0x1f, 0xe9, 0x6f, 0x41, 0x91, 0x99, 0x8d, 0xb1, 0x6b, 0x68, 0x55, 0xa5, 0x56, 0xb0,
+	0x62, 0x40, 0x5f, 0x81, 0x9c, 0x67, 0x0f, 0x90, 0x51, 0xaa, 0x2a, 0x35, 0x35, 0xa1, 0x66, 0xdb,
+	0x1e, 0xa0, 0x66, 0xfe, 0x77, 0xca, 0x80, 0xca, 0xe8, 0x57, 0xa0, 0xe0, 0xdb, 0x8e, 0xd3, 0xf7,
+	0x7a, 0x1b, 0xc6, 0x02, 0x09, 0x4f, 0x33, 0xff, 0xea, 0xe8, 0x35, 0x54, 0x2d, 0x01, 0x4b, 0x22,
+	0x4d, 0xa3, 0xcc, 0x6c, 0x48, 0x8a, 0x34, 0x75, 0x13, 0xf2, 0x24, 0x39, 0x02, 0x43, 0xad, 0x66,
+	0x6b, 0xea, 0x9a, 0x56, 0x67, 0x79, 0x53, 0xdf, 0xb5, 0xdd, 0xd0, 0x62, 0x53, 0xe6, 0x0f, 0x0a,
+	0x94, 0x36, 0x5c, 0xf7, 0x7e, 0x1f, 0xb9, 0x0e, 0x31, 0x22, 0x20, 0x01, 0x0d, 0xc2, 0x61, 0xdf,
+	0xeb, 0x75, 0x29, 0xf7, 0x28, 0x6d, 0x54, 0x86, 0xd1, 0x80, 0xe9, 0x6d, 0xa8, 0x90, 0x6c, 0xed,
+	0xd2, 0x74, 0x8d, 0xc4, 0x32, 0xd4, 0xac, 0xe5, 0x3a, 0x4b, 0xeb, 0x3a, 0x4f, 0xeb, 0xfa, 0x53,
+	0x9e, 0xd6, 0xd6, 0x02, 0x59, 0xb3, 0x4b, 0xfe, 0x32, 0x2d, 0x82, 0x5e, 0x36, 0x9d, 0xde, 0xb7,
+	0x0a, 0xe8, 0x09, 0x7a, 0x64, 0x72, 0x3a, 0x47, 0x2d, 0xc9, 0xb1, 0x96, 0xc2, 0x51, 0x3b, 0x13,
+	0x8f, 0x77, 0x01, 0x76, 0xfb, 0xe4, 0x5c, 0x6d, 0x85, 0x68, 0x90, 0x76, 0xa6, 0xcc, 0x31, 0x68,
+	0x16, 0xf2, 0x91, 0x1d, 0x22, 0x87, 0xca, 0x5d, 0x93, 0xe4, 0x88, 0xea, 0x37, 0xa4, 0xa0, 0xc7,
+	0xea, 0x4e, 0x3c, 0x92, 0xb3, 0x10, 0x7c, 0x09, 0x45, 0xa6, 0xf1, 0x89, 0xed, 0xeb, 0xb7, 0x20,
+	0xcf, 0xfd, 0x42, 0x16, 0x5c, 0x9e, 0xd8, 0xf6, 0x89, 0xed, 0xd7, 0xa9, 0xf1, 0x1d, 0x2f, 0x1c,
+	0x8e, 0x2d, 0x26, 0xbd, 0xbc, 0x0e, 0x10, 0x83, 0x7a, 0x05, 0xb2, 0xcf, 0xd0, 0x98, 0x5a, 0x98,
+	0xb7, 0xc8, 0x5f, 0xfd, 0x02, 0x57, 0xcb, 0xe8, 0xb1, 0xc1, 0xfb, 0x99, 0x75, 0xc5, 0xfc, 0x45,
+	0x81, 0x32, 0xd3, 0xbc, 0x4b, 0x43, 0x40, 0x48, 0x34, 0x93, 0x24, 0xde, 0x9b, 0x20, 0x21, 0x44,
+	0x25, 0x2a, 0x3c, 0x89, 0xd9, 0xd2, 0xd8, 0xf2, 0x4c, 0xaa, 0xe5, 0xe9, 0xac, 0x8b, 0x27, 0xb1,
+	0xfe, 0x55, 0x81, 0xe2, 0x36, 0x0a, 0x42, 0xe4, 0x9c, 0xe0, 0x34, 0x21, 0x34, 0xe9, 0xb4, 0x99,
+	0x28, 0x6e, 0x9f, 0xe0, 0xd8, 0x15, 0x99, 0xa2, 0xba, 0x76, 0x61, 0x5a, 0xbc, 0x64, 0xe2, 0x8f,
+	0x40, 0x65, 0x38, 0x53, 0x78, 0x89, 0x54, 0xa9, 0x70, 0x38, 0xee, 0xc6, 0x96, 0x17, 0x28, 0xf0,
+	0x08, 0x8d, 0xf5, 0xcb, 0xa0, 0xb2, 0x49, 0xd9, 0x09, 0x40, 0x21, 0xca, 0xc9, 0xfc, 0x12, 0x4a,
+	0xb1, 0xb2, 0x3e, 0x0a, 0xf4, 0x0e, 0xcc, 0x23, 0xf6, 0x37, 0x72, 0xc5, 0xd2, 0x04, 0x1f, 0x16,
+	0xab, 0xf3, 0x34, 0x56, 0xbf, 0x1d, 0xbd, 0x96, 0xf6, 0xb7, 0xf8, 0xda, 0x59, 0x1c, 0x63, 0xba,
+	0x90, 0x9f, 0xc1, 0x84, 0xf8, 0xb8, 0x65, 0x52, 0xae, 0xb0, 0x2c, 0x3d, 0xd8, 0xc7, 0xaf, 0xb0,
+	0x56, 0xe2, 0xaa, 0x6a, 0x99, 0x1e, 0xcc, 0x73, 0x1b, 0xef, 0x1d, 0xb7, 0xb1, 0x92, 0x28, 0xeb,
+	0xff, 0x8d, 0x75, 0xf7, 0xa0, 0x44, 0x6f, 0xc0, 0x47, 0x68, 0xcc, 0xac, 0x34, 0x60, 0xde, 0x76,
+	0x9c, 0x21, 0x0a, 0x82, 0xa8, 0x62, 0xf1, 0xe1, 0xf4, 0x24, 0x35, 0x5f, 0x42, 0x59, 0x56, 0x30,
+	0x35, 0x38, 0x86, 0x44, 0x3c, 0xb1, 0x5b, 0x73, 0x91, 0x18, 0x70, 0x81, 0x18, 0xc0, 0xb7, 0x39,
+	0x1d, 0xfd, 0xef, 0x14, 0x30, 0x9e, 0xbe, 0xc0, 0x8f, 0xd1, 0x73, 0xe4, 0xf2, 0xb2, 0x76, 0xe2,
+	0xb3, 0xa2, 0x21, 0xd5, 0x30, 0xa2, 0xf9, 0xa2, 0x44, 0x4f, 0xae, 0x8d, 0xa7, 0x2a, 0x6e, 0xdf,
+	0x28, 0xb0, 0xc4, 0x12, 0x6f, 0x66, 0x1e, 0x27, 0x3d, 0x6f, 0x5a, 0x74, 0x3f, 0x8e, 0xb7, 0x62,
+	0x1a, 0xb9, 0x74, 0x1a, 0x7f, 0x65, 0x60, 0x51, 0x9c, 0xc7, 0x33, 0x33, 0x78, 0x90, 0x60, 0xa0,
+	0xae, 0xd5, 0xa6, 0x9d, 0x76, 0xae, 0x9d, 0x15, 0x9c, 0x56, 0xa2, 0x36, 0x72, 0xca, 0x1f, 0x44,
+	0x8a, 0xda, 0x11, 0xe7, 0x19, 0x14, 0xb5, 0x59, 0xe9, 0x8a, 0xd6, 0xc5, 0x46, 0xe7, 0xd3, 0x6b,
+	0xd7, 0x5d, 0x50, 0x25, 0x0e, 0xa7, 0xa9, 0xaf, 0x62, 0x69, 0xfb, 0xf4, 0x17, 0xca, 0x18, 0x34,
+	0x9e, 0x7a, 0x13, 0x37, 0xa9, 0xf2, 0xff, 0xde, 0xa4, 0x7f, 0x28, 0xb0, 0xc4, 0x0a, 0xfe, 0xbf,
+	0x4e, 0xb6, 0x6b, 0xc7, 0x42, 0xfd, 0x8f, 0xac, 0x5b, 0xe2, 0xec, 0xb4, 0x69, 0xdd, 0x4a, 0x9e,
+	0x1d, 0xd9, 0x1b, 0xa7, 0x89, 0x9f, 0xf9, 0x19, 0x2c, 0x6f, 0x79, 0xcf, 0x6d, 0xb7, 0xef, 0xb0,
+	0x37, 0x2d, 0x7d, 0x4a, 0x09, 0x8b, 0x2e, 0xc5, 0x97, 0x1e, 0x7d, 0x65, 0xb2, 0x67, 0xf0, 0xec,
+	0x57, 0x9b, 0xf9, 0xa7, 0x02, 0x2a, 0xf6, 0x10, 0x3e, 0xd8, 0xa5, 0x6d, 0xc7, 0x31, 0x17, 0xe5,
+	0x85, 0x8b, 0x8c, 0x84, 0x8b, 0xf2, 0x9b, 0xe7, 0x84, 0x93, 0x0c, 0xc9, 0x49, 0x4a, 0xad, 0x28,
+	0x66, 0x26, 0xfd, 0x31, 0xdd, 0x7d, 0x62, 0x41, 0x5b, 0x6c, 0xde, 0xa1, 0x5d, 0x08, 0xdf, 0xbc,
+	0x13, 0x1b, 0x32, 0x97, 0x6a, 0x48, 0x53, 0x03, 0xa0, 0x76, 0x34, 0x5d, 0xbc, 0xff, 0xcc, 0xfc,
+	0x3e, 0x0b, 0xda, 0x63, 0xec, 0xf5, 0x26, 0x42, 0x7f, 0xdd, 0xa8, 0x48, 0x77, 0xca, 0x75, 0xa9,
+	0x5d, 0x52, 0x52, 0xda, 0xa5, 0x4c, 0xa2, 0x5d, 0xe2, 0xf8, 0x8d, 0x44, 0x7b, 0x75, 0x43, 0xe0,
+	0x37, 0x13, 0x77, 0xd6, 0x4d, 0x81, 0xdf, 0xa2, 0x26, 0x71, 0xfc, 0x96, 0xc0, 0x6f, 0xd3, 0x56,
+	0x8a, 0xe3, 0xb7, 0x05, 0x7e, 0x87, 0xb6, 0x4d, 0x1c, 0xbf, 0x23, 0xf0, 0x75, 0xda, 0x1f, 0x71,
+	0x7c, 0x5d, 0xe0, 0x77, 0x69, 0x23, 0xc4, 0xf1, 0xbb, 0x52, 0x1c, 0x41, 0xc2, 0xe5, 0x54, 0x57,
+	0x25, 0x5c, 0xae, 0xab, 0x9a, 0x7c, 0xe7, 0x0a, 0xbc, 0x4d, 0xfb, 0x9e, 0xec, 0x94, 0x50, 0x2d,
+	0x48, 0xb8, 0x14, 0xaa, 0x72, 0x7a, 0xce, 0xfd, 0x98, 0x81, 0xc2, 0x96, 0x17, 0xa2, 0x1e, 0x1a,
+	0x06, 0xa9, 0x09, 0x97, 0x3c, 0x93, 0xd9, 0xa9, 0x17, 0x80, 0x52, 0x2b, 0x4d, 0x21, 0x4a, 0x02,
+	0x90, 0x4b, 0xc9, 0xa9, 0x45, 0x41, 0x94, 0xe3, 0xf7, 0x69, 0x00, 0xf4, 0x08, 0xbf, 0x2f, 0xf0,
+	0x07, 0x34, 0x00, 0xf3, 0x11, 0xfe, 0x40, 0xe0, 0x9b, 0x34, 0x00, 0x73, 0x11, 0xbe, 0x29, 0xf0,
+	0x2d, 0x1a, 0x80, 0x72, 0x84, 0x6f, 0x09, 0xfc, 0x21, 0x0d, 0x40, 0x25, 0xc2, 0x1f, 0xce, 0xd4,
+	0xd4, 0xed, 0x81, 0xd6, 0xc2, 0x5e, 0x68, 0xf7, 0x3d, 0xd6, 0x2e, 0xcd, 0x56, 0xb7, 0xf2, 0xa7,
+	0x2a, 0x93, 0x1d, 0x38, 0x1f, 0x7d, 0x6a, 0xf8, 0xb8, 0x1f, 0x1e, 0xe2, 0x51, 0x78, 0xa6, 0xad,
+	0xcc, 0xeb, 0x90, 0x23, 0xed, 0x2f, 0xb9, 0x0a, 0x0e, 0xfa, 0xc3, 0x20, 0x8c, 0x96, 0xb1, 0x81,
+	0xae, 0x43, 0xce, 0xb5, 0x83, 0x30, 0x2a, 0xab, 0xf4, 0xbf, 0xf9, 0x29, 0xa8, 0x3b, 0x87, 0xd8,
+	0x43, 0xdb, 0xa3, 0xc1, 0x1e, 0x1a, 0x12, 0x11, 0xda, 0x9d, 0xb3, 0x75, 0xf4, 0xbf, 0x5e, 0x05,
+	0x75, 0x1f, 0x8f, 0xc8, 0xa5, 0xb3, 0x8f, 0x1d, 0x7e, 0xbb, 0xc8, 0x10, 0xa1, 0xe3, 0xd1, 0xf5,
+	0xac, 0xe8, 0x58, 0xd1, 0xc8, 0xfc, 0x1c, 0x4a, 0x91, 0x55, 0xec, 0x0a, 0xd0, 0x6b, 0xa0, 0xb1,
+	0x0f, 0x05, 0x72, 0xa7, 0xc9, 0xeb, 0xa4, 0xca, 0xa6, 0x58, 0x1b, 0xf9, 0x4e, 0xd4, 0xdf, 0x67,
+	0xa6, 0xf6, 0xf7, 0xac, 0xb1, 0x37, 0x8f, 0x14, 0x38, 0xbf, 0xe1, 0xfb, 0xc8, 0x3b, 0x56, 0x87,
+	0xf9, 0xc7, 0x01, 0x65, 0x86, 0x8f, 0x03, 0x57, 0x21, 0x4f, 0x7e, 0x79, 0x59, 0x4e, 0x13, 0x66,
+	0x42, 0xfa, 0x0e, 0x94, 0x7c, 0xe2, 0xae, 0x2e, 0xb3, 0x90, 0xc7, 0x54, 0x7e, 0xd3, 0x4b, 0xee,
+	0x64, 0xaf, 0xde, 0x1c, 0x79, 0x34, 0x52, 0x57, 0x32, 0x55, 0x9a, 0x1f, 0x4b, 0x04, 0xe6, 0xd7,
+	0x0a, 0xbc, 0xf9, 0xa1, 0x17, 0x8c, 0x7c, 0x1f, 0x0f, 0x43, 0xe4, 0x30, 0x73, 0xce, 0x64, 0xc9,
+	0x1d, 0x98, 0xf3, 0xa8, 0x9b, 0x23, 0xa7, 0xc9, 0x6f, 0xd9, 0x44, 0x18, 0xf8, 0xb2, 0x48, 0xdc,
+	0xfc, 0x0a, 0x2e, 0x4a, 0xc9, 0xb7, 0xc3, 0x3e, 0x78, 0x50, 0x8f, 0xea, 0x6f, 0x27, 0x13, 0x30,
+	0xf9, 0x68, 0xda, 0x10, 0xd3, 0x2c, 0x0f, 0xb5, 0xe4, 0xf4, 0x4c, 0x99, 0xbf, 0x62, 0x42, 0xae,
+	0xe3, 0x8d, 0x06, 0xba, 0x06, 0x05, 0xe2, 0xa2, 0x2e, 0xf6, 0x50, 0xe5, 0x9c, 0x18, 0x85, 0x2f,
+	0x70, 0x45, 0x69, 0x5e, 0x85, 0xd2, 0x3e, 0x1e, 0xc4, 0xe6, 0x34, 0xb5, 0x88, 0xef, 0xce, 0x10,
+	0x87, 0x78, 0x47, 0xf9, 0x44, 0x15, 0x53, 0xfe, 0xde, 0xde, 0x1c, 0xfd, 0x5a, 0x72, 0xe3, 0xef,
+	0x00, 0x00, 0x00, 0xff, 0xff, 0x26, 0xba, 0xf2, 0x66, 0x41, 0x14, 0x00, 0x00,
 }
