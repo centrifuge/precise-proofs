@@ -109,12 +109,12 @@ func TestLeafNode_HashNode(t *testing.T) {
 	invalidSaltLeaf := LeafNode{
 		Property: prop,
 		Value:    []byte(strconv.FormatInt(int64(42), 10)),
-		Salt:     []byte{},
+		Salt:     []byte{1}, // Now we allow no salts
 	}
 	err = invalidSaltLeaf.HashNode(h, false)
-	assert.EqualError(t, err, "fieldName: Salt has incorrect length: 0 instead of 32")
+	assert.EqualError(t, err, "fieldName: Salt has incorrect length: 1 instead of 32")
 	err = invalidSaltLeaf.HashNode(h, true)
-	assert.EqualError(t, err, "[42]: Salt has incorrect length: 0 instead of 32")
+	assert.EqualError(t, err, "[42]: Salt has incorrect length: 1 instead of 32")
 
 }
 

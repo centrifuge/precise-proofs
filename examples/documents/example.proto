@@ -236,6 +236,12 @@ message ExampleNested {
   Name name = 2;
 }
 
+message NoSaltDocument {
+  string valueNoSalt = 1 [(proofs.no_salt) = true];
+  string valueSalt = 2 ;
+  Name name = 3 [(proofs.no_salt) = true];
+}
+
 message AppendFieldDocument {
   Name name = 1[ (proofs.append_fields) = true ];
   repeated Name names = 2[ (proofs.append_fields) = true ];

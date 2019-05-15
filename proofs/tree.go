@@ -661,10 +661,10 @@ func (n *LeafNode) HashNode(h hash.Hash, compact bool) error {
 func ConcatValues(propName proofspb.PropertyName, value []byte, salt []byte) (payload []byte, err error) {
 	payload = append(payload, AsBytes(propName)...)
 	payload = append(payload, []byte(value)...)
-	if len(salt) != 32 {
+	if len(salt) > 0 && len(salt) != 32 {
 		return []byte{}, fmt.Errorf("%s: Salt has incorrect length: %d instead of 32", propName, len(salt))
 	}
-	payload = append(payload, salt[:32]...)
+	payload = append(payload, salt...)
 	return
 }
 
