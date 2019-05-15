@@ -42,7 +42,6 @@ See below code sample (`examples/simple.go`) for a usage example. For detailed u
 
 ```go,
 	// ExampleDocument is a protobuf message
-<<<<<<< HEAD
     document := documentspb.ExampleDocument{
         Value1:      1,
         ValueA:      "Foo",
