@@ -173,7 +173,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 			return nil
 		}
 
-		// if append fields enabled if so, then sort and add the field
+		// if append fields enabled, sort and add the field
 		var keys []int
 		for k := range fieldMap {
 			keys = append(keys, int(k))
