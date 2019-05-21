@@ -203,9 +203,6 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 			if err != nil {
 				return errors.Wrapf(err, "failed to convert %s value to map with mapping_key %q", value.Type(), mappingKey)
 			}
-			if err != nil {
-				return errors.Wrapf(err, "failed to convert %s saltValue to map with mapping_key %q", value.Type(), mappingKey)
-			}
 			return f.handleValue(prop, mapValue, salts, readablePropertyLengthSuffix, outerFieldDescriptor)
 		}
 
