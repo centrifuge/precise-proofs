@@ -257,3 +257,12 @@ message ExampleWithPaddingField {
   bytes  valueB = 2 [(proofs.field_length) = 32 ];
   repeated proofs.Salt salts = 3;
 }
+
+message NamePadded {
+  string first = 1 [(proofs.field_length) = 10 ];
+  string last = 2 [(proofs.field_length) = 10 ];
+  int32 age = 3;
+}
+message AppendFieldPaddingDocument {
+  repeated NamePadded names = 1 [(proofs.append_fields) = true];
+}

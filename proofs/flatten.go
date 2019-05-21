@@ -109,6 +109,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 				continue
 			}
 
+			fixedLength := getKeyLengthFrom(innerFieldDescriptor)
 			protoTag := field.Tag.Get("protobuf")
 			name, num, err := ExtractFieldTags(protoTag)
 			if err != nil {
@@ -154,7 +155,12 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 
 			// if append fields are enabled, check if we can append the field
 			if appendFields {
-				b, err := f.valueToBytesArray(nextValue.Interface())
+				var b []byte
+				if fixedLength == 0 {
+					b, err = f.valueToBytesArray(nextValue.Interface())
+				} else {
+					b, err = f.valueToPaddingBytesArray(nextValue.Interface(), int(fixedLength))
+				}
 				if err != nil {
 					return errors.Wrapf(err, "failed to append the field %s", field.Name)
 				}
