@@ -54,22 +54,18 @@ See below code sample (`examples/simple.go`) for a usage example. For detailed u
         PaddingA:    "WillBePadded",
     }
 
-    doctree, err := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New()})
-    checkErr(err)
-    checkErr(doctree.AddLeavesFromDocument(&document))
-    checkErr(doctree.Generate())
+    doctree, _ := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New()})
+    doctree.AddLeavesFromDocument(&document)
+    doctree.Generate()
     fmt.Printf("Generated tree: %s\n", doctree.String())
 
-    // Generate the actual proof for a field. In this case the field called "ValueA".
-    proof, err := doctree.CreateProof("valueA")
-    checkErr(err)
-    proofJson, err := json.Marshal(proof)
-    checkErr(err)
+    // Generate the proof for a field. In this case the field called "ValueA".
+    proof, _ := doctree.CreateProof("valueA")
+    proofJson, _ := json.Marshal(proof)
     fmt.Println("Proof:\n", string(proofJson))
 
     // Validate the proof that was just generated
-    valid, err := doctree.ValidateProof(&proof)
-    checkErr(err)
+    valid, _ := doctree.ValidateProof(&proof)
 
     fmt.Printf("Proof validated: %v\n", valid)
     // Fixed Length Tree

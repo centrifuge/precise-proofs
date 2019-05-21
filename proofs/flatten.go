@@ -176,7 +176,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 			return nil
 		}
 
-		// if append fields enabled if so, then sort and add the field
+		// if append fields enabled, sort and add the field
 		var keys []int
 		for k := range fieldMap {
 			keys = append(keys, int(k))
@@ -209,9 +209,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 			if err != nil {
 				return errors.Wrapf(err, "failed to convert %s value to map with mapping_key %q", value.Type(), mappingKey)
 			}
-			if err != nil {
-				return errors.Wrapf(err, "failed to convert %s saltValue to map with mapping_key %q", value.Type(), mappingKey)
-			}
+      
 			return f.handleValue(prop, mapValue, salts, readablePropertyLengthSuffix, outerFieldDescriptor, skipSalts)
 		}
 
