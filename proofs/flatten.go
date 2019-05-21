@@ -112,6 +112,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 				continue
 			}
 
+			fixedLength := getKeyLengthFrom(innerFieldDescriptor)
 			protoTag := field.Tag.Get("protobuf")
 			name, num, err := ExtractFieldTags(protoTag)
 			if err != nil {
@@ -157,7 +158,12 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 
 			// if append fields are enabled, check if we can append the field
 			if appendFields {
-				b, err := f.valueToBytesArray(nextValue.Interface())
+				var b []byte
+				if fixedLength == 0 {
+					b, err = f.valueToBytesArray(nextValue.Interface())
+				} else {
+					b, err = f.valueToPaddingBytesArray(nextValue.Interface(), int(fixedLength))
+				}
 				if err != nil {
 					return errors.Wrapf(err, "failed to append the field %s", field.Name)
 				}
@@ -176,7 +182,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 			return nil
 		}
 
-		// if append fields enabled if so, then sort and add the field
+		// if append fields enabled, sort and add the field
 		var keys []int
 		for k := range fieldMap {
 			keys = append(keys, int(k))
@@ -208,9 +214,6 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 			mapValue, err := sliceToMap(value, mappingKey, keyLength)
 			if err != nil {
 				return errors.Wrapf(err, "failed to convert %s value to map with mapping_key %q", value.Type(), mappingKey)
-			}
-			if err != nil {
-				return errors.Wrapf(err, "failed to convert %s saltValue to map with mapping_key %q", value.Type(), mappingKey)
 			}
 			return f.handleValue(prop, mapValue, salts, readablePropertyLengthSuffix, outerFieldDescriptor, skipSalts)
 		}
@@ -501,12 +504,12 @@ func getMappingKeyFrom(fd *godescriptor.FieldDescriptorProto) (mappingKey string
 	return
 }
 
-func getNoSaltFrom(fd *godescriptor.FieldDescriptorProto) bool {
+func getAppendFieldsFrom(fd *godescriptor.FieldDescriptorProto) bool {
 	if fd == nil {
 		return false
 	}
 
-	extVal, err := proto.GetExtension(fd.Options, proofspb.E_NoSalt)
+	extVal, err := proto.GetExtension(fd.Options, proofspb.E_AppendFields)
 	if err == nil {
 		return *extVal.(*bool)
 	}
@@ -514,12 +517,12 @@ func getNoSaltFrom(fd *godescriptor.FieldDescriptorProto) bool {
 	return false
 }
 
-func getAppendFieldsFrom(fd *godescriptor.FieldDescriptorProto) bool {
+func getNoSaltFrom(fd *godescriptor.FieldDescriptorProto) bool {
 	if fd == nil {
 		return false
 	}
 
-	extVal, err := proto.GetExtension(fd.Options, proofspb.E_AppendFields)
+	extVal, err := proto.GetExtension(fd.Options, proofspb.E_NoSalt)
 	if err == nil {
 		return *extVal.(*bool)
 	}

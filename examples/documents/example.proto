@@ -236,12 +236,6 @@ message ExampleNested {
   Name name = 2;
 }
 
-message NoSaltDocument {
-  string valueNoSalt = 1 [(proofs.no_salt) = true];
-  string valueSalt = 2 ;
-  Name name = 3 [(proofs.no_salt) = true];
-}
-
 message AppendFieldDocument {
   Name name = 1[ (proofs.append_fields) = true ];
   repeated Name names = 2[ (proofs.append_fields) = true ];
@@ -257,9 +251,23 @@ message UnsupportedAppendDocument {
   ExampleNested nested = 2[ (proofs.append_fields) = true ];
 }
 
+message NoSaltDocument {
+  string valueNoSalt = 1 [(proofs.no_salt) = true];
+  string valueSalt = 2 ;
+  Name name = 3 [(proofs.no_salt) = true];
+}
 
 message ExampleWithPaddingField {
   string valueA = 1 [(proofs.field_length) = 32 ];
   bytes  valueB = 2 [(proofs.field_length) = 32 ];
   repeated proofs.Salt salts = 3;
+}
+
+message NamePadded {
+  string first = 1 [(proofs.field_length) = 10 ];
+  string last = 2 [(proofs.field_length) = 10 ];
+  int32 age = 3;
+}
+message AppendFieldPaddingDocument {
+  repeated NamePadded names = 1 [(proofs.append_fields) = true];
 }

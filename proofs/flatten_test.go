@@ -463,6 +463,77 @@ func TestFlatten_AppendFields(t *testing.T) {
 	assert.NotNil(t, leaves[5].Salt)
 }
 
+func TestFlatten_AppendField_Failure(t *testing.T) {
+	doc := &documentspb.UnsupportedAppendDocument{
+		Name: &documentspb.Name{
+			First: "hello, ",
+			Last:  "World",
+		},
+		Nested: &documentspb.ExampleNested{
+			HashedValue: []byte("some hashed value"),
+			Name: &documentspb.Name{
+				First: "hello, ",
+				Last:  "World",
+			},
+		},
+	}
+
+	_, err := FlattenMessage(doc, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty, false)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Got unsupported value of type *documentspb.Name")
+}
+
+func TestFlatten_AppendField_Padding_success(t *testing.T) {
+	doc := &documentspb.AppendFieldPaddingDocument{
+		Names: []*documentspb.NamePadded{
+			{
+				First: "Hello",
+				Last:  "world",
+				Age:   25,
+			},
+
+			{
+				First: "",
+				Last:  "World",
+				Age:   25,
+			},
+
+			{
+				First: "",
+				Last:  "",
+				Age:   0,
+			},
+		},
+	}
+
+	leaves, err := FlattenMessage(doc, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty, false)
+	assert.NoError(t, err)
+	assert.Len(t, leaves, 4)
+	assert.Equal(t, leaves[0].Property.ReadableName(), "names.length")
+	assert.Equal(t, leaves[1].Property.ReadableName(), "names[0]")
+	assert.Len(t, leaves[1].Value, 24) // first(10) + last(10) + age(4)
+	assert.Equal(t, leaves[2].Property.ReadableName(), "names[1]")
+	assert.Len(t, leaves[2].Value, 24) // first(10) + last(10) + age(4)
+	assert.Equal(t, leaves[3].Property.ReadableName(), "names[2]")
+	assert.Len(t, leaves[3].Value, 24) // first(10) + last(10) + age(4)
+}
+
+func TestFlatten_AppendField_Padding_failure(t *testing.T) {
+	doc := &documentspb.AppendFieldPaddingDocument{
+		Names: []*documentspb.NamePadded{
+			{
+				First: "Hello, world exceeds padding length",
+				Last:  "world",
+				Age:   25,
+			},
+		},
+	}
+
+	_, err := FlattenMessage(doc, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty, false)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "Field's length 35 is bigger than 10")
+}
+
 func TestFlatten_FieldNoSalt(t *testing.T) {
 	doc := &documentspb.NoSaltDocument{
 		ValueNoSalt: "ValueNoSalt",
@@ -489,24 +560,4 @@ func TestFlatten_FieldNoSalt(t *testing.T) {
 	assert.Equal(t, leaves[1].Property.ReadableName(), "name.last")
 	assert.Equal(t, leaves[1].Value, []byte("doe"))
 	assert.Nil(t, leaves[1].Salt)
-}
-
-func TestFlatten_AppendField_Failure(t *testing.T) {
-	doc := &documentspb.UnsupportedAppendDocument{
-		Name: &documentspb.Name{
-			First: "hello, ",
-			Last:  "World",
-		},
-		Nested: &documentspb.ExampleNested{
-			HashedValue: []byte("some hashed value"),
-			Name: &documentspb.Name{
-				First: "hello, ",
-				Last:  "World",
-			},
-		},
-	}
-
-	_, err := FlattenMessage(doc, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty, false)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "Got unsupported value of type *documentspb.Name")
 }
