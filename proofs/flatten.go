@@ -11,7 +11,7 @@ import (
 	"github.com/centrifuge/precise-proofs/proofs/proto"
 	"github.com/golang/protobuf/descriptor"
 	"github.com/golang/protobuf/proto"
-	go_descriptor "github.com/golang/protobuf/protoc-gen-go/descriptor"
+	godescriptor "github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"github.com/golang/protobuf/protoc-gen-go/generator"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
@@ -30,8 +30,13 @@ type messageFlattener struct {
 	fixedLengthFieldLeftPadding  bool
 }
 
-func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts Salts, readablePropertyLengthSuffix string, outerFieldDescriptor *go_descriptor.FieldDescriptorProto) (err error) {
+func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts Salts, readablePropertyLengthSuffix string, outerFieldDescriptor *godescriptor.FieldDescriptorProto) (err error) {
 	// handle special cases
+	// if the underlying value is nil, let's skip it
+	if !value.IsValid() {
+		return nil
+	}
+
 	switch v := value.Interface().(type) {
 	case []byte, *timestamp.Timestamp:
 		var valueBytesArray []byte
@@ -68,6 +73,10 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 		// lookup map key from field descriptor, if it exists
 		mappingKeyFieldName := generator.CamelCase(getMappingKeyFrom(outerFieldDescriptor))
 
+		// get append fields extension
+		appendFields := getAppendFieldsFrom(outerFieldDescriptor)
+		fieldMap := make(map[uint32][]byte)
+
 		_, messageDescriptor := descriptor.ForMessage(value.Addr().Interface().(descriptor.Message))
 
 		// Handle each field of the struct
@@ -100,6 +109,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 				continue
 			}
 
+			fixedLength := getKeyLengthFrom(innerFieldDescriptor)
 			protoTag := field.Tag.Get("protobuf")
 			name, num, err := ExtractFieldTags(protoTag)
 			if err != nil {
@@ -126,19 +136,68 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 					return errors.New("The option hashed_field is only supported for type `bytes`")
 				}
 
+				// if append fields, add it to the fields
+				if appendFields {
+					fieldMap[uint32(num)] = hashed
+					continue
+				}
+
 				f.appendLeaf(fieldProp, []byte{}, nil, readablePropertyLengthSuffix, hashed, true)
 				continue
 			}
+
+			var nextValue reflect.Value
 			if oneOfField {
-				err = f.handleValue(fieldProp, value.Field(i).Elem().Elem().Field(0), salts, readablePropertyLengthSuffix, innerFieldDescriptor)
+				nextValue = value.Field(i).Elem().Elem().Field(0)
 			} else {
-				err = f.handleValue(fieldProp, value.Field(i), salts, readablePropertyLengthSuffix, innerFieldDescriptor)
+				nextValue = value.Field(i)
 			}
 
+			// if append fields are enabled, check if we can append the field
+			if appendFields {
+				var b []byte
+				if fixedLength == 0 {
+					b, err = f.valueToBytesArray(nextValue.Interface())
+				} else {
+					b, err = f.valueToPaddingBytesArray(nextValue.Interface(), int(fixedLength))
+				}
+				if err != nil {
+					return errors.Wrapf(err, "failed to append the field %s", field.Name)
+				}
+
+				fieldMap[uint32(num)] = b
+				continue
+			}
+
+			err = f.handleValue(fieldProp, nextValue, salts, readablePropertyLengthSuffix, innerFieldDescriptor)
 			if err != nil {
 				return errors.Wrapf(err, "error handling field %s", field.Name)
 			}
 		}
+
+		if !appendFields {
+			return nil
+		}
+
+		// if append fields enabled, sort and add the field
+		var keys []int
+		for k := range fieldMap {
+			keys = append(keys, int(k))
+		}
+
+		sort.Ints(keys)
+		var finalValue []byte
+		for _, k := range keys {
+			finalValue = append(finalValue, fieldMap[uint32(k)]...)
+		}
+
+		salt, err := salts(prop.CompactName())
+		if err != nil {
+			return err
+		}
+
+		f.appendLeaf(prop, finalValue, salt, readablePropertyLengthSuffix, nil, false)
+
 	case reflect.Slice:
 		mappingKey := generator.CamelCase(getMappingKeyFrom(outerFieldDescriptor))
 		if mappingKey != "" {
@@ -149,9 +208,6 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 			mapValue, err := sliceToMap(value, mappingKey, keyLength)
 			if err != nil {
 				return errors.Wrapf(err, "failed to convert %s value to map with mapping_key %q", value.Type(), mappingKey)
-			}
-			if err != nil {
-				return errors.Wrapf(err, "failed to convert %s saltValue to map with mapping_key %q", value.Type(), mappingKey)
 			}
 			return f.handleValue(prop, mapValue, salts, readablePropertyLengthSuffix, outerFieldDescriptor)
 		}
@@ -171,7 +227,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 		// Handle each element of the slice
 		for i := 0; i < value.Len(); i++ {
 			elemProp := prop.SliceElemProp(FieldNumForSliceLength(i))
-			err := f.handleValue(elemProp, value.Index(i), salts, readablePropertyLengthSuffix, nil)
+			err := f.handleValue(elemProp, value.Index(i), salts, readablePropertyLengthSuffix, outerFieldDescriptor)
 			if err != nil {
 				return errors.Wrapf(err, "error handling slice element %d", i)
 			}
@@ -413,7 +469,7 @@ func sliceToMap(value reflect.Value, mappingKey string, keyLength uint64) (refle
 	return mapValue, nil
 }
 
-func getKeyLengthFrom(fd *go_descriptor.FieldDescriptorProto) (keyLength uint64) {
+func getKeyLengthFrom(fd *godescriptor.FieldDescriptorProto) (keyLength uint64) {
 	if fd == nil {
 		return
 	}
@@ -426,7 +482,7 @@ func getKeyLengthFrom(fd *go_descriptor.FieldDescriptorProto) (keyLength uint64)
 	return
 }
 
-func getMappingKeyFrom(fd *go_descriptor.FieldDescriptorProto) (mappingKey string) {
+func getMappingKeyFrom(fd *godescriptor.FieldDescriptorProto) (mappingKey string) {
 	if fd == nil {
 		return
 	}
@@ -437,6 +493,19 @@ func getMappingKeyFrom(fd *go_descriptor.FieldDescriptorProto) (mappingKey strin
 	}
 
 	return
+}
+
+func getAppendFieldsFrom(fd *godescriptor.FieldDescriptorProto) bool {
+	if fd == nil {
+		return false
+	}
+
+	extVal, err := proto.GetExtension(fd.Options, proofspb.E_AppendFields)
+	if err == nil {
+		return *extVal.(*bool)
+	}
+
+	return false
 }
 
 // Utility function to convert data to `[]byte` representation using BigEndian encoding
