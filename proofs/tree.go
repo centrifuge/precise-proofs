@@ -19,6 +19,8 @@ Fields can be excluded from the flattener by setting the custom protobuf option
 
 Fields can be treated as raw (already hashed values) by setting the option `proofs.hashed_field`.
 
+Field salts are optional. This will make the proofs simpler to validate. Only recommended on fields that have higher variadic nature, like hashes.
+
 	message Document {
 		string value_a = 1;
 		string value_b = 2 [
@@ -26,6 +28,9 @@ Fields can be treated as raw (already hashed values) by setting the option `proo
 		];
 		bytes value_c = 3 [
 			(proofs.hashed_field) = true
+		];
+		bytes value_d = 4 [
+			(proofs.no_salt) = true
 		];
 	}
 
