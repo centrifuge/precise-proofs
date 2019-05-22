@@ -176,6 +176,102 @@ Library supports padding bytes and string field, one usage of `proto.field_lengt
 Fixed Length Tree
 
 `TreeOption.TreeDepth` is used to define an optional fixed length tree. If this option is provided, the tree will be extended to have the depth specified in the option, so a fixed number of `(2**TreeDepth)` leaves. Empty leaves with hash `hash([]byte{})` will be added to the tree if client does not provide enough leaf nodes.  If the provided leaf nodes surpass `(2**TreeDepth)`, an error will be returned.
+
+Append Fields
+
+Simple Structure:
+Append Field property when enabled on a protobuf message will flatten the message fields into a single leaf. Leaves are appended in sorted order of the field names.
+
+	message Name {
+		string first = 1;
+    	string last = 2;
+	}
+
+	message Document {
+		Name name = 1 [ (proofs.append_fields) = true; ];
+	}
+
+Result:
+	- document.name = first+last
+
+Example:
+	{
+		"name": {
+			"first": "john",
+			"last": "doe"
+		}
+	}
+
+Result:
+	- document.name = "johndoe"
+
+
+Repeated field:
+Append field property when enabled on repeated protobuf message will flatten structure as follows.
+
+	message Document {
+		repeated Name names = 1 [ (proofs.append_fields) = true; ];
+	}
+
+Result:
+	- document.names[0] = name[0].first + name[0].last
+	- document.names[1] = name[1].first + name[1].last
+
+Example:
+	{
+		names: [
+			{
+				"first": "john",
+				"last": "doe"
+			},
+
+			{
+				"first": "bob",
+				"last": "barker"
+			}
+		]
+	}
+
+Result:
+	- document.names[0] = "johndoe"
+	- document.names[1] = "bobbarker"
+
+
+Mapped Field and Repeated field with `mapping_key` enabled:
+Append field property when enabled on Map or repeated field with `mapping_key` enabled will flatten structure as follows.
+
+	message PhoneNumber {
+    	string type = 1;
+    	string country_code = 2;
+    	string number = 3;
+	}
+
+	message Document {
+		repeated phone_numbers PhoneNumber = 3 [
+      		(proofs.mapping_key) = "type";
+      		(proofs.append_fields) = true;
+  		];
+	}
+
+Result:
+	- document.phone_numbers[phone_numbers[0].type] = phone_number[0].country_code + phone_numbers[0].number
+	- document.phone_numbers[phone_numbers[1].type] = phone_number[1].country_code + phone_numbers[1].number
+
+Example:
+	{
+		"phone_numbers": [
+			{
+				"type": "home",
+				"country_code": "+1",
+				"number": "123 4567 89"
+			}
+		]
+	}
+
+Result:
+	- document.phone_numbers["home"] = "+1123 4567 89"
+
+
 */
 package proofs
 
