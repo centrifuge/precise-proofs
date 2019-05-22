@@ -251,6 +251,11 @@ message UnsupportedAppendDocument {
   ExampleNested nested = 2[ (proofs.append_fields) = true ];
 }
 
+message NoSaltDocument {
+  string valueNoSalt = 1 [(proofs.no_salt) = true];
+  string valueSalt = 2 ;
+  Name name = 3 [(proofs.no_salt) = true];
+}
 
 message ExampleWithPaddingField {
   string valueA = 1 [(proofs.field_length) = 32 ];

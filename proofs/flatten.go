@@ -30,12 +30,15 @@ type messageFlattener struct {
 	fixedLengthFieldLeftPadding  bool
 }
 
-func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts Salts, readablePropertyLengthSuffix string, outerFieldDescriptor *godescriptor.FieldDescriptorProto) (err error) {
+func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts Salts, readablePropertyLengthSuffix string, outerFieldDescriptor *godescriptor.FieldDescriptorProto, skipSalts bool) (err error) {
 	// handle special cases
 	// if the underlying value is nil, let's skip it
 	if !value.IsValid() {
 		return nil
 	}
+
+	// Check if we should skip salts from now on
+	skipSalts = skipSalts || getNoSaltFrom(outerFieldDescriptor)
 
 	switch v := value.Interface().(type) {
 	case []byte, *timestamp.Timestamp:
@@ -67,7 +70,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 	// handle generic recursive cases
 	switch value.Kind() {
 	case reflect.Ptr:
-		return f.handleValue(prop, value.Elem(), salts, readablePropertyLengthSuffix, outerFieldDescriptor)
+		return f.handleValue(prop, value.Elem(), salts, readablePropertyLengthSuffix, outerFieldDescriptor, skipSalts)
 	case reflect.Struct:
 
 		// lookup map key from field descriptor, if it exists
@@ -169,7 +172,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 				continue
 			}
 
-			err = f.handleValue(fieldProp, nextValue, salts, readablePropertyLengthSuffix, innerFieldDescriptor)
+			err = f.handleValue(fieldProp, nextValue, salts, readablePropertyLengthSuffix, innerFieldDescriptor, skipSalts)
 			if err != nil {
 				return errors.Wrapf(err, "error handling field %s", field.Name)
 			}
@@ -191,9 +194,12 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 			finalValue = append(finalValue, fieldMap[uint32(k)]...)
 		}
 
-		salt, err := salts(prop.CompactName())
-		if err != nil {
-			return err
+		var salt []byte
+		if !skipSalts {
+			salt, err = salts(prop.CompactName())
+			if err != nil {
+				return err
+			}
 		}
 
 		f.appendLeaf(prop, finalValue, salt, readablePropertyLengthSuffix, nil, false)
@@ -209,7 +215,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 			if err != nil {
 				return errors.Wrapf(err, "failed to convert %s value to map with mapping_key %q", value.Type(), mappingKey)
 			}
-			return f.handleValue(prop, mapValue, salts, readablePropertyLengthSuffix, outerFieldDescriptor)
+			return f.handleValue(prop, mapValue, salts, readablePropertyLengthSuffix, outerFieldDescriptor, skipSalts)
 		}
 
 		// Append length of slice as tree leaf
@@ -227,7 +233,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 		// Handle each element of the slice
 		for i := 0; i < value.Len(); i++ {
 			elemProp := prop.SliceElemProp(FieldNumForSliceLength(i))
-			err := f.handleValue(elemProp, value.Index(i), salts, readablePropertyLengthSuffix, outerFieldDescriptor)
+			err := f.handleValue(elemProp, value.Index(i), salts, readablePropertyLengthSuffix, outerFieldDescriptor, skipSalts)
 			if err != nil {
 				return errors.Wrapf(err, "error handling slice element %d", i)
 			}
@@ -253,7 +259,7 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 			if err != nil {
 				return errors.Wrapf(err, "failed to create elem prop for %q", k)
 			}
-			err = f.handleValue(elemProp, value.MapIndex(k), salts, readablePropertyLengthSuffix, outerFieldDescriptor)
+			err = f.handleValue(elemProp, value.MapIndex(k), salts, readablePropertyLengthSuffix, outerFieldDescriptor, skipSalts)
 			if err != nil {
 				return errors.Wrapf(err, "error handling slice element %s", k)
 			}
@@ -277,9 +283,12 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 		if err != nil {
 			return err
 		}
-		salt, err := salts(prop.CompactName())
-		if err != nil {
-			return err
+		var salt []byte
+		if !skipSalts {
+			salt, err = salts(prop.CompactName())
+			if err != nil {
+				return err
+			}
 		}
 		f.appendLeaf(prop, valueBytesArray, salt, readablePropertyLengthSuffix, []byte{}, false)
 	}
@@ -392,7 +401,7 @@ func FlattenMessage(message proto.Message, salts Salts, readablePropertyLengthSu
 		fixedLengthFieldLeftPadding:  fixedLengthFieldLeftPadding,
 	}
 
-	err = f.handleValue(parentProp, reflect.ValueOf(message), salts, readablePropertyLengthSuffix, nil)
+	err = f.handleValue(parentProp, reflect.ValueOf(message), salts, readablePropertyLengthSuffix, nil, false)
 	if err != nil {
 		return
 	}
@@ -501,6 +510,19 @@ func getAppendFieldsFrom(fd *godescriptor.FieldDescriptorProto) bool {
 	}
 
 	extVal, err := proto.GetExtension(fd.Options, proofspb.E_AppendFields)
+	if err == nil {
+		return *extVal.(*bool)
+	}
+
+	return false
+}
+
+func getNoSaltFrom(fd *godescriptor.FieldDescriptorProto) bool {
+	if fd == nil {
+		return false
+	}
+
+	extVal, err := proto.GetExtension(fd.Options, proofspb.E_NoSalt)
 	if err == nil {
 		return *extVal.(*bool)
 	}

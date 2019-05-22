@@ -460,6 +460,7 @@ func TestFlatten_AppendFields(t *testing.T) {
 	assert.Equal(t, leaves[4].Property.ReadableName(), "phone_numbers.length")
 	assert.Equal(t, leaves[5].Property.ReadableName(), "phone_numbers[home]")
 	assert.Equal(t, leaves[5].Value, []byte("+1123456789"))
+	assert.NotNil(t, leaves[5].Salt)
 }
 
 func TestFlatten_AppendField_Failure(t *testing.T) {
@@ -531,4 +532,32 @@ func TestFlatten_AppendField_Padding_failure(t *testing.T) {
 	_, err := FlattenMessage(doc, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty, false)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "Field's length 35 is bigger than 10")
+}
+
+func TestFlatten_FieldNoSalt(t *testing.T) {
+	doc := &documentspb.NoSaltDocument{
+		ValueNoSalt: "ValueNoSalt",
+		ValueSalt:   "ValueSalt",
+		Name:				 &documentspb.Name{
+			First: "john",
+			Last: "doe",
+		},
+	}
+	leaves, err := FlattenMessage(doc, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty, false)
+	assert.Nil(t, err)
+	assert.Len(t, leaves, 4)
+	assert.Equal(t, leaves[2].Property.ReadableName(), "valueNoSalt")
+	assert.Equal(t, leaves[2].Value, []byte("ValueNoSalt"))
+	assert.Nil(t, leaves[2].Salt)
+	assert.Equal(t, leaves[3].Property.ReadableName(), "valueSalt")
+	assert.Equal(t, leaves[3].Value, []byte("ValueSalt"))
+	assert.NotNil(t, leaves[3].Salt)
+
+	// Check nested message doesn't have salts
+	assert.Equal(t, leaves[0].Property.ReadableName(), "name.first")
+	assert.Equal(t, leaves[0].Value, []byte("john"))
+	assert.Nil(t, leaves[0].Salt)
+	assert.Equal(t, leaves[1].Property.ReadableName(), "name.last")
+	assert.Equal(t, leaves[1].Value, []byte("doe"))
+	assert.Nil(t, leaves[1].Salt)
 }

@@ -15,6 +15,7 @@ extend google.protobuf.FieldOptions {
   uint64 field_length = 2862102;
   string mapping_key = 2862103;
   bool append_fields = 2862104;
+  bool no_salt = 2862105;
 }
 
 message MerkleHash {
