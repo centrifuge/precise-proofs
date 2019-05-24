@@ -3,8 +3,8 @@ package documentspb
 import (
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
 	"github.com/centrifuge/precise-proofs/proofs/proto"
+	"github.com/golang/protobuf/ptypes"
 )
 
 var salt []byte = []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225}
@@ -66,7 +66,7 @@ var ExampleOneofSampleDocument = OneofSample{
 }
 
 var ExampleContainSaltsDocument = ContainSalts{
-  ValueA:     "valueAValue",
-  ValueB:     10,
-  Salts:      []*proofspb.Salt{{Compact: []byte{0,0,0,1}, Value: []byte{0x1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x2}},{Compact: []byte{0,0,0,2}, Value: []byte{0x3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0x4}}},
+	ValueA: "valueAValue",
+	ValueB: 10,
+	Salts:  []*proofspb.Salt{{Compact: []byte{0, 0, 0, 1}, Value: []byte{0x1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x2}}, {Compact: []byte{0, 0, 0, 2}, Value: []byte{0x3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x4}}},
 }
