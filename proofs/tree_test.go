@@ -16,6 +16,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/xsleonard/go-merkle"
+	"golang.org/x/crypto/blake2b"
 )
 
 var testSalt = []byte{213, 85, 144, 21, 65, 130, 94, 93, 64, 97, 45, 34, 1, 66, 199, 66, 140, 56, 92, 72, 224, 36, 95, 211, 164, 11, 142, 59, 100, 103, 155, 225}
@@ -29,6 +30,7 @@ func NewSaltForErrorTest(compact []byte) (salt []byte, err error) {
 }
 
 var sha256Hash = sha256.New()
+var blake2bHash, _ = blake2b.New512([]byte{1, 2, 3, 4})
 
 type UnsupportedType struct {
 	supported bool
@@ -1640,10 +1642,10 @@ func TestTree_EmptyLeavesAdded(t *testing.T) {
 	assert.Len(t, leaves, 8)
 }
 
-func TestTree_Md5LeafSha256InternalHashFunction(t *testing.T) {
+func TestTree_Blake2b512LeafSha256InternalHashFunction(t *testing.T) {
 	doctree, err := NewDocumentTree(TreeOptions{
 		Hash:     sha256Hash,
-		LeafHash: md5.New(),
+		LeafHash: blake2bHash,
 		Salts:    NewSaltForTest,
 	})
 	assert.Nil(t, err)
@@ -1651,13 +1653,13 @@ func TestTree_Md5LeafSha256InternalHashFunction(t *testing.T) {
 	err = doctree.AddLeavesFromDocument(&documentspb.LongDocumentExample)
 	assert.Nil(t, err)
 
-	//leaf should hashed by md5
+	//leaf should hashed by Blake2b
 	for _, leaf := range doctree.GetLeaves() {
 		hashByInternal := leaf.Hash
-		assert.Len(t, leaf.Hash, 16, "length of md5 hash is 16")
+		assert.Len(t, leaf.Hash, 64, "length of blake2b512 hash is 64")
 		leaf.Hash = []byte{}
 		leaf.Hashed = false
-		leaf.HashNode(md5.New(), false)
+		leaf.HashNode(blake2bHash, false)
 		assert.Equal(t, hashByInternal, leaf.Hash)
 	}
 
@@ -1667,7 +1669,7 @@ func TestTree_Md5LeafSha256InternalHashFunction(t *testing.T) {
 	rootHash := doctree.rootHash
 	assert.Len(t, rootHash, 32, "length of sha256 hash is 32")
 
-	expectedHash := []byte{0x6b, 0x24, 0x6, 0xf, 0x81, 0xa4, 0x13, 0x10, 0x9d, 0x79, 0xe1, 0xdd, 0x29, 0xbf, 0x55, 0x8d, 0x3e, 0x52, 0x7a, 0x1, 0xbf, 0x47, 0xdb, 0xa, 0x57, 0x22, 0xc0, 0x64, 0x83, 0xcc, 0xde, 0x13}
+	expectedHash := []byte{0x1, 0xe1, 0xe7, 0x59, 0x2a, 0xf5, 0xba, 0xa3, 0xbc, 0x5a, 0x3f, 0xb0, 0x82, 0xd4, 0xa1, 0x76, 0xad, 0xc3, 0x8b, 0x52, 0x4a, 0x68, 0xc, 0x30, 0x37, 0x3a, 0xda, 0xda, 0x9a, 0x41, 0xd6, 0xe0}
 	assert.Equal(t, expectedHash, rootHash, "Hash should match")
 	proof, err := doctree.CreateProof("value0")
 	assert.Nil(t, err)
@@ -1677,9 +1679,9 @@ func TestTree_Md5LeafSha256InternalHashFunction(t *testing.T) {
 	assert.True(t, valid)
 }
 
-func TestTree_Sha256LeafMd5InternalHashFunction(t *testing.T) {
+func TestTree_Sha256LeafBlake2b512InternalHashFunction(t *testing.T) {
 	doctree, err := NewDocumentTree(TreeOptions{
-		Hash:     md5.New(),
+		Hash:     blake2bHash,
 		LeafHash: sha256Hash,
 		Salts:    NewSaltForTest,
 	})
@@ -1702,9 +1704,9 @@ func TestTree_Sha256LeafMd5InternalHashFunction(t *testing.T) {
 	assert.Nil(t, err)
 
 	rootHash := doctree.rootHash
-	assert.Len(t, rootHash, 16, "length of MD5 hash is 16")
+	assert.Len(t, rootHash, 64, "length of Blake2b512 hash is 64")
 
-	expectedHash := []byte{0x17, 0x90, 0x9b, 0xdf, 0x85, 0x6b, 0x9a, 0xef, 0xe2, 0x58, 0x18, 0x89, 0xc0, 0x4e, 0xe2, 0x6f}
+	expectedHash := []byte{0x7f, 0x63, 0x55, 0x32, 0x9f, 0x35, 0x8a, 0x5f, 0xdc, 0x54, 0x7a, 0xbb, 0x38, 0x3d, 0x8f, 0x3b, 0xe7, 0x66, 0x17, 0x12, 0xaa, 0x82, 0xb4, 0x7d, 0x50, 0xdf, 0x19, 0xd0, 0x90, 0xad, 0x6b, 0x4a, 0x86, 0xdd, 0x7f, 0x65, 0xbb, 0x9c, 0xbc, 0x91, 0x48, 0xe6, 0xf9, 0x42, 0x63, 0xdb, 0x73, 0x8d, 0x7d, 0xd9, 0x3f, 0xd, 0x2a, 0xb7, 0x44, 0x7a, 0xce, 0x47, 0x94, 0xe1, 0x15, 0xeb, 0xa7, 0x9f}
 	assert.Equal(t, expectedHash, rootHash, "Hash should match")
 	proof, err := doctree.CreateProof("value0")
 	assert.Nil(t, err)
