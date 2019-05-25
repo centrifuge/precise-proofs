@@ -3,6 +3,7 @@
 package main
 
 import (
+	"crypto/md5"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
@@ -25,7 +26,7 @@ func main() {
 		PaddingA: "WillBePadded",
 	}
 
-	doctree, err := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New()})
+	doctree, err := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New(), LeafHash: md5.New()})
 	checkErr(err)
 
 	checkErr(doctree.AddLeavesFromDocument(&document))

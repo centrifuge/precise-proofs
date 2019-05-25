@@ -54,7 +54,7 @@ See below code sample (`examples/simple.go`) for a usage example. For detailed u
         PaddingA:    "WillBePadded",
     }
 
-    doctree, _ := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New()})
+    doctree, _ := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New(), LeafHash: md5.New()})
     doctree.AddLeavesFromDocument(&document)
     doctree.Generate()
     fmt.Printf("Generated tree: %s\n", doctree.String())
