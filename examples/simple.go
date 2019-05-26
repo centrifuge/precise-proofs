@@ -9,6 +9,7 @@ import (
 
 	"github.com/centrifuge/precise-proofs/examples/documents"
 	"github.com/centrifuge/precise-proofs/proofs"
+	"golang.org/x/crypto/blake2b"
 )
 
 func main() {
@@ -25,7 +26,10 @@ func main() {
 		PaddingA: "WillBePadded",
 	}
 
-	doctree, err := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New()})
+	blake2b256, err := blake2b.New256([]byte{1, 2, 3, 4})
+	checkErr(err)
+
+	doctree, err := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New(), LeafHash: blake2b256})
 	checkErr(err)
 
 	checkErr(doctree.AddLeavesFromDocument(&document))
