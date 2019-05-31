@@ -19,6 +19,8 @@ Fields can be excluded from the flattener by setting the custom protobuf option
 
 Fields can be treated as raw (already hashed values) by setting the option `proofs.hashed_field`.
 
+Field salts are optional. This will make the proofs simpler to validate. Only recommended on fields that have higher variadic nature, like hashes.
+
 	message Document {
 		string value_a = 1;
 		string value_b = 2 [
@@ -26,6 +28,9 @@ Fields can be treated as raw (already hashed values) by setting the option `proo
 		];
 		bytes value_c = 3 [
 			(proofs.hashed_field) = true
+		];
+		bytes value_d = 4 [
+			(proofs.no_salt) = true
 		];
 	}
 
@@ -171,6 +176,106 @@ Library supports padding bytes and string field, one usage of `proto.field_lengt
 Fixed Length Tree
 
 `TreeOption.TreeDepth` is used to define an optional fixed length tree. If this option is provided, the tree will be extended to have the depth specified in the option, so a fixed number of `(2**TreeDepth)` leaves. Empty leaves with hash `hash([]byte{})` will be added to the tree if client does not provide enough leaf nodes.  If the provided leaf nodes surpass `(2**TreeDepth)`, an error will be returned.
+
+Use Customized Leaf Hash Function
+
+`TreeOption.LeafHash` is used to define hash funtion used by leaf node, when do hashing on leaf node of document tree this hash funtion will be used instead of `TreeOption.Hash`. If this option is not provided, then `TreeOption.Hash` will be used when do leaf node hashing operation.
+
+Append Fields
+
+Simple Structure:
+Append Field property when enabled on a protobuf message will flatten the message fields into a single leaf. Leaves are appended in sorted order of the field names.
+
+	message Name {
+		string first = 1;
+    	string last = 2;
+	}
+
+	message Document {
+		Name name = 1 [ (proofs.append_fields) = true; ];
+	}
+
+Result:
+	- document.name = first+last
+
+Example:
+	{
+		"name": {
+			"first": "john",
+			"last": "doe"
+		}
+	}
+
+Result:
+	- document.name = "johndoe"
+
+
+Repeated field:
+Append field property when enabled on repeated protobuf message will flatten structure as follows.
+
+	message Document {
+		repeated Name names = 1 [ (proofs.append_fields) = true; ];
+	}
+
+Result:
+	- document.names[0] = name[0].first + name[0].last
+	- document.names[1] = name[1].first + name[1].last
+
+Example:
+	{
+		names: [
+			{
+				"first": "john",
+				"last": "doe"
+			},
+
+			{
+				"first": "bob",
+				"last": "barker"
+			}
+		]
+	}
+
+Result:
+	- document.names[0] = "johndoe"
+	- document.names[1] = "bobbarker"
+
+
+Mapped Field and Repeated field with `mapping_key` enabled:
+Append field property when enabled on Map or repeated field with `mapping_key` enabled will flatten structure as follows.
+
+	message PhoneNumber {
+    	string type = 1;
+    	string country_code = 2;
+    	string number = 3;
+	}
+
+	message Document {
+		repeated phone_numbers PhoneNumber = 3 [
+      		(proofs.mapping_key) = "type";
+      		(proofs.append_fields) = true;
+  		];
+	}
+
+Result:
+	- document.phone_numbers[phone_numbers[0].type] = phone_number[0].country_code + phone_numbers[0].number
+	- document.phone_numbers[phone_numbers[1].type] = phone_number[1].country_code + phone_numbers[1].number
+
+Example:
+	{
+		"phone_numbers": [
+			{
+				"type": "home",
+				"country_code": "+1",
+				"number": "123 4567 89"
+			}
+		]
+	}
+
+Result:
+	- document.phone_numbers["home"] = "+1123 4567 89"
+
+
 */
 package proofs
 
@@ -203,6 +308,7 @@ type TreeOptions struct {
 	// does not collide with potential field names of your own proto structs.
 	ReadablePropertyLengthSuffix string
 	Hash                         hash.Hash
+	LeafHash                     hash.Hash
 	// ParentPrefix defines an arbitrary prefix to prepend to the parent, so all fields are prepended with it
 	ParentPrefix                Property
 	CompactProperties           bool
@@ -256,6 +362,7 @@ type DocumentTree struct {
 	salts                        Salts
 	propertyList                 []Property
 	hash                         hash.Hash
+	leafHash                     hash.Hash
 	readablePropertyLengthSuffix string
 	parentPrefix                 Property
 	compactProperties            bool
@@ -295,6 +402,11 @@ func NewDocumentTree(proofOpts TreeOptions) (DocumentTree, error) {
 		leavesNo = 1 << proofOpts.TreeDepth
 	}
 
+	leafHash := proofOpts.Hash
+	if proofOpts.LeafHash != nil {
+		leafHash = proofOpts.LeafHash
+	}
+
 	return DocumentTree{
 		propertyList:                 []Property{},
 		merkleTree:                   merkle.NewTreeWithOpts(opts),
@@ -302,6 +414,7 @@ func NewDocumentTree(proofOpts TreeOptions) (DocumentTree, error) {
 		readablePropertyLengthSuffix: readablePropertyLengthSuffix,
 		leaves:                       []LeafNode{},
 		hash:                         proofOpts.Hash,
+		leafHash:                     leafHash,
 		parentPrefix:                 proofOpts.ParentPrefix,
 		compactProperties:            proofOpts.CompactProperties,
 		fixedLengthFieldLeftPadding:  proofOpts.FixedLengthFieldLeftPadding,
@@ -384,7 +497,9 @@ func (doctree *DocumentTree) AddLeavesFromDocument(document proto.Message) (err 
 			return err
 		}
 	}
-	leaves, err := FlattenMessage(document, salts, doctree.readablePropertyLengthSuffix, doctree.hash, doctree.compactProperties, doctree.parentPrefix, doctree.fixedLengthFieldLeftPadding)
+
+	leaves, err := FlattenMessage(document, salts, doctree.readablePropertyLengthSuffix, doctree.leafHash, doctree.compactProperties, doctree.parentPrefix, doctree.fixedLengthFieldLeftPadding)
+
 	if err != nil {
 		return err
 	}
@@ -428,7 +543,7 @@ func (doctree *DocumentTree) Generate() error {
 	if doctree.fixedNoOfLeafs != 0 {
 		emptyNoToBeAdded := doctree.fixedNoOfLeafs - uint(len(doctree.leaves))
 		if emptyNoToBeAdded > 0 {
-			hash, err := emptyNodeHash(doctree.hash)
+			hash, err := emptyNodeHash(doctree.leafHash)
 			if err != nil {
 				return err
 			}
@@ -441,7 +556,7 @@ func (doctree *DocumentTree) Generate() error {
 	hashes := make([][]byte, len(doctree.leaves))
 	for i, leaf := range doctree.leaves {
 		if len(leaf.Hash) < 1 || leaf.Hashed {
-			err := leaf.HashNode(doctree.hash, doctree.compactProperties)
+			err := leaf.HashNode(doctree.leafHash, doctree.compactProperties)
 			if err != nil {
 				return err
 			}
@@ -610,7 +725,7 @@ func (doctree *DocumentTree) pickHashesFromMerkleTreeAsList(leaf uint64) (hashes
 func (doctree *DocumentTree) ValidateProof(proof *proofspb.Proof) (valid bool, err error) {
 	var fieldHash []byte
 	if len(proof.Hash) == 0 {
-		fieldHash, err = CalculateHashForProofField(proof, doctree.hash)
+		fieldHash, err = CalculateHashForProofField(proof, doctree.leafHash)
 	} else {
 		fieldHash = proof.Hash
 	}
@@ -661,10 +776,10 @@ func (n *LeafNode) HashNode(h hash.Hash, compact bool) error {
 func ConcatValues(propName proofspb.PropertyName, value []byte, salt []byte) (payload []byte, err error) {
 	payload = append(payload, AsBytes(propName)...)
 	payload = append(payload, []byte(value)...)
-	if len(salt) != 32 {
+	if len(salt) > 0 && len(salt) != 32 {
 		return []byte{}, fmt.Errorf("%s: Salt has incorrect length: %d instead of 32", propName, len(salt))
 	}
-	payload = append(payload, salt[:32]...)
+	payload = append(payload, salt...)
 	return
 }
 
@@ -699,9 +814,9 @@ func (m sortByCompactName) Less(i, j int) bool {
 // HashTwoValues concatenate two hashes to calculate hash out of the result. This is used in the merkleTree calculation code
 // as well as the validation code.
 func HashTwoValues(a []byte, b []byte, hashFunc hash.Hash) (hash []byte) {
-	data := make([]byte, hashFunc.Size()*2)
-	copy(data[:hashFunc.Size()], a[:hashFunc.Size()])
-	copy(data[hashFunc.Size():], b[:hashFunc.Size()])
+	data := make([]byte, len(a)+len(b))
+	copy(data[:len(a)], a)
+	copy(data[len(a):], b)
 	return hashBytes(hashFunc, data)
 }
 
@@ -770,7 +885,6 @@ func ValidateProofHashes(hash []byte, hashes []*proofspb.MerkleHash, rootHash []
 			hash = HashTwoValues(hashes[i].Left, hash, hashFunc)
 		}
 	}
-
 	if !bytes.Equal(hash, rootHash) {
 		return false, errors.New("Hash does not match")
 	}

@@ -29,8 +29,9 @@ message ExampleDocument {
   ];
   Enum enum_type = 10;
   bool valueBool = 12;
-  string paddingA = 13 [(proofs.field_length) = 32 ];
-  bytes  paddingB = 14 [(proofs.field_length) = 32 ];
+  Name name = 13[ (proofs.append_fields) = true ];
+  string paddingA = 14 [(proofs.field_length) = 32 ];
+  bytes  paddingB = 15 [(proofs.field_length) = 32 ];
   repeated proofs.Salt salts = 11;
 }
 
@@ -219,8 +220,54 @@ message ExampleWithoutSalts {
   int32  valueB = 2;
 }
 
+message Name {
+  string first = 1;
+  string last = 2;
+}
+
+message PhoneNumber {
+  string type = 1;
+  string countrycode = 2;
+  string number = 3;
+}
+
+message ExampleNested {
+  bytes hashed_value = 1 [(proofs.hashed_field) = true];
+  Name name = 2;
+}
+
+message AppendFieldDocument {
+  Name name = 1[ (proofs.append_fields) = true ];
+  repeated Name names = 2[ (proofs.append_fields) = true ];
+  repeated PhoneNumber phone_numbers = 3 [
+    (proofs.field_length) = 4,
+    (proofs.mapping_key) = "type",
+    (proofs.append_fields) = true
+  ];
+}
+
+message UnsupportedAppendDocument {
+  Name name = 1[ (proofs.append_fields) = true ];
+  ExampleNested nested = 2[ (proofs.append_fields) = true ];
+}
+
+message NoSaltDocument {
+  string valueNoSalt = 1 [(proofs.no_salt) = true];
+  string valueSalt = 2 ;
+  Name name = 3 [(proofs.no_salt) = true];
+}
+
 message ExampleWithPaddingField {
   string valueA = 1 [(proofs.field_length) = 32 ];
   bytes  valueB = 2 [(proofs.field_length) = 32 ];
   repeated proofs.Salt salts = 3;
+}
+
+message NamePadded {
+  string first = 1 [(proofs.field_length) = 10 ];
+  string last = 2 [(proofs.field_length) = 10 ];
+  int32 age = 3;
+}
+message AppendFieldPaddingDocument {
+  repeated NamePadded names = 1 [(proofs.append_fields) = true];
 }
