@@ -564,7 +564,13 @@ func (doctree *DocumentTree) Generate() error {
 
 		hashes[i] = leaf.Hash
 	}
-	err := doctree.merkleTree.Generate(hashes, doctree.hash)
+
+	var err error
+	if doctree.hash != doctree.leafHash {
+		err = doctree.merkleTree.GenerateByTwoHashFunc(hashes, doctree.hash, doctree.leafHash)
+	} else {
+		err = doctree.merkleTree.Generate(hashes, doctree.hash)
+	}
 	if err != nil {
 		return fmt.Errorf("failed to generate merkle tree: %s", err)
 	}
