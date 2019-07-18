@@ -55,12 +55,28 @@
   version = "v1.2.2"
 
 [[projects]]
-  digest = "1:65f2553aabd1d6879691058ce20eac0f798a82d92c71f13cd56de3350fa06183"
+  digest = "1:d39d810ccffde4d61766d07ff59855105967fb9e7efe9908407ef4a9cb87b983"
   name = "github.com/xsleonard/go-merkle"
   packages = ["."]
   pruneopts = "UT"
-  revision = "a73b8999d89d80bdcd89d199f41ab7fcdfd12dde"
-  source = "github.com/mikiquantum/go-merkle"
+  revision = "c7855d8c36d110ff46c64fe8364d494eb501a6b4"
+  source = "github.com/centrifuge/go-merkle"
+
+[[projects]]
+  branch = "master"
+  digest = "1:73f9bd0a36bd49a7a46061dd5d6370fbf7c7afcd92a31dcb18661497610672aa"
+  name = "golang.org/x/crypto"
+  packages = ["blake2b"]
+  pruneopts = "UT"
+  revision = "20be4c3c3ed52bfccdb2d59a412ee1a936d175a7"
+
+[[projects]]
+  branch = "master"
+  digest = "1:9289797869517c73400e7b5a93beefbfc86e06f56e3ab03f38fb0d575e685277"
+  name = "golang.org/x/sys"
+  packages = ["cpu"]
+  pruneopts = "UT"
+  revision = "46560c3f3c0a091352115a3d825af45663b983d8"
 
 [solve-meta]
   analyzer-name = "dep"
@@ -76,6 +92,7 @@
     "github.com/pkg/errors",
     "github.com/stretchr/testify/assert",
     "github.com/xsleonard/go-merkle",
+    "golang.org/x/crypto/blake2b",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
