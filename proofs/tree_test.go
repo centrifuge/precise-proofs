@@ -1715,3 +1715,25 @@ func TestTree_Sha256LeafBlake2b512InternalHashFunction(t *testing.T) {
 	assert.Nil(t, err)
 	assert.True(t, valid)
 }
+
+func TestTree_GenerateLeafSha256NodeBlake2b(t *testing.T) {
+	doctree, err := NewDocumentTree(TreeOptions{
+		Hash:     blake2bHash,
+		LeafHash: sha256Hash,
+		Salts:    NewSaltForTest,
+	})
+	assert.NoError(t, err)
+	err = doctree.AddLeavesFromDocument(&documentspb.LongDocumentExample)
+	assert.Nil(t, err)
+
+	err = doctree.Generate()
+	assert.Nil(t, err)
+
+	rootHash := doctree.rootHash
+	assert.Len(t, rootHash, 64, "length of Blake2b512 hash is 64")
+
+	assert.Len(t, doctree.leaves, 15)
+
+	leafHash := doctree.leaves[0].Hash
+	assert.Len(t, leafHash, 32, "length of sha256 hash is 32")
+}
