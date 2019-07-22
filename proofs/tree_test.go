@@ -128,15 +128,15 @@ func TestTree_Generate(t *testing.T) {
 
 	leaves, err := FlattenMessage(&protoMessage, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty, false)
 	assert.NoError(t, err)
-	tree := merkle.NewTreeWithOpts(merkle.TreeOptions{DisableHashLeaves: true})
+	tree := merkle.NewTree(sha256Hash)
 	var hashes [][]byte
 	assert.Equal(t, 12, len(leaves))
 	for _, leaf := range leaves {
 		hashes = append(hashes, leaf.Hash)
 	}
 
-	assert.NoError(t, tree.Generate(hashes, sha256Hash))
-	h := tree.Root().Hash
+	assert.NoError(t, tree.Generate(hashes, 0))
+	h := tree.RootHash()
 	expectedHash := []byte{0xaf, 0x15, 0x46, 0x42, 0x95, 0xc8, 0x50, 0x46, 0x9c, 0x6e, 0x1a, 0xdc, 0xc, 0x57, 0x53, 0x63, 0xf0, 0xce, 0xb9, 0x9a, 0x50, 0x3, 0x70, 0xaa, 0x65, 0xce, 0x28, 0xb0, 0x91, 0x80, 0xb, 0x13}
 	assert.Equal(t, expectedHash, h, "Hash should match")
 }
@@ -149,197 +149,15 @@ func TestSortedHashTree_Generate(t *testing.T) {
 
 	leaves, err := FlattenMessage(&protoMessage, NewSaltForTest, DefaultReadablePropertyLengthSuffix, sha256Hash, false, Empty, false)
 	assert.NoError(t, err)
-	tree := merkle.NewTreeWithOpts(merkle.TreeOptions{DisableHashLeaves: true, EnableHashSorting: true})
+	tree := merkle.NewTreeWithHashSortingEnable(sha256Hash)
 	var hashes [][]byte
 	for _, leaf := range leaves {
 		hashes = append(hashes, leaf.Hash)
 	}
-	assert.NoError(t, tree.Generate(hashes, sha256Hash))
-	h := tree.Root().Hash
+	assert.NoError(t, tree.Generate(hashes, 0))
+	h := tree.RootHash()
 	expectedHash := []byte{0x60, 0xdd, 0xfc, 0x7d, 0x8f, 0x58, 0xd5, 0xe6, 0x94, 0xce, 0x2c, 0x2a, 0x30, 0x7, 0xe0, 0x45, 0x86, 0xfb, 0x67, 0x8a, 0x79, 0x73, 0xc7, 0x60, 0x55, 0x80, 0xb5, 0x9c, 0xdd, 0x54, 0xe3, 0xf9}
 	assert.Equal(t, expectedHash, h, "Hash should match")
-}
-
-func TestCalculateProofNodeList(t *testing.T) {
-	inputs := [][]uint64{
-		{0, 15},
-		{1, 15},
-		{2, 15},
-		{3, 15},
-		{4, 15},
-		{5, 15},
-		{6, 15},
-		{7, 15},
-		{12, 15},
-		{13, 15},
-		{14, 15}, // Lone child edge case
-		{15, 16}, // Last node
-		{0, 2},   // Two leaves, one level
-		{0, 4},
-		{2, 3},
-		{2, 5},
-		{6, 7},
-	}
-
-	results := [][]*HashNode{
-		// 0, 15
-		{
-			&HashNode{false, 1},
-			&HashNode{false, 16},
-			&HashNode{false, 24},
-			&HashNode{false, 28},
-		},
-		// 1, 15
-		{
-			&HashNode{true, 0},
-			&HashNode{false, 16},
-			&HashNode{false, 24},
-			&HashNode{false, 28},
-		},
-		// 2, 15
-		{
-			&HashNode{false, 3},
-			&HashNode{true, 15},
-			&HashNode{false, 24},
-			&HashNode{false, 28},
-		},
-		// 3, 15
-		{
-			&HashNode{true, 2},
-			&HashNode{true, 15},
-			&HashNode{false, 24},
-			&HashNode{false, 28},
-		},
-		// 4, 15
-		{
-			&HashNode{false, 5},
-			&HashNode{false, 18},
-			&HashNode{true, 23},
-			&HashNode{false, 28},
-		},
-		// 5, 15
-		{
-			&HashNode{true, 4},
-			&HashNode{false, 18},
-			&HashNode{true, 23},
-			&HashNode{false, 28},
-		},
-		// 6, 15
-		{
-			&HashNode{false, 7},
-			&HashNode{true, 17},
-			&HashNode{true, 23},
-			&HashNode{false, 28},
-		},
-		// 7, 15
-		{
-			&HashNode{true, 6},
-			&HashNode{true, 17},
-			&HashNode{true, 23},
-			&HashNode{false, 28},
-		},
-		// 12, 15
-		{
-			&HashNode{false, 13},
-			&HashNode{false, 22},
-			&HashNode{true, 25},
-			&HashNode{true, 27},
-		},
-		// 13, 15
-		{
-			&HashNode{true, 12},
-			&HashNode{false, 22},
-			&HashNode{true, 25},
-			&HashNode{true, 27},
-		},
-		// 14, 15
-		{
-			&HashNode{true, 21},
-			&HashNode{true, 25},
-			&HashNode{true, 27},
-		},
-		// 15, 16
-		{
-			&HashNode{true, 14},
-			&HashNode{true, 22},
-			&HashNode{true, 26},
-			&HashNode{true, 28},
-		},
-		// 0, 2
-		{
-			&HashNode{false, 1},
-		},
-
-		// 4 Leaf Tree:
-		//       6
-		//   4       5
-		// 0   1   2   3
-		//
-		// 0, 4
-		{
-			&HashNode{false, 1},
-			&HashNode{false, 5},
-		},
-		// 3 Leaf Tree:
-		//     5
-		//   3    4 (2)
-		// 0   1   2
-		//
-		// 2, 3
-		{
-			&HashNode{true, 3},
-		},
-		// 5 Leaf Tree:
-		//             8
-		//        8        9 (4)
-		//   5       6     7 (4)
-		// 0   1   2   3   4
-		//
-		// 2, 5
-		{
-			&HashNode{false, 3},
-			&HashNode{true, 5},
-			&HashNode{false, 9},
-		},
-		// 7 Leaf Tree:
-		//               14
-		//        11              12
-		//   7       8       9     10 (6)
-		// 0   1   2   3   4   5   6
-		//
-		// 6, 7
-		{
-			&HashNode{true, 9},
-			&HashNode{true, 11},
-		},
-	}
-
-	for i, input := range inputs {
-		r, _ := CalculateProofNodeList(input[0], input[1])
-		assert.Equal(t,
-			len(results[i]),
-			len(r),
-			fmt.Sprintf("CalculateProofNodeList(%d, %d), Result Length Mismatch", input[0], input[1]))
-
-		for j, n := range r {
-			assert.Equal(t,
-				results[i][j].Left,
-				n.Left,
-				fmt.Sprintf("CalculateProofNodeList(%d, %d), node #: %d, %t, %d", input[0], input[1], j, results[i][j].Left, results[i][j].Leaf))
-
-			assert.Equal(t,
-				results[i][j].Leaf,
-				n.Leaf,
-				fmt.Sprintf("CalculateProofNodeList(%d, %d) hash %d was leaf %d expected %d", input[0], input[1], j, n.Leaf, results[i][j].Leaf))
-		}
-	}
-
-}
-
-func BenchmarkCalculateProofNodeList(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		CalculateProofNodeList(50, 100)
-	}
 }
 
 func TestDocumentTree_ToStringNilEncoder(t *testing.T) {
@@ -505,13 +323,12 @@ func TestTree_AddLeavesFromDocument_twice(t *testing.T) {
 
 	hashes, err := doctree.pickHashesFromMerkleTree(0)
 	assert.Nil(t, err)
-	fieldHash := doctree.merkleTree.Nodes[0].Hash
+	fieldHash := doctree.leaves[0].Hash
 	valid, err := ValidateProofHashes(fieldHash, hashes, doctree.rootHash, doctree.hash)
 	assert.Nil(t, err)
 	assert.True(t, valid)
 
 }
-
 func TestTree_GenerateStandardProof(t *testing.T) {
 	doctree, err := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: NewSaltForTest})
 	assert.Nil(t, err)
@@ -525,7 +342,7 @@ func TestTree_GenerateStandardProof(t *testing.T) {
 
 	hashes, err := doctree.pickHashesFromMerkleTree(0)
 	assert.Nil(t, err)
-	fieldHash := doctree.merkleTree.Nodes[0].Hash
+	fieldHash := doctree.leaves[0].Hash
 	valid, err := ValidateProofHashes(fieldHash, hashes, doctree.rootHash, doctree.hash)
 	assert.Nil(t, err)
 	assert.True(t, valid)
@@ -561,7 +378,7 @@ func TestTree_GenerateNestedTreeCombinedStandardProof(t *testing.T) {
 	fieldProofA, err := doctreeA.CreateProof("valueA")
 	assert.NoError(t, err)
 
-	fieldHash := doctreeA.merkleTree.Nodes[0].Hash
+	fieldHash := doctreeA.leaves[0].Hash
 	valid, err := ValidateProofHashes(fieldHash, fieldProofA.Hashes, doctreeA.rootHash, doctreeA.hash)
 	assert.NoError(t, err)
 	assert.True(t, valid)
@@ -576,7 +393,7 @@ func TestTree_GenerateNestedTreeCombinedStandardProof(t *testing.T) {
 	combinedProof := fieldProofA
 	combinedProof.Hashes = append(combinedProof.Hashes, fieldProofB.Hashes...)
 
-	fieldHash = doctreeA.merkleTree.Nodes[0].Hash
+	fieldHash = doctreeA.leaves[0].Hash
 	valid, err = ValidateProofHashes(fieldHash, combinedProof.Hashes, doctreeB.rootHash, doctreeB.hash)
 	assert.Nil(t, err)
 	assert.True(t, valid)
@@ -612,7 +429,7 @@ func TestTree_GenerateNestedTreeCombinedSortedHashesProof(t *testing.T) {
 	fieldProofA, err := doctreeA.CreateProof("valueA")
 	assert.Nil(t, err)
 
-	fieldHash := doctreeA.merkleTree.Nodes[0].Hash
+	fieldHash := doctreeA.leaves[0].Hash
 	valid, err := ValidateProofSortedHashes(fieldHash, fieldProofA.SortedHashes, doctreeA.rootHash, doctreeA.hash)
 	assert.Nil(t, err)
 	assert.True(t, valid)
@@ -627,7 +444,7 @@ func TestTree_GenerateNestedTreeCombinedSortedHashesProof(t *testing.T) {
 	combinedProof := fieldProofA
 	combinedProof.SortedHashes = append(combinedProof.SortedHashes, fieldProofB.SortedHashes...)
 
-	fieldHash = doctreeA.merkleTree.Nodes[0].Hash
+	fieldHash = doctreeA.leaves[0].Hash
 	valid, err = ValidateProofSortedHashes(fieldHash, combinedProof.SortedHashes, doctreeB.rootHash, doctreeB.hash)
 	assert.Nil(t, err)
 	assert.True(t, valid)
@@ -677,7 +494,7 @@ func TestTree_GenerateProofHashed(t *testing.T) {
 
 	hashes, err := doctree.pickHashesFromMerkleTree(0)
 	assert.Nil(t, err)
-	fieldHash := doctree.merkleTree.Nodes[0].Hash
+	fieldHash := doctree.leaves[0].Hash
 	valid, err := ValidateProofHashes(fieldHash, hashes, doctree.rootHash, doctree.hash)
 	assert.Nil(t, err)
 	assert.True(t, valid)
@@ -706,7 +523,7 @@ func TestTree_GenerateSortedProof(t *testing.T) {
 
 	hashes, err := doctree.pickHashesFromMerkleTreeAsList(0)
 	assert.Nil(t, err)
-	fieldHash := doctree.merkleTree.Nodes[0].Hash
+	fieldHash := doctree.leaves[0].Hash
 	valid, err := ValidateProofSortedHashes(fieldHash, hashes, doctree.rootHash, doctree.hash)
 	assert.Nil(t, err)
 	assert.True(t, valid)
@@ -733,7 +550,7 @@ func TestTree_GenerateWithRepeatedFields(t *testing.T) {
 
 	hashes, err := doctree.pickHashesFromMerkleTreeAsList(0)
 	assert.Nil(t, err)
-	fieldHash := doctree.merkleTree.Nodes[0].Hash
+	fieldHash := doctree.leaves[0].Hash
 	valid, err := ValidateProofSortedHashes(fieldHash, hashes, doctree.rootHash, doctree.hash)
 	assert.Nil(t, err)
 	assert.True(t, valid)
@@ -763,7 +580,7 @@ func TestTree_GenerateWithNestedAndRepeatedFields(t *testing.T) {
 
 	hashes, err := doctree.pickHashesFromMerkleTreeAsList(0)
 	assert.Nil(t, err)
-	fieldHash := doctree.merkleTree.Nodes[0].Hash
+	fieldHash := doctree.leaves[0].Hash
 	valid, err := ValidateProofSortedHashes(fieldHash, hashes, doctree.rootHash, doctree.hash)
 	assert.Nil(t, err)
 	assert.True(t, valid)
@@ -1600,7 +1417,7 @@ func TestTree_PaddingSucess(t *testing.T) {
 }
 
 func TestTree_ToomanyLeaves(t *testing.T) {
-	tree, err := NewDocumentTree(TreeOptions{Salts: NewSaltForTest, TreeDepth: 3})
+	tree, err := NewDocumentTree(TreeOptions{Salts: NewSaltForTest, TreeDepth: 3, Hash: sha256Hash})
 	assert.Nil(t, err)
 	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA1", 1)})
 	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA2", 2)})
@@ -1623,23 +1440,8 @@ func TestTree_TreeDepthArg(t *testing.T) {
 	_, err = NewDocumentTreeWithRootHash(TreeOptions{Hash: sha256Hash, Salts: NewSaltForTest, TreeDepth: 33}, nil)
 	assert.EqualError(t, err, "TreeDepth is too bigger, it should not be bigger than 32")
 
-	_, err = NewDocumentTree(TreeOptions{Salts: NewSaltForTest, TreeDepth: 32})
+	_, err = NewDocumentTree(TreeOptions{Salts: NewSaltForTest, TreeDepth: 32, Hash: sha256Hash})
 	assert.Nil(t, err)
-}
-
-func TestTree_EmptyLeavesAdded(t *testing.T) {
-	tree, err := NewDocumentTree(TreeOptions{Hash: sha256Hash, Salts: NewSaltForTest, TreeDepth: 3})
-	assert.Nil(t, err)
-	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA1", 1), Salt: testSalt})
-	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA2", 2), Salt: testSalt})
-	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA3", 3), Salt: testSalt})
-	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA4", 4), Salt: testSalt})
-	err = tree.AddLeaf(LeafNode{Property: NewProperty("LeafA5", 5), Salt: testSalt})
-	assert.Nil(t, err)
-	err = tree.Generate()
-	assert.Nil(t, err)
-	leaves := tree.GetLeaves()
-	assert.Len(t, leaves, 8)
 }
 
 func TestTree_Blake2b512LeafSha256InternalHashFunction(t *testing.T) {
