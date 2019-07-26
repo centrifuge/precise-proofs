@@ -282,6 +282,7 @@ package proofs
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"hash"
 	"reflect"
@@ -875,4 +876,43 @@ func ValidateProofSortedHashes(hash []byte, hashes [][]byte, rootHash []byte, ha
 	}
 
 	return true, nil
+}
+
+// OptimizeProofs identifies common hashes to all proofs provided for the same tree and reduces the length of the resulting
+// proof data
+func OptimizeProofs(proofs []*proofspb.Proof, documentRoot []byte, hashFunc hash.Hash) ([]*proofspb.Proof, error) {
+	var optimized []*proofspb.Proof
+	cached := make(map[string]struct{})
+	cached[hex.EncodeToString(documentRoot)] = struct{}{}
+	for i := 0; i < len(proofs); i++ {
+		hashes := proofs[i].SortedHashes
+		hashItem := proofs[i].Hash
+		var err error
+		if len(hashItem) == 0 {
+			hashItem, err = CalculateHashForProofField(proofs[i], hashFunc)
+			if err != nil {
+				return nil, err
+			}
+		}
+		var optHashes [][]byte
+		for j := 0; j < len(hashes); j++ {
+			cached[hex.EncodeToString(hashes[j])] = struct{}{}
+			if bytes.Compare(hashItem, hashes[j]) > 0 {
+				hashItem = HashTwoValues(hashes[j], hashItem, hashFunc)
+			} else {
+				hashItem = HashTwoValues(hashItem, hashes[j], hashFunc)
+			}
+			if _, ok := cached[hex.EncodeToString(hashItem)]; !ok {
+				cached[hex.EncodeToString(hashItem)] = struct{}{}
+				optHashes = append(optHashes, hashes[j])
+			} else {
+				optHashes = append(optHashes, hashes[j])
+				break
+			}
+		}
+		pp := proto.Clone(proofs[i]).(*proofspb.Proof)
+		pp.SortedHashes = optHashes
+		optimized = append(optimized, pp)
+	}
+	return optimized, nil
 }
