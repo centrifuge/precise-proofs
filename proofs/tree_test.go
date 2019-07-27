@@ -1162,6 +1162,35 @@ func Example_complete() {
 	valid, _ := doctree.ValidateProof(&proof)
 
 	fmt.Printf("Proof validated: %v\n", valid)
+
+	// Fixed Size Tree
+	doctree, err = NewDocumentTree(TreeOptions{Hash: sha256.New(), LeafHash: md5.New(), TreeDepth: 32})
+	if err != nil {
+		panic(err)
+	}
+
+	err = doctree.AddLeavesFromDocument(&document)
+	if err != nil {
+		panic(err)
+	}
+
+	err = doctree.Generate()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("Generated fixed size tree: %s\n", doctree.String())
+
+	// Generate the actual proof for a field. In this case the field called "valueA".
+	proof, _ = doctree.CreateProof("valueA")
+	proofJson, _ = json.Marshal(proof)
+	fmt.Println("Proof:\n", string(proofJson))
+
+	// Validate the proof that was just generated
+	valid, _ = doctree.ValidateProof(&proof)
+
+	fmt.Printf("Proof validated: %v\n", valid)
+
 }
 
 func TestTree_LengthProp_ListMap(t *testing.T) {
@@ -1538,4 +1567,15 @@ func TestTree_GenerateLeafSha256NodeBlake2b(t *testing.T) {
 
 	leafHash := doctree.leaves[0].Hash
 	assert.Len(t, leafHash, 32, "length of sha256 hash is 32")
+}
+
+func TestTree_FixedSizeTreeDonotSupportSortingByHash(t *testing.T) {
+	_, err := NewDocumentTree(TreeOptions{
+		Hash:              blake2bHash,
+		LeafHash:          sha256Hash,
+		Salts:             NewSaltForTest,
+		EnableHashSorting: true,
+		TreeDepth:         256,
+	})
+	assert.Equal(t, "Fixed size tree does not support sorting by hash", err.Error())
 }
