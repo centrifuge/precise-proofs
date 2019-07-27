@@ -1162,6 +1162,35 @@ func Example_complete() {
 	valid, _ := doctree.ValidateProof(&proof)
 
 	fmt.Printf("Proof validated: %v\n", valid)
+
+	// Fixed Size Tree
+	doctree, err = NewDocumentTree(TreeOptions{Hash: sha256.New(), LeafHash: md5.New(), TreeDepth: 32})
+	if err != nil {
+		panic(err)
+	}
+
+	err = doctree.AddLeavesFromDocument(&document)
+	if err != nil {
+		panic(err)
+	}
+
+	err = doctree.Generate()
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Printf("Generated fixed size tree: %s\n", doctree.String())
+
+	// Generate the actual proof for a field. In this case the field called "valueA".
+	proof, _ = doctree.CreateProof("valueA")
+	proofJson, _ = json.Marshal(proof)
+	fmt.Println("Proof:\n", string(proofJson))
+
+	// Validate the proof that was just generated
+	valid, _ = doctree.ValidateProof(&proof)
+
+	fmt.Printf("Proof validated: %v\n", valid)
+
 }
 
 func TestTree_LengthProp_ListMap(t *testing.T) {
