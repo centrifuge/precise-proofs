@@ -380,6 +380,9 @@ func (doctree *DocumentTree) String() string {
 
 // NewDocumentTree returns an empty DocumentTree
 func NewDocumentTree(proofOpts TreeOptions) (DocumentTree, error) {
+	if proofOpts.TreeDepth != 0 && proofOpts.EnableHashSorting {
+		return DocumentTree{}, errors.New("Fixed size tree does not support sorting by hash")
+	}
 	var salts Salts
 	if proofOpts.Salts != nil {
 		salts = proofOpts.Salts

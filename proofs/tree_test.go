@@ -1539,3 +1539,14 @@ func TestTree_GenerateLeafSha256NodeBlake2b(t *testing.T) {
 	leafHash := doctree.leaves[0].Hash
 	assert.Len(t, leafHash, 32, "length of sha256 hash is 32")
 }
+
+func TestTree_FixedSizeTreeDonotSupportSortingByHash(t *testing.T) {
+	_, err := NewDocumentTree(TreeOptions{
+		Hash:              blake2bHash,
+		LeafHash:          sha256Hash,
+		Salts:             NewSaltForTest,
+		EnableHashSorting: true,
+		TreeDepth:         256,
+	})
+	assert.Equal(t, "Fixed size tree does not support sorting by hash", err.Error())
+}
