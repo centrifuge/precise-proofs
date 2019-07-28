@@ -175,7 +175,7 @@ Library supports padding bytes and string field, one usage of `proto.field_lengt
 
 Fixed Length Tree
 
-`TreeOption.TreeDepth` is used to define an optional fixed length tree. If this option is provided, the tree will be extended to have the depth specified in the option, so a fixed number of `(2**TreeDepth)` leaves. Empty leaves with hash `hash([]byte{})` will be added to the tree if client does not provide enough leaf nodes.  If the provided leaf nodes surpass `(2**TreeDepth)`, an error will be returned.
+`TreeOption.TreeDepth` is used to define an optional fixed length tree. If this option is provided, the tree will be extended to have the depth specified in the option, so a fixed number of `(2**TreeDepth)` leaves. Empty leaves with hash `hash([]byte{})` will be added to the tree if client does not provide enough leaf nodes.  If the provided leaf nodes surpass `(2**TreeDepth)`, an error will be returned. Fixed length tree does not support sorting by hash option.
 
 Use Customized Leaf Hash Function
 
@@ -382,6 +382,9 @@ func (doctree *DocumentTree) String() string {
 
 // NewDocumentTree returns an empty DocumentTree
 func NewDocumentTree(proofOpts TreeOptions) (DocumentTree, error) {
+	if proofOpts.TreeDepth != 0 && proofOpts.EnableHashSorting {
+		return DocumentTree{}, errors.New("Fixed size tree does not support sorting by hash")
+	}
 	var salts Salts
 	if proofOpts.Salts != nil {
 		salts = proofOpts.Salts
