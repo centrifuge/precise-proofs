@@ -55,11 +55,11 @@
   version = "v1.2.2"
 
 [[projects]]
-  digest = "1:d39d810ccffde4d61766d07ff59855105967fb9e7efe9908407ef4a9cb87b983"
+  digest = "1:2833602d8454c0f7dac4f73c1a1c0fc1a52dcc738e3ad87d4a64f6446966510d"
   name = "github.com/xsleonard/go-merkle"
   packages = ["."]
   pruneopts = "UT"
-  revision = "c7855d8c36d110ff46c64fe8364d494eb501a6b4"
+  revision = "f8894f6f7351abae156c2365b31354d4cd78a1af"
   source = "github.com/centrifuge/go-merkle"
 
 [[projects]]

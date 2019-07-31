@@ -4,13 +4,16 @@ import (
 	"bytes"
 	"crypto/md5"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/centrifuge/precise-proofs/examples/documents"
+	proofspb "github.com/centrifuge/precise-proofs/proofs/proto"
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/pkg/errors"
@@ -1569,7 +1572,7 @@ func TestTree_GenerateLeafSha256NodeBlake2b(t *testing.T) {
 	assert.Len(t, leafHash, 32, "length of sha256 hash is 32")
 }
 
-func TestTree_FixedSizeTreeDonotSupportSortingByHash(t *testing.T) {
+func TestTree_FixedSizeTreeDoNotSupportSortingByHash(t *testing.T) {
 	_, err := NewDocumentTree(TreeOptions{
 		Hash:              blake2bHash,
 		LeafHash:          sha256Hash,
@@ -1578,4 +1581,212 @@ func TestTree_FixedSizeTreeDonotSupportSortingByHash(t *testing.T) {
 		TreeDepth:         256,
 	})
 	assert.Equal(t, "Fixed size tree does not support sorting by hash", err.Error())
+}
+
+func TestOptimizeProofs(t *testing.T) {
+	// nil input
+	opt, err := OptimizeProofs(nil, nil, sha256.New())
+	assert.NoError(t, err)
+	assert.Empty(t, opt)
+
+	// empty input
+	var original []*proofspb.Proof
+	opt, err = OptimizeProofs(original, nil, sha256.New())
+	assert.NoError(t, err)
+	assert.Empty(t, opt)
+
+	docRoot, err := hex.DecodeString("7eba2627f27e0c2b49cd7f3aee6a11ca2637e1e07d5bb82b68253e7905ca074c")
+	assert.NoError(t, err)
+
+	// Original Proofs
+	p0 := convertProof(t,
+		"0x000100000000000e",
+		"0x007b0000000000000000",
+		"0x3d9f77a675dbc27641b27d8bbf612164774adc814a40d3c1324c5c77b26f9aa2",
+		"0x",
+		[]string{
+			"0xd42948fa37dd912117ac5966b55d4b364005e4dc366e3afb6caf38649dce7d20",
+			"0xccaad8761ce1a541483d2fb98d621a9a9c11d7b03d82fdbeb2cefdbb8405916e",
+			"0x598e8661d6c2a206e632f12c9031a3b50e02af430b144f71db2bbde83e8da2ec",
+			"0x7f8410d0adbc62a9b9933c8cb16a45c0cca73dec62e89b185f22a06073e7b960",
+			"0x6a37a214f9f3cb50f0cbdfd4183040781860acf7ccb1a4c8453cf31003fc99e7",
+			"0x41337de1d0f1a323f5fcca15144b7a1f37cbb442a053fee73f84f27afbc3d719",
+			"0x480d3bf285726b8ecf2199da06f35bb77830e07828e036bf9a8dc8c95129f45e",
+			"0xa42cfcb21740fbd16b4a48499f7d273611fa413b001f9f0fb476eb00d85b5eeb",
+		},
+	)
+	original = append(original, p0)
+	p1 := convertProof(t,
+		"0x000100000000000d",
+		"0x455552",
+		"0xcc8a2c1e741a708995d38288d84515df9cb67a52e015d6e73a9cbb6217f4c476",
+		"0x",
+		[]string{
+			"0x07b97ffc8aaf85fffa15cec19f509f876d26af31a3186af35d4672b05f8a5310",
+			"0xccaad8761ce1a541483d2fb98d621a9a9c11d7b03d82fdbeb2cefdbb8405916e",
+			"0x598e8661d6c2a206e632f12c9031a3b50e02af430b144f71db2bbde83e8da2ec",
+			"0x7f8410d0adbc62a9b9933c8cb16a45c0cca73dec62e89b185f22a06073e7b960",
+			"0x6a37a214f9f3cb50f0cbdfd4183040781860acf7ccb1a4c8453cf31003fc99e7",
+			"0x41337de1d0f1a323f5fcca15144b7a1f37cbb442a053fee73f84f27afbc3d719",
+			"0x480d3bf285726b8ecf2199da06f35bb77830e07828e036bf9a8dc8c95129f45e",
+			"0xa42cfcb21740fbd16b4a48499f7d273611fa413b001f9f0fb476eb00d85b5eeb",
+		},
+	)
+	original = append(original, p1)
+	p2 := convertProof(t,
+		"0x0001000000000016",
+		"0x000000005c9ca876",
+		"0x4a706b3d95476cef89beba9dee5cd0b1fa4cdc91296bce089bed4b92263bc9f0",
+		"0x",
+		[]string{
+			"0xfb2b62df3ef2783f2e27ebe1a58aeb6a5e0915c4ced901bd85288d6fb144a02c",
+			"0x0d2a959865cbb523021c642d37a8c018eba07782357d055a361e4ec769c500e1",
+			"0x775dd58168d7b778197f0d5eab357647cd27ab91706b7f5acbc86bb33f84daf9",
+			"0x3e76163beecf850fd051fda774d06d2963303721d1eb25fcb56f5dfa6b9f0add",
+			"0x17e476077dde0a65139b094cff2c2bde82c2bf38c08299f28643074d117f967a",
+			"0x41337de1d0f1a323f5fcca15144b7a1f37cbb442a053fee73f84f27afbc3d719",
+			"0x480d3bf285726b8ecf2199da06f35bb77830e07828e036bf9a8dc8c95129f45e",
+			"0xa42cfcb21740fbd16b4a48499f7d273611fa413b001f9f0fb476eb00d85b5eeb",
+		},
+	)
+	original = append(original, p2)
+	p3 := convertProof(t,
+		"0x0001000000000013",
+		"0xc0338705d374f72ebc1b27854ec1152337ff12fb",
+		"0xef821a1c720b7f283077fe52a80db4f73db5932744b78ad7ca29e6069d4f5d84",
+		"0x",
+		[]string{
+			"0xacddc0b566bd952cb74998348e23c3061d9a504d807b5cec80d21307c70e3467",
+			"0xee3a6581c1c3102b6a17b5f269716a2081606103d05f0bfdbbdf5b7639613302",
+			"0xc3de7ef9786ca87dfd8373afcd98c536c838c462526ee5c092d76867c2ce15af",
+			"0x3e76163beecf850fd051fda774d06d2963303721d1eb25fcb56f5dfa6b9f0add",
+			"0x17e476077dde0a65139b094cff2c2bde82c2bf38c08299f28643074d117f967a",
+			"0x41337de1d0f1a323f5fcca15144b7a1f37cbb442a053fee73f84f27afbc3d719",
+			"0x480d3bf285726b8ecf2199da06f35bb77830e07828e036bf9a8dc8c95129f45e",
+			"0xa42cfcb21740fbd16b4a48499f7d273611fa413b001f9f0fb476eb00d85b5eeb",
+		},
+	)
+	original = append(original, p3)
+	p4 := convertProof(t,
+		"0x0001000000000002",
+		"0x756e70616964",
+		"0xde3711a205db1b5b2b28f410dd6bcfb6a68da799f2c13a70e0b8eae30194dbfa",
+		"0x",
+		[]string{
+			"0x8007b147695dfb7e5981a097a1213df1ebc12606c6313ca53cd35a7989bf4e60",
+			"0xaf19c8d425eb7cae7b6c2f948636ebc3297babd49f6194385aed04759c5f1b33",
+			"0xe2da7185358359ea3666be334f8f7223f8f96a6c094b1c52e461644384aaceb6",
+			"0xd4c21ca487bd4101b62e1292db9f547e670a91ed4555acb06a0e0b25ecd403ad",
+			"0x6a37a214f9f3cb50f0cbdfd4183040781860acf7ccb1a4c8453cf31003fc99e7",
+			"0x41337de1d0f1a323f5fcca15144b7a1f37cbb442a053fee73f84f27afbc3d719",
+			"0x480d3bf285726b8ecf2199da06f35bb77830e07828e036bf9a8dc8c95129f45e",
+			"0xa42cfcb21740fbd16b4a48499f7d273611fa413b001f9f0fb476eb00d85b5eeb",
+		},
+	)
+	original = append(original, p4)
+	p5 := convertProof(t,
+		"0x040000000000000a",
+		"0x",
+		"0x",
+		"0xca87e9ba4fcfc9eb27594e18d14dc3fb094913e67c9aa3f19e0e3205dbb7dbfa",
+		[]string{
+			"0xa42cfcb21740fbd16b4a48499f7d273611fa413b001f9f0fb476eb00d85b5eeb",
+		},
+	)
+	original = append(original, p5)
+	p6 := convertProof(t,
+		"0x0300000000000001c0338705d374f72ebc1b27854ec1152337ff12fb000000000000000000000000746c4d8464ad40caadc76c2c0b31393c6ae0d6c500000004",
+		"0xa2776063c2177a8e4be999fd337d939d03df0f341c50d2dac45dafad0008016e248cfb0076035c514dfc66af39e574bcc795a6af6b112a6ec90ff9291c766b7c01",
+		"0x6cfd93297f2be442bfbb7d9c8b8598e876f9ebafe9f098ef790203de3bfbbf3c",
+		"0x",
+		[]string{
+			"0x179b3819d3b2a17be17401b78b350e79b6c70e4b67803eb398221b12879ff720",
+			"0xab8e27cb3d33491409524c36b9c4a9afce4eee70b0ffc576c4e09dff928231a1",
+			"0xca87e9ba4fcfc9eb27594e18d14dc3fb094913e67c9aa3f19e0e3205dbb7dbfa",
+		},
+	)
+	original = append(original, p6)
+	p7 := convertProof(t,
+		"0x0100000000000004",
+		"0x563928f23599499286e138d185d49af9d2d69b7d291499124ddbecf95533acc8",
+		"0xcdce11607a4008de202a3d0aea684f812e0ec6f45c7a8a904b98214d2c042bf4",
+		"0x",
+		[]string{
+			"0x2f57c3d607effeac903b45ece78c569edd2f7a59defa1d806823f61d4495e435",
+			"0xc52a2036ab698ae068589bc78c50b7ed48a9d8c86f4c9a7c404980c0226c1099",
+			"0x14c175413ed3a91e23fd831235885f7652b78c16e2a86328dd2d8b5adc39cc00",
+			"0xdc6ea84837c32ed666d580e7dfb47305e670bd2d5b81c3a1bced33d00a2de749",
+			"0xc07430e27007ac41e71f4efa61fbc8141c4220bbe06ae570179aa403d144b1dd",
+			"0x428df21c9bae763a91f93587847a596b8e3a77bcbe51c7f218fa3b33906279ec",
+			"0x6cff4b5e8568c9d8b612c7dedefbad0553db5da9e9abb4b897a43e28fb43360d",
+			"0xa42cfcb21740fbd16b4a48499f7d273611fa413b001f9f0fb476eb00d85b5eeb",
+		},
+	)
+	original = append(original, p7)
+	p8 := convertProof(t,
+		"0x0100000000000014e821d1b50945ff736992d0af793684dd53ac7fa7000000000000000000000000",
+		"0xfc03d8fc2094952d153396f1904513850b4f76fcfeaef9c44dcb6d7de1921674",
+		"0x200d4ab58a902b0f5b860cf04ef19ea3c40113558c2a3858da583ebf76b4fc74",
+		"0x",
+		[]string{
+			"0x1729e97cc44f4d0f3930175d1b29a1d0c3d217a244a98be549f72d69bc35f2ef",
+			"0x1d200bb5e4a0935bb392e560398cc4f09ef8a47ce5b60ffb8561f9649b227348",
+			"0x272cf01f0c371697319e95ffade01a221ed60a2fea530d1f252f0966b868157d",
+			"0x8e32d7a9533edbb5fe0af56b58a081adf56fdcc084d7b870ee76099c57f056cc",
+			"0x344c38025b6398676c1014205c69e6c391dd986f1a1e6c9337e7ac1b9daac2f7",
+			"0x428df21c9bae763a91f93587847a596b8e3a77bcbe51c7f218fa3b33906279ec",
+			"0x6cff4b5e8568c9d8b612c7dedefbad0553db5da9e9abb4b897a43e28fb43360d",
+			"0xa42cfcb21740fbd16b4a48499f7d273611fa413b001f9f0fb476eb00d85b5eeb",
+		},
+	)
+	original = append(original, p8)
+
+	opt, err = OptimizeProofs(original,  docRoot, sha256.New())
+	assert.NoError(t, err)
+	assert.Len(t, opt, 9)
+	assert.Len(t, opt[0].SortedHashes, 8)
+	assert.Len(t, opt[1].SortedHashes, 1)
+	assert.Len(t, opt[2].SortedHashes, 4)
+	assert.Len(t, opt[3].SortedHashes, 2)
+	assert.Len(t, opt[4].SortedHashes, 3)
+	assert.Len(t, opt[5].SortedHashes, 1)
+	assert.Len(t, opt[6].SortedHashes, 2)
+	assert.Len(t, opt[7].SortedHashes, 6)
+	assert.Len(t, opt[8].SortedHashes, 4)
+	optHashesCount := 0
+	for i := 0; i < len(opt); i++ {
+		optHashesCount += len(opt[i].SortedHashes)
+		fmt.Printf("Hashes%d %x\n", i, opt[i].SortedHashes)
+	}
+	origHashesCount := 0
+	for i := 0; i < len(original); i++ {
+		origHashesCount += len(original[i].SortedHashes)
+	}
+	fmt.Printf("Original[%d] -> Optimized[%d] with factor[%f]\n", origHashesCount, optHashesCount, float64(optHashesCount)/float64(origHashesCount))
+}
+
+func convertProof(t *testing.T, property, value, salt, hash string, hashes []string) *proofspb.Proof {
+	p, err := hex.DecodeString(strings.Replace(property,"0x", "", -1))
+	assert.NoError(t, err)
+	v, err := hex.DecodeString(strings.Replace(value,"0x", "", -1))
+	assert.NoError(t, err)
+	s, err := hex.DecodeString(strings.Replace(salt,"0x", "", -1))
+	assert.NoError(t, err)
+	h, err := hex.DecodeString(strings.Replace(hash,"0x", "", -1))
+	assert.NoError(t, err)
+	sh := make([][]byte, len(hashes))
+
+	for idx, shi := range hashes {
+		shh, err := hex.DecodeString(strings.Replace(shi,"0x", "", -1))
+		assert.NoError(t, err)
+		sh[idx] = shh
+	}
+
+	return &proofspb.Proof{
+		Property: &proofspb.Proof_CompactName{CompactName: p},
+		Value: v,
+		Salt: s,
+		Hash: h,
+		SortedHashes: sh,
+	}
 }

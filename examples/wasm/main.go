@@ -26,8 +26,8 @@ func generateProof(i []js.Value) {
 	err := jsonpb.Unmarshal(strings.NewReader(i[0].String()), &document)
 	checkErr(err)
 
-	salts := proofs.Salts{}
-	doctree := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New(), Salts: &salts})
+	doctree, err := proofs.NewDocumentTree(proofs.TreeOptions{Hash: sha256.New()})
+	checkErr(err)
 
 	checkErr(doctree.AddLeavesFromDocument(&document))
 	checkErr(doctree.Generate())
@@ -61,8 +61,8 @@ func validateProof(i []js.Value) {
 	rootHash, err := hex.DecodeString(i[1].String())
 	checkErr(err)
 
-	salts := proofs.Salts{}
-	doctree := proofs.NewDocumentTreeWithRootHash(proofs.TreeOptions{Hash: sha256.New(), Salts: &salts}, rootHash)
+	doctree, err := proofs.NewDocumentTreeWithRootHash(proofs.TreeOptions{Hash: sha256.New()}, rootHash)
+	checkErr(err)
 	fmt.Printf("Generated tree: %s\n", doctree.String())
 
 	// Validate the proof that was just generated
