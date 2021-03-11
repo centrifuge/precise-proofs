@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/centrifuge/precise-proofs/proofs/proto"
+	proofspb "github.com/centrifuge/precise-proofs/proofs/proto"
 	"github.com/golang/protobuf/descriptor"
 	"github.com/golang/protobuf/proto"
 	godescriptor "github.com/golang/protobuf/protoc-gen-go/descriptor"
@@ -254,7 +254,9 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 		// Handle each value of the map
 		for _, k := range value.MapKeys() {
 			keyLength := getKeyLengthFrom(outerFieldDescriptor)
-
+			if keyLength == 0 {
+				keyLength = fetchLengthFromInterface(k)
+			}
 			elemProp, err := prop.MapElemProp(k.Interface(), keyLength)
 			if err != nil {
 				return errors.Wrapf(err, "failed to create elem prop for %q", k)
@@ -294,6 +296,18 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 	}
 
 	return nil
+}
+
+func fetchLengthFromInterface(k reflect.Value) uint64 {
+	switch k.Kind() {
+	case reflect.Interface:
+		v := reflect.ValueOf(k.Interface())
+		return fetchLengthFromInterface(v)
+	case reflect.Array, reflect.Slice, reflect.String, reflect.Chan, reflect.Map:
+		return uint64(k.Len())
+	}
+
+	return 0
 }
 
 func (f *messageFlattener) appendLeaf(prop Property, value []byte, salt []byte, readablePropertyLengthSuffix string, hash []byte, hashed bool) {
@@ -429,13 +443,31 @@ func sliceToMap(value reflect.Value, mappingKey string, keyLength uint64) (refle
 		// since we know the key length, we convert each
 		// []byte to [keyLength]byte before using it as a key
 		keyType = reflect.ArrayOf(int(keyLength), reflect.TypeOf(byte(0)))
+
+		// if key length is 0
+		// then we set the map type as interface{}
+		// individual key type will b declared based on the length of each value
+		if keyLength == 0 {
+			m := make(map[interface{}]bool)
+			r := reflect.TypeOf(m)
+			keyType = r.Key()
+		}
+
 		extractKeyByteSlice := extractKey
 		extractKey = func(v reflect.Value) (reflect.Value, error) {
 			bs, _ := extractKeyByteSlice(v)
-			if uint64(bs.Len()) != keyLength {
+			// if key length is not set or 0,
+			// then take the key length of key
+			kt := keyType
+			if keyLength == 0 {
+				kt = reflect.ArrayOf(int(uint64(bs.Len())), reflect.TypeOf(byte(0)))
+			}
+
+			if keyLength != 0 && uint64(bs.Len()) != keyLength {
 				return reflect.Value{}, errors.Errorf("could not use %x as mapping_key - does not have length %d", bs, keyLength)
 			}
-			ba := reflect.New(keyType)
+
+			ba := reflect.New(kt)
 			reflect.Copy(ba.Elem(), bs)
 			return ba.Elem(), nil
 		}
