@@ -10,7 +10,7 @@ Precise-Proofs is a library for creating Merkle proofs out of protobuf messages.
 handles flattening of objects, ordering the fields by label and creating shareable and
 independently verifiable proofs.
 
-This library takes arbitrary protobuf messages and makes sure a Merkle tree can be reliable calculated
+This library takes arbitrary protobuf messages and makes sure a Merkle tree can be reliably calculated
 from the values with each value representing a leaf in the tree.
 ```js,
 {
@@ -31,7 +31,7 @@ Above example would result in the following tree:
 ## Why protobuf?
 
 Google's [protobuf](https://developers.google.com/protocol-buffers/docs/gotutorial) is a space efficient and fast format
-to serialize data in a portable way. It's easy to generate JSON out of
+to serialize data in a portable way. It's easy to generate JSON out of.
 
 ## Binary fields encoding
 For `[]byte` fields the default encoding used for tree and proof generation is Hexadecimal using <https://godoc.org/github.com/ethereum/go-ethereum/common/hexutil>
