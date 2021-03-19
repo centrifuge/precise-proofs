@@ -1,3 +1,5 @@
+// +build wasm
+
 package main
 
 import (
@@ -7,9 +9,9 @@ import (
 	"strings"
 	"syscall/js"
 
-	"github.com/centrifuge/precise-proofs/examples/documents"
+	documentspb "github.com/centrifuge/precise-proofs/examples/documents"
 	"github.com/centrifuge/precise-proofs/proofs"
-	"github.com/centrifuge/precise-proofs/proofs/proto"
+	proofspb "github.com/centrifuge/precise-proofs/proofs/proto"
 	"github.com/golang/protobuf/jsonpb"
 )
 

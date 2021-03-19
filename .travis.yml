@@ -1,12 +1,15 @@
 language: go
 go_import_path: github.com/centrifuge/precise-proofs
 go:
- - 1.11.x
- - tip
+ - 1.15.x
+
+env:
+ matrix:
+  - GO111MODULE=on
 
 install:
-  - go get -u github.com/golang/dep/...
-  - dep ensure
+  - go mod tidy
+  - go mod vendor
 
 script:
   - go test -race -coverprofile=coverage.txt -covermode=atomic -v ./proofs
