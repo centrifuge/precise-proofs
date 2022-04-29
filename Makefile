@@ -1,11 +1,14 @@
-lint-check: ## runs linters on go code
-		@gometalinter --disable-all --enable=golint --enable=goimports --enable=vet --enable=nakedret \
-				--enable=staticcheck --vendor --skip=resources --skip=testingutils --skip=protobufs  --deadline=1m ./...;
+.PHONY: install_protoc_deps proto-lint proto
 
-install_protoc_deps:	## Installs all protobuf dependencies
-	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28.0
+install-protoc-deps:	## Installs all protobuf dependencies
+	@go install github.com/ckaznocha/protoc-gen-lint@0.2.4
+	@go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28.0
+
+proto-lint:  ## Lint protos
+	@protoc --lint_out=. proofs/proto/*.proto
 
 proto:	## Compile protos
-	protoc -Iproofs/proto \
+	@protoc -Iproofs/proto \
 		--go_out=paths=source_relative:proofs/proto \
+		--lint_out=. \
 		proofs/proto/*.proto
