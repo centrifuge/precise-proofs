@@ -17,3 +17,8 @@ proto: ## Compile protos
 	@protoc -Iproofs/proto \
 		--go_out=paths=source_relative:proofs/proto \
 		proofs/proto/*.proto
+
+proto-example:
+	@protoc -I./ \
+		--go_out=paths=source_relative:. \
+		examples/documents/example.proto
