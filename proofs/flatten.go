@@ -95,8 +95,8 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 				field = value.Field(i).Elem().Elem().Type().Field(0)
 				oneOfField = true
 			}
-			// Ignore fields starting with XXX_, those are protobuf internals
-			if strings.HasPrefix(field.Name, "XXX_") || !field.IsExported() {
+			// Ignore unexported fields.
+			if !field.IsExported() {
 				continue
 			}
 
@@ -537,11 +537,9 @@ var internalProtoFields = map[string]struct{}{
 }
 
 func isInternalProtoField(fieldName string) bool {
-	if _, ok := internalProtoFields[fieldName]; ok {
-		return true
-	}
+	_, ok := internalProtoFields[fieldName]
 
-	return strings.HasPrefix(fieldName, "XXX_")
+	return ok
 }
 
 func getKeyLengthFrom(fd *godescriptor.FieldDescriptorProto) (keyLength uint64) {
