@@ -3,6 +3,7 @@ package proofs
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"hash"
 	"reflect"
 	"sort"
@@ -16,6 +17,7 @@ import (
 	"github.com/golang/protobuf/ptypes"
 	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/pkg/errors"
+	"google.golang.org/protobuf/types/descriptorpb"
 )
 
 // messageFlattener takes a proto.Message and flattens it to a list of ordered nodes.
@@ -93,8 +95,8 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 				field = value.Field(i).Elem().Elem().Type().Field(0)
 				oneOfField = true
 			}
-			// Ignore fields starting with XXX_, those are protobuf internals
-			if strings.HasPrefix(field.Name, "XXX_") {
+			// Ignore unexported fields.
+			if !field.IsExported() {
 				continue
 			}
 
@@ -104,15 +106,6 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 				continue
 			}
 
-			innerFieldDescriptor := messageDescriptor.Field[i]
-
-			// Check if the field has an exclude_from_tree option and skip it
-			excludeFromTree, err := proto.GetExtension(innerFieldDescriptor.Options, proofspb.E_ExcludeFromTree)
-			if err == nil && *(excludeFromTree.(*bool)) {
-				continue
-			}
-
-			fixedLength := getKeyLengthFrom(innerFieldDescriptor)
 			protoTag := field.Tag.Get("protobuf")
 			name, num, err := ExtractFieldTags(protoTag)
 			if err != nil {
@@ -125,6 +118,21 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 					continue
 				}
 			}
+
+			innerFieldDescriptor, err := getInnerFieldDescriptor(messageDescriptor, int32(num))
+
+			if err != nil {
+				return errors.Wrapf(err, "failed to get inner field descriptor")
+			}
+
+			// Check if the field has an exclude_from_tree option and skip it
+			excludeFromTree, err := proto.GetExtension(innerFieldDescriptor.Options, proofspb.E_ExcludeFromTree)
+			if err == nil && *(excludeFromTree.(*bool)) {
+				continue
+			}
+
+			fixedLength := getKeyLengthFrom(innerFieldDescriptor)
+
 			fieldProp := prop.FieldProp(name, num)
 
 			isHashed, err := proto.GetExtension(innerFieldDescriptor.Options, proofspb.E_HashedField)
@@ -296,6 +304,16 @@ func (f *messageFlattener) handleValue(prop Property, value reflect.Value, salts
 	}
 
 	return nil
+}
+
+func getInnerFieldDescriptor(descriptorProto *descriptorpb.DescriptorProto, fieldNum int32) (*descriptorpb.FieldDescriptorProto, error) {
+	for _, field := range descriptorProto.GetField() {
+		if field.GetNumber() == fieldNum {
+			return field, nil
+		}
+	}
+
+	return nil, fmt.Errorf("field number %d not found", fieldNum)
 }
 
 func fetchLengthFromInterface(k reflect.Value) uint64 {
@@ -481,9 +499,9 @@ func sliceToMap(value reflect.Value, mappingKey string, keyLength uint64) (refle
 	if (len(elemMD.Field) == 2) || ((len(elemMD.Field) == 3) && (saltsFieldFound)) {
 		valueField, valueFound := elemType.FieldByNameFunc(func(name string) bool {
 			if saltsFieldFound {
-				return !strings.HasPrefix(name, "XXX_") && name != mappingKey && name != SaltsFieldName
+				return !isInternalProtoField(name) && name != mappingKey && name != SaltsFieldName
 			} else {
-				return !strings.HasPrefix(name, "XXX_") && name != mappingKey
+				return !isInternalProtoField(name) && name != mappingKey
 			}
 		})
 		if !valueFound {
@@ -508,6 +526,20 @@ func sliceToMap(value reflect.Value, mappingKey string, keyLength uint64) (refle
 		mapValue.SetMapIndex(key, value)
 	}
 	return mapValue, nil
+}
+
+var internalProtoFields = map[string]struct{}{
+	"state":           {},
+	"sizeCache":       {},
+	"weakFields":      {},
+	"unknownFields":   {},
+	"extensionFields": {},
+}
+
+func isInternalProtoField(fieldName string) bool {
+	_, ok := internalProtoFields[fieldName]
+
+	return ok
 }
 
 func getKeyLengthFrom(fd *godescriptor.FieldDescriptorProto) (keyLength uint64) {
